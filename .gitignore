@@ -1,0 +1,5 @@
+./config.json
+bundle.js
+*.lock
+node_modules
+testing
