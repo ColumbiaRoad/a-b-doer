@@ -1,4 +1,4 @@
-./config.json
+config.json
 bundle.js
 *.lock
 node_modules
