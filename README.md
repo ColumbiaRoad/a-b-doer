@@ -16,6 +16,8 @@ Tests can be run with command `npm run build path/to/test/folder`
 
 and with a watcher for file changes `npm run watch path/to/test/folder`
 
+Command opens the test's URL in a browser and injects the built js and style files to site's DOM.
+
 # Test structure
 
 Tests can be created to under any folder. All tests should at least have buildspec.json crated in test's own folder or its parent's folder.
@@ -23,21 +25,21 @@ Tests can be created to under any folder. All tests should at least have buildsp
 ```
 tests/
 	|- SomeTest/
-	|		|- buildspec.json
-	|		|- index.js (optional)
-	|		|- styles.scss (optional)
+	|	|- buildspec.json
+	|	|- index.js (optional)
+	|	|- styles.scss (optional)
 	|
 	|- SomeNestedTest
-			|- buildspec.json
-			|- NestedOne/
-					|- index.js
-			|- NestedTwo/
-					|- index.js
+		|- buildspec.json
+		|- NestedOne/
+			|- index.js
+		|- NestedTwo/
+			|- index.js
 ```
 
 ## Test files
 
-In JS files ES6, imports, etc are supported and also rollup will bundle and minify them. Styles should be created with SASS syntax (imports are supported as well).
+In JS files ES6, imports, etc are supported and also rollup will bundle and minify them. Styles should be created with SCSS/SASS syntax (imports are supported as well).
 
 ## buildspec.json contents
 
