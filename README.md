@@ -43,6 +43,14 @@ In JS files ES6, imports, etc are supported and also rollup will bundle and mini
 
 ## buildspec.json contents
 
+### Supported properties
+
+| Property |  Type  |               Description |
+| -------- | :----: | ------------------------: |
+| url      | string | Web page url for the test |
+
+### Example
+
 ```
 {
 	"url": "https://www.columbiaroad.com"
