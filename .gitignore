@@ -1,5 +1,5 @@
 config.json
-bundle.js
+.build
 *.lock
 node_modules
 testing

@@ -33,6 +33,14 @@ try {
 
 	let steps = [];
 
+	// Ensure build folder
+	const buildDir = path.join(testPath, '.build');
+	try {
+		if (!fs.existsSync(buildDir)) {
+			fs.mkdirSync(buildDir);
+		}
+	} catch (error) {}
+
 	// Check & load build related data
 	let testConfig;
 	try {
@@ -112,6 +120,9 @@ try {
 		const styles = sass.renderSync({
 			file: sassFile,
 		});
+
+		fs.writeFileSync(path.resolve(buildDir, 'styles.css'), styles.css);
+
 		return {
 			...args,
 			styles,
@@ -124,7 +135,7 @@ try {
 	 * @param {Object} args
 	 */
 	async function transpileJs(jsFile, args) {
-		const bundle = await rollup({
+		const inputOptions = {
 			input: jsFile,
 			plugins: [
 				resolve(),
@@ -143,14 +154,18 @@ try {
 				}),
 			],
 			watch: false,
-		});
+		};
 
-		const { output } = await bundle.generate({
-			file: path.resolve(testPath, 'bundle.js'),
+		const outputOptions = {
+			file: path.resolve(buildDir, 'bundle.js'),
 			strict: false,
 			format: 'iife',
 			plugins: [terser()],
-		});
+		};
+
+		const bundle = await rollup(inputOptions);
+
+		const { output } = await bundle.generate(outputOptions);
 
 		let code = '';
 
@@ -159,6 +174,8 @@ try {
 				code += chunkOrAsset.code;
 			}
 		}
+
+		await bundle.write(outputOptions);
 
 		return { ...args, js: code };
 	}
