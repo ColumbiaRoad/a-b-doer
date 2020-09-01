@@ -83,6 +83,8 @@ try {
 	const browser = await puppeteer.launch({
 		headless: false,
 		executablePath: config.browser,
+		defaultViewport: null,
+		args: ['--start-maximized'],
 	});
 
 	let page = (await browser.pages())[0];
