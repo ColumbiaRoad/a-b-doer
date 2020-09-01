@@ -6,6 +6,8 @@ const rollup = require('rollup').rollup;
 const resolve = require('@rollup/plugin-node-resolve').default;
 const babel = require('@rollup/plugin-babel').default;
 const terser = require('rollup-plugin-terser').terser;
+const autoprefixer = require('autoprefixer');
+const postcss = require('postcss');
 
 /**
  * Load the config for the whole testing project
@@ -22,6 +24,8 @@ try {
 }
 
 (async () => {
+	let initial = true;
+
 	let testPath = process.argv[2];
 	if (!testPath) {
 		console.log('Test folder is missing');
@@ -118,16 +122,18 @@ try {
 	 * @param {String} sassFile
 	 * @param {Object} args
 	 */
-	function transformStyles(sassFile, args) {
+	async function transformStyles(sassFile, args) {
 		const styles = sass.renderSync({
 			file: sassFile,
 		});
 
-		fs.writeFileSync(path.resolve(buildDir, 'styles.css'), styles.css);
+		const result = await postcss([autoprefixer]).process(styles.css.toString(), { from: undefined });
+
+		fs.writeFileSync(path.resolve(buildDir, 'styles.css'), result.css);
 
 		return {
 			...args,
-			styles,
+			styles: result.css,
 		};
 	}
 
@@ -182,20 +188,41 @@ try {
 		return { ...args, js: code };
 	}
 
+	let loadListener = null;
+
 	/**
 	 * Opens a browser tab and injects all required styles and scripts to the DOM
 	 * @param {String} url
 	 * @param {Object} args
 	 */
 	async function openBrowserTab(url, args = {}) {
-		console.log('Opening page "' + url + '"', 'with custom:', Object.keys(args));
-		await page.goto(url);
-		if (args.styles && args.styles.css) {
-			await page.addStyleTag({ content: args.styles.css.toString() });
+		console.log(initial ? 'Opening' : 'Reloading', ' page "' + url + '"', 'with custom:', Object.keys(args));
+
+		try {
+			// Remove previous listener
+			if (loadListener) {
+				page.off('domcontentloaded', loadListener);
+			}
+
+			// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
+			loadListener = async () => {
+				if (args.styles && args.styles) {
+					await page.addStyleTag({ content: args.styles });
+				}
+				if (args.js) {
+					await page.addScriptTag({ content: args.js });
+				}
+			};
+
+			page.on('domcontentloaded', loadListener);
+
+			await page.goto(url);
+		} catch (error) {
+			console.log(error.message);
+			process.exit();
 		}
-		if (args.js) {
-			await page.addScriptTag({ content: args.js });
-		}
+
+		initial = false;
 	}
 
 	buildSteps(steps);
