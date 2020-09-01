@@ -25,6 +25,7 @@ try {
 
 (async () => {
 	let initial = true;
+	let counter = 0;
 
 	let testPath = process.argv[2];
 	if (!testPath) {
@@ -196,7 +197,13 @@ try {
 	 * @param {Object} args
 	 */
 	async function openBrowserTab(url, args = {}) {
-		console.log(initial ? 'Opening' : 'Reloading', ' page "' + url + '"', 'with custom:', Object.keys(args));
+		console.log(
+			`#${++counter}`,
+			initial ? 'Opening' : 'Reloading',
+			'page "' + url + '"',
+			'with custom:',
+			Object.keys(args)
+		);
 
 		try {
 			// Remove previous listener
@@ -206,11 +213,15 @@ try {
 
 			// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 			loadListener = async () => {
-				if (args.styles && args.styles) {
-					await page.addStyleTag({ content: args.styles });
-				}
-				if (args.js) {
-					await page.addScriptTag({ content: args.js });
+				try {
+					if (args.styles && args.styles) {
+						await page.addStyleTag({ content: args.styles });
+					}
+					if (args.js) {
+						await page.addScriptTag({ content: args.js });
+					}
+				} catch (error) {
+					console.log(error.message);
 				}
 			};
 
@@ -227,6 +238,8 @@ try {
 
 	buildSteps(steps);
 
+	let t;
+
 	if (watch) {
 		fs.watch(
 			testPath,
@@ -235,7 +248,12 @@ try {
 			},
 			(evt, file) => {
 				if (file.includes('.build/')) return;
-				buildSteps(steps);
+				if (t) {
+					clearTimeout(t);
+				}
+				t = setTimeout(() => {
+					buildSteps(steps);
+				}, 300);
 			}
 		);
 	}
