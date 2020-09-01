@@ -206,7 +206,8 @@ try {
 			{
 				recursive: true,
 			},
-			() => {
+			(evt, file) => {
+				if (file.includes('.build/')) return;
 				buildSteps(steps);
 			}
 		);
