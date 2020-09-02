@@ -20,7 +20,7 @@ Command opens the test's URL in a browser and injects the built js and style fil
 
 # Test structure
 
-Tests can be created to under any folder. All tests should at least have buildspec.json crated in test's own folder or its parent's folder.
+Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent's folder.
 
 ```
 tests/

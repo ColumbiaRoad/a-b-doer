@@ -126,6 +126,7 @@ try {
 	async function transformStyles(sassFile, args) {
 		const styles = sass.renderSync({
 			file: sassFile,
+			outputStyle: 'compressed',
 		});
 
 		const result = await postcss([autoprefixer]).process(styles.css.toString(), { from: undefined });
