@@ -1,13 +1,15 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
-const sass = require('node-sass');
 const fs = require('fs');
 const rollup = require('rollup').rollup;
+const rollupWatch = require('rollup').watch;
 const resolve = require('@rollup/plugin-node-resolve').default;
 const babel = require('@rollup/plugin-babel').default;
 const terser = require('rollup-plugin-terser').terser;
+const scss = require('rollup-plugin-scss');
 const autoprefixer = require('autoprefixer');
 const postcss = require('postcss');
+const glob = require('glob');
 
 /**
  * Load the config for the whole testing project
@@ -23,21 +25,99 @@ try {
 	process.exit();
 }
 
-(async () => {
-	let initial = true;
-	let counter = 0;
+let testPath = process.argv[2];
+if (!testPath) {
+	console.log('Test folder is missing');
+	process.exit();
+}
+testPath = path.resolve(testPath);
 
-	let testPath = process.argv[2];
-	if (!testPath) {
-		console.log('Test folder is missing');
+const watch = process.env.PROJECT_WATCH === 'true';
+
+let page = null;
+
+/**
+ * Return a puppeteer page. If there's no page created then this also creates the page.
+ *
+ * @returns {Promise<import("puppeteer").Page>}
+ */
+async function getBrowserPage() {
+	if (page) return page;
+
+	// Setup puppeteer
+	const browser = await puppeteer.launch({
+		headless: false,
+		executablePath: config.browser,
+		defaultViewport: null,
+		args: ['--start-maximized'],
+	});
+
+	page = (await browser.pages())[0];
+	if (!page) {
+		page = await browser.newPage();
+	}
+
+	page.on('close', () => {
+		process.exit();
+	});
+
+	return page;
+}
+
+let initial = true;
+let counter = 0;
+let loadListener = null;
+
+/**
+ * Opens a browser tab and injects all required styles and scripts to the DOM
+ * @param {String} url
+ * @param {Object} pageTags
+ */
+async function openBrowserTab(url, pageTags = {}) {
+	const page = await getBrowserPage();
+
+	// Check which tags has some content. With style entries, js file is still generate on watch task for some reason.
+	const keysWithValues = Object.keys(pageTags).reduce(
+		(acc, key) => ((pageTags[key] || '').replace(/\s/gms, '') ? acc.concat(key) : acc),
+		[]
+	);
+	console.log(`#${++counter}`, initial ? 'Opening' : 'Reloading', `page "${url}"`, 'with custom:', keysWithValues);
+
+	try {
+		// Remove previous listener
+		if (loadListener) {
+			page.off('domcontentloaded', loadListener);
+		}
+
+		// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
+		loadListener = async () => {
+			try {
+				if (pageTags.styles && pageTags.styles) {
+					await page.addStyleTag({ content: pageTags.styles });
+				}
+				if (pageTags.js) {
+					await page.addScriptTag({ content: pageTags.js });
+				}
+			} catch (error) {
+				console.log(error.message);
+			}
+		};
+
+		page.on('domcontentloaded', loadListener);
+
+		await page.goto(url);
+	} catch (error) {
+		console.log(error.message);
 		process.exit();
 	}
-	testPath = path.resolve(testPath);
 
-	const watch = process.env.PROJECT_WATCH === 'true';
+	initial = false;
+}
 
-	let steps = [];
-
+/**
+ * Async wrapper for the bundler and the bundle watcher.
+ */
+(async () => {
 	// Ensure build folder
 	const buildDir = path.join(testPath, '.build');
 	try {
@@ -65,197 +145,129 @@ try {
 		process.exit();
 	}
 
-	// Add step for styles
-	const sassFile = path.join(testPath, 'styles.scss');
-	try {
-		if (fs.existsSync(sassFile)) {
-			steps = steps.concat((args) => transformStyles(sassFile, args));
+	let entryFile = '';
+
+	if (testConfig.entry) {
+		entryFile = testConfig.entry;
+	} else {
+		const files = fs.readdirSync(testPath, { encoding: 'utf8' });
+		// Find first index file
+		const indexFile = files.find((file) => /index\.(jsx?|tsx?|(sa|sc|c)ss)$/.test(file));
+		if (indexFile) {
+			entryFile = indexFile;
 		}
-	} catch (error) {}
-
-	// Add step for javascript
-	const jsFile = path.join(testPath, 'index.js');
-	try {
-		if (fs.existsSync(jsFile)) {
-			steps = steps.concat((args) => transpileJs(jsFile, args));
-		}
-	} catch (error) {}
-
-	// Final step that opens the browser
-	steps = steps.concat((args) => openBrowserTab(testConfig.url, args));
-
-	// Setup puppeteer
-	const browser = await puppeteer.launch({
-		headless: false,
-		executablePath: config.browser,
-		defaultViewport: null,
-		args: ['--start-maximized'],
-	});
-
-	let page = (await browser.pages())[0];
-	if (!page) {
-		page = await browser.newPage();
-	}
-
-	/**
-	 * Recursively loops through all build steps
-	 * @param {Array} steps
-	 * @param {Object} args
-	 */
-	async function buildSteps(steps = [], args = {}) {
-		const [step, ...rest] = steps;
-		const ret = (await step(args)) || {};
-
-		try {
-			if (rest.length) {
-				buildSteps(rest, {
-					...args,
-					...ret,
-				});
-			}
-		} catch (error) {
-			console.error(error);
+		// Try some style file
+		else {
+			entryFile = files.find((file) => /styles?\.(sa|sc|c)ss$/.test(file));
 		}
 	}
 
-	/**
-	 * Transforms given sass file to css
-	 * @param {String} sassFile
-	 * @param {Object} args
-	 */
-	async function transformStyles(sassFile, args) {
-		const styles = sass.renderSync({
-			file: sassFile,
-			outputStyle: 'compressed',
-		});
+	// Bundler behaves a little bit differently when there's style file as an entry.
+	let stylesOnly = /\.(sa|sc|c)ss$/.test(entryFile);
 
-		const result = await postcss([autoprefixer]).process(styles.css.toString(), { from: undefined });
-
-		fs.writeFileSync(path.resolve(buildDir, 'styles.css'), result.css);
-
-		return {
-			...args,
-			styles: result.css,
-		};
+	if (!entryFile) {
+		console.log("Couldn't find entry file");
+		process.exit();
 	}
 
-	/**
-	 * Transpiles given js file to es5
-	 * @param {String} jsFile
-	 * @param {Object} args
-	 */
-	async function transpileJs(jsFile, args) {
-		const inputOptions = {
-			input: jsFile,
-			plugins: [
-				resolve(),
-				babel({
-					babelrc: false,
-					presets: [
-						[
-							'@babel/env',
-							{
-								modules: false,
-							},
-						],
+	let entryPart = entryFile;
+	entryFile = path.join(testPath, entryFile);
+
+	let pageTags = {};
+
+	const inputOptions = {
+		input: entryFile,
+		plugins: [
+			resolve(),
+			babel({
+				babelrc: false,
+				presets: [
+					[
+						'@babel/env',
+						{
+							modules: false,
+						},
 					],
-					babelHelpers: 'bundled',
-					plugins: ['@babel/plugin-proposal-optional-chaining', '@babel/plugin-proposal-nullish-coalescing-operator'],
-				}),
-			],
-			watch: false,
-		};
+				],
+				babelHelpers: 'bundled',
+				plugins: ['@babel/plugin-proposal-optional-chaining', '@babel/plugin-proposal-nullish-coalescing-operator'],
+			}),
+			scss({
+				// Filename to write all styles to
+				output: function (styles) {
+					let styleFile = entryPart.split('.');
+					styleFile.pop();
+					styleFile.push('css');
+					fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
+					pageTags.styles = styles;
+				},
+				// Determine if node process should be terminated on error (default: false)
+				failOnError: true,
+				// Get all style files with glob because scss plugin cannot handle them by it self
+				watch: watch ? glob.sync(path.join(testPath, '**', '*.s*ss')) : undefined,
+				// Prefix global scss. Useful for variables and mixins.
+				// prefix: `@import "./fonts.scss";`,
+				processor: () => postcss([autoprefixer]),
+			}),
+		],
+		watch: false,
+	};
 
-		const outputOptions = {
-			file: path.resolve(buildDir, 'bundle.js'),
-			strict: false,
-			format: 'iife',
-			plugins: [terser()],
-		};
+	console.log(watch ? glob.sync(path.join(testPath, '**', '*.s*ss')) : undefined);
 
-		const bundle = await rollup(inputOptions);
+	const outputOptions = {
+		dir: buildDir,
+		strict: false,
+		format: 'iife',
+		plugins: [terser()],
+	};
 
-		const { output } = await bundle.generate(outputOptions);
+	const bundle = await rollup(inputOptions);
 
-		let code = '';
-
-		for (const chunkOrAsset of output) {
-			if (chunkOrAsset.type !== 'asset') {
-				code += chunkOrAsset.code;
-			}
-		}
-
+	// Do not write bundle to disk if it's just a style file. CSS will be written to disk by the scss plugin.
+	if (stylesOnly) {
+		await bundle.generate(outputOptions);
+	} else {
 		await bundle.write(outputOptions);
-
-		return { ...args, js: code };
 	}
-
-	let loadListener = null;
-
-	/**
-	 * Opens a browser tab and injects all required styles and scripts to the DOM
-	 * @param {String} url
-	 * @param {Object} args
-	 */
-	async function openBrowserTab(url, args = {}) {
-		console.log(
-			`#${++counter}`,
-			initial ? 'Opening' : 'Reloading',
-			'page "' + url + '"',
-			'with custom:',
-			Object.keys(args)
-		);
-
-		try {
-			// Remove previous listener
-			if (loadListener) {
-				page.off('domcontentloaded', loadListener);
-			}
-
-			// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
-			loadListener = async () => {
-				try {
-					if (args.styles && args.styles) {
-						await page.addStyleTag({ content: args.styles });
-					}
-					if (args.js) {
-						await page.addScriptTag({ content: args.js });
-					}
-				} catch (error) {
-					console.log(error.message);
-				}
-			};
-
-			page.on('domcontentloaded', loadListener);
-
-			await page.goto(url);
-		} catch (error) {
-			console.log(error.message);
-			process.exit();
-		}
-
-		initial = false;
-	}
-
-	buildSteps(steps);
-
-	let t;
 
 	if (watch) {
-		fs.watch(
-			testPath,
-			{
-				recursive: true,
+		const watcher = rollupWatch({
+			...inputOptions,
+			output: outputOptions,
+			watch: {
+				buildDelay: 300,
+				exclude: [path.join(testPath, '.build', '**')],
+				include: [path.join(testPath, '**')],
+				skipWrite: stylesOnly,
 			},
-			(evt, file) => {
-				if (file.includes('.build/')) return;
-				if (t) {
-					clearTimeout(t);
+		});
+
+		watcher.on('event', async (event) => {
+			if (event.code === 'END') {
+				const { output } = await bundle.generate(outputOptions);
+
+				for (const chunkOrAsset of output) {
+					if (chunkOrAsset.type !== 'asset') {
+						if (!pageTags.code) {
+							pageTags.code = '';
+						}
+						pageTags.code += chunkOrAsset.code;
+					}
 				}
-				t = setTimeout(() => {
-					buildSteps(steps);
-				}, 300);
+
+				await openBrowserTab(testConfig.url, pageTags);
+
+				pageTags = {};
 			}
-		);
+			// event.code can be one of:
+			//   START        — the watcher is (re)starting
+			//   BUNDLE_START — building an individual bundle
+			//   BUNDLE_END   — finished building a bundle
+			//   END          — finished building all bundles
+			//   ERROR        — encountered an error while bundling
+		});
+	} else {
+		openBrowserTab(testConfig.url, pageTags);
 	}
 })();
