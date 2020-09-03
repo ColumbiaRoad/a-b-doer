@@ -10,6 +10,7 @@ const scss = require('rollup-plugin-scss');
 const autoprefixer = require('autoprefixer');
 const postcss = require('postcss');
 const glob = require('glob');
+const alias = require('@rollup/plugin-alias');
 
 /**
  * Load the config for the whole testing project
@@ -31,6 +32,11 @@ if (!testPath) {
 	process.exit();
 }
 testPath = path.resolve(testPath);
+
+if (!fs.existsSync(testPath)) {
+	console.log('Test folder does not exist', testPath);
+	process.exit();
+}
 
 const watch = process.env.PROJECT_WATCH === 'true';
 
@@ -209,11 +215,12 @@ async function openBrowserTab(url, pageTags = {}) {
 				// prefix: `@import "./fonts.scss";`,
 				processor: () => postcss([autoprefixer]),
 			}),
+			alias({
+				entries: [{ find: /^@\/(.*)/, replacement: path.join(__dirname, '$1') }],
+			}),
 		],
 		watch: false,
 	};
-
-	console.log(watch ? glob.sync(path.join(testPath, '**', '*.s*ss')) : undefined);
 
 	const outputOptions = {
 		dir: buildDir,

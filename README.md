@@ -26,8 +26,8 @@ Tests can be created to under any folder. All tests should at least have buildsp
 tests/
 	|- SomeTest/
 	|	|- buildspec.json
-	|	|- index.js (optional)
-	|	|- styles.scss (optional)
+	|	|- index.js (default)
+	|	|- styles.scss
 	|
 	|- SomeNestedTest
 		|- buildspec.json
@@ -39,16 +39,20 @@ tests/
 
 ## Test files
 
-In JS files ES6, imports, etc are supported and also rollup will bundle and minify them. Styles should be created with SCSS/SASS syntax (imports are supported as well).
+In JS files ES6, imports, etc are supported and also Rollup will bundle and minify them. Styles should be created with SCSS/SASS syntax (imports are supported as well). If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Rollup will handle it.
+
+By default, JS supports nullish coalescing and optional chaining.
+
+If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
 
 ## buildspec.json contents
 
 ### Supported properties
 
-| Property |  Type  | Description               | Optional |
-| -------- | :----: | ------------------------- | :------: |
-| url      | string | Web page url for the test |  false   |
-| entry    | string | Entry file for Parcel     |   true   |
+| Property |  Type  | Description                                            | Optional |
+| -------- | :----: | ------------------------------------------------------ | :------: |
+| url      | string | Web page url for the test                              |  false   |
+| entry    | string | Entry file for Rollup. Can be at least js or scss file |   true   |
 
 ### Example
 
