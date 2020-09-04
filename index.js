@@ -11,6 +11,7 @@ const autoprefixer = require('autoprefixer');
 const postcss = require('postcss');
 const glob = require('glob');
 const alias = require('@rollup/plugin-alias');
+const ejs = require('rollup-plugin-ejs');
 
 /**
  * Load the config for the whole testing project
@@ -37,6 +38,14 @@ if (!fs.existsSync(testPath)) {
 	console.log('Test folder does not exist', testPath);
 	process.exit();
 }
+
+// Ensure build folder
+const buildDir = path.join(testPath, '.build');
+try {
+	if (!fs.existsSync(buildDir)) {
+		fs.mkdirSync(buildDir);
+	}
+} catch (error) {}
 
 const watch = process.env.PROJECT_WATCH === 'true';
 
@@ -74,13 +83,43 @@ let initial = true;
 let counter = 0;
 let loadListener = null;
 
+const defaultJs = fs.readFileSync('./utils/createElement.js', 'utf8');
+
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
  * @param {String} url
- * @param {Object} pageTags
  */
-async function openBrowserTab(url, pageTags = {}) {
+async function openBrowserTab(url) {
 	const page = await getBrowserPage();
+
+	let files = [];
+	try {
+		files = fs.readdirSync(buildDir, { encoding: 'utf8' });
+	} catch (error) {
+		console.log('Cannot read build directory');
+		process.exit();
+	}
+
+	const pageTags = files.reduce((tags, file) => {
+		const fileType = file.split('.').pop();
+
+		const fileContent = fs.readFileSync(path.join(buildDir, file), 'utf8');
+
+		switch (fileType) {
+			case 'css':
+				return {
+					...tags,
+					styles: (tags.styles || '') + fileContent,
+				};
+			case 'js':
+				return {
+					...tags,
+					code: (tags.code || defaultJs) + fileContent,
+				};
+			default:
+				return tags;
+		}
+	}, {});
 
 	// Check which tags has some content. With style entries, js file is still generate on watch task for some reason.
 	const keysWithValues = Object.keys(pageTags).reduce(
@@ -101,8 +140,8 @@ async function openBrowserTab(url, pageTags = {}) {
 				if (pageTags.styles && pageTags.styles) {
 					await page.addStyleTag({ content: pageTags.styles });
 				}
-				if (pageTags.js) {
-					await page.addScriptTag({ content: pageTags.js });
+				if (pageTags.code) {
+					await page.addScriptTag({ content: pageTags.code });
 				}
 			} catch (error) {
 				console.log(error.message);
@@ -124,14 +163,6 @@ async function openBrowserTab(url, pageTags = {}) {
  * Async wrapper for the bundler and the bundle watcher.
  */
 (async () => {
-	// Ensure build folder
-	const buildDir = path.join(testPath, '.build');
-	try {
-		if (!fs.existsSync(buildDir)) {
-			fs.mkdirSync(buildDir);
-		}
-	} catch (error) {}
-
 	// Check & load build related data
 	let testConfig;
 	try {
@@ -179,8 +210,6 @@ async function openBrowserTab(url, pageTags = {}) {
 	let entryPart = entryFile;
 	entryFile = path.join(testPath, entryFile);
 
-	let pageTags = {};
-
 	const inputOptions = {
 		input: entryFile,
 		plugins: [
@@ -196,7 +225,11 @@ async function openBrowserTab(url, pageTags = {}) {
 					],
 				],
 				babelHelpers: 'bundled',
-				plugins: ['@babel/plugin-proposal-optional-chaining', '@babel/plugin-proposal-nullish-coalescing-operator'],
+				plugins: [
+					'@babel/plugin-proposal-optional-chaining',
+					'@babel/plugin-proposal-nullish-coalescing-operator',
+					['@babel/plugin-transform-react-jsx', { pragma: 'createElement' }],
+				],
 			}),
 			scss({
 				// Filename to write all styles to
@@ -205,7 +238,6 @@ async function openBrowserTab(url, pageTags = {}) {
 					styleFile.pop();
 					styleFile.push('css');
 					fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
-					pageTags.styles = styles;
 				},
 				// Determine if node process should be terminated on error (default: false)
 				failOnError: true,
@@ -217,6 +249,9 @@ async function openBrowserTab(url, pageTags = {}) {
 			}),
 			alias({
 				entries: [{ find: /^@\/(.*)/, replacement: path.join(__dirname, '$1') }],
+			}),
+			ejs({
+				include: ['**/*.ejs', '**/*.html'],
 			}),
 		],
 		watch: false,
@@ -252,20 +287,8 @@ async function openBrowserTab(url, pageTags = {}) {
 
 		watcher.on('event', async (event) => {
 			if (event.code === 'END') {
-				const { output } = await bundle.generate(outputOptions);
-
-				for (const chunkOrAsset of output) {
-					if (chunkOrAsset.type !== 'asset') {
-						if (!pageTags.code) {
-							pageTags.code = '';
-						}
-						pageTags.code += chunkOrAsset.code;
-					}
-				}
-
-				await openBrowserTab(testConfig.url, pageTags);
-
-				pageTags = {};
+				await bundle.generate(outputOptions);
+				await openBrowserTab(testConfig.url);
 			}
 			// event.code can be one of:
 			//   START        — the watcher is (re)starting
@@ -275,6 +298,6 @@ async function openBrowserTab(url, pageTags = {}) {
 			//   ERROR        — encountered an error while bundling
 		});
 	} else {
-		openBrowserTab(testConfig.url, pageTags);
+		openBrowserTab(testConfig.url);
 	}
 })();

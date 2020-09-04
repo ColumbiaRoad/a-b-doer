@@ -45,6 +45,44 @@ By default, JS supports nullish coalescing and optional chaining.
 
 If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
 
+HTML files can be imported like JS and Rollup creates a ejs template function from the file. Template can be rendered as string by calling the function, example below
+
+```
+import tpl from './template.ejs'; 	// ./template.html is also okay
+
+const domNode = document.createElement('div');
+
+domNode.innerHTML = tpl({text: 'Hello World'});
+```
+
+template.ejs content:
+
+```
+<p><%= locals.text %></p>
+```
+
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes.
+
+```
+import { pollQuerySelector } from '@/utils/dom';
+import tpl from './template.jsx';
+import './styles.scss';
+
+pollQuerySelector('html body', (target) => {
+	target.appendChild(tpl({ test: 1 }));
+});
+
+// template.jsx
+export default (props) => {
+	return (
+		<div onClick={() => console.log('testing')}>
+			<h3>click me {props.test}</h3>
+		</div>
+	);
+};
+
+```
+
 ## buildspec.json contents
 
 ### Supported properties
