@@ -61,7 +61,7 @@ template.ejs content:
 <p><%= locals.text %></p>
 ```
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes.
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from config.json by adding `"jsx": true` or if the entry file is jsx
 
 ```
 import { pollQuerySelector } from '@/utils/dom';

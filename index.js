@@ -83,7 +83,43 @@ let initial = true;
 let counter = 0;
 let loadListener = null;
 
-const defaultJs = fs.readFileSync('./utils/createElement.js', 'utf8');
+// Check & load build related data
+let testConfig;
+try {
+	const specFile = path.join(testPath, 'buildspec.json');
+	if (fs.existsSync(specFile)) {
+		testConfig = require(specFile);
+	} else {
+		const parentSpecFile = path.join(testPath, '..', 'buildspec.json');
+		if (fs.existsSync(parentSpecFile)) {
+			testConfig = require(parentSpecFile);
+		}
+	}
+} catch (error) {}
+
+if (!testConfig) {
+	console.log("test's buildspec.json is missing");
+	process.exit();
+}
+
+let entryFile = '';
+
+if (testConfig.entry) {
+	entryFile = testConfig.entry;
+} else {
+	const files = fs.readdirSync(testPath, { encoding: 'utf8' });
+	// Find first index file
+	const indexFile = files.find((file) => /index\.(jsx?|tsx?|(sa|sc|c)ss)$/.test(file));
+	if (indexFile) {
+		entryFile = indexFile;
+	}
+	// Try some style file
+	else {
+		entryFile = files.find((file) => /styles?\.(sa|sc|c)ss$/.test(file));
+	}
+}
+
+const defaultJs = config.jsx || /\.jsx$/.test(entryFile) ? fs.readFileSync('./utils/createElement.js', 'utf8') : '';
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -163,42 +199,6 @@ async function openBrowserTab(url) {
  * Async wrapper for the bundler and the bundle watcher.
  */
 (async () => {
-	// Check & load build related data
-	let testConfig;
-	try {
-		const specFile = path.join(testPath, 'buildspec.json');
-		if (fs.existsSync(specFile)) {
-			testConfig = require(specFile);
-		} else {
-			const parentSpecFile = path.join(testPath, '..', 'buildspec.json');
-			if (fs.existsSync(parentSpecFile)) {
-				testConfig = require(parentSpecFile);
-			}
-		}
-	} catch (error) {}
-
-	if (!testConfig) {
-		console.log("test's buildspec.json is missing");
-		process.exit();
-	}
-
-	let entryFile = '';
-
-	if (testConfig.entry) {
-		entryFile = testConfig.entry;
-	} else {
-		const files = fs.readdirSync(testPath, { encoding: 'utf8' });
-		// Find first index file
-		const indexFile = files.find((file) => /index\.(jsx?|tsx?|(sa|sc|c)ss)$/.test(file));
-		if (indexFile) {
-			entryFile = indexFile;
-		}
-		// Try some style file
-		else {
-			entryFile = files.find((file) => /styles?\.(sa|sc|c)ss$/.test(file));
-		}
-	}
-
 	// Bundler behaves a little bit differently when there's style file as an entry.
 	let stylesOnly = /\.(sa|sc|c)ss$/.test(entryFile);
 
