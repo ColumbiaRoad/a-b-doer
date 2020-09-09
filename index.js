@@ -1,17 +1,19 @@
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
-const rollup = require('rollup').rollup;
+const { rollup } = require('rollup');
 const rollupWatch = require('rollup').watch;
 const resolve = require('@rollup/plugin-node-resolve').default;
-const babel = require('@rollup/plugin-babel').default;
-const terser = require('rollup-plugin-terser').terser;
+const babelPlugin = require('@rollup/plugin-babel').default;
+const { terser } = require('rollup-plugin-terser');
 const scss = require('rollup-plugin-scss');
 const autoprefixer = require('autoprefixer');
 const postcss = require('postcss');
 const glob = require('glob');
 const alias = require('@rollup/plugin-alias');
 const ejs = require('rollup-plugin-ejs');
+const babel = require('@babel/core');
+const { minify } = require('terser');
 
 /**
  * Load the config for the whole testing project
@@ -119,7 +121,52 @@ if (testConfig.entry) {
 	}
 }
 
+const babelConfig = {
+	babelrc: false,
+	presets: [
+		[
+			'@babel/env',
+			{
+				modules: false,
+			},
+		],
+	],
+	plugins: [
+		'@babel/plugin-proposal-optional-chaining',
+		'@babel/plugin-proposal-nullish-coalescing-operator',
+		['@babel/plugin-transform-react-jsx', { pragma: 'createElement' }],
+	],
+};
+
 const defaultJs = config.jsx || /\.jsx$/.test(entryFile) ? fs.readFileSync('./utils/createElement.js', 'utf8') : '';
+let defautMinJs = '';
+
+/**
+ * Run given JS string through babel and terser
+ * @param {String} [defaultJs]
+ */
+async function minifyDefaultJs(defaultJs) {
+	if (!defaultJs) {
+		return defaultJs;
+	}
+	if (defautMinJs) {
+		return defautMinJs;
+	}
+
+	const js = babel.transformSync(defaultJs, babelConfig);
+
+	defautMinJs = await minify(js.code, {
+		compress: {},
+		mangle: { toplevel: true, reserved: ['createElement', 'createFragment', 'appendChild'] },
+		output: {},
+		parse: {},
+		rename: {},
+	});
+
+	defautMinJs = defautMinJs.code;
+
+	return defautMinJs;
+}
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -136,6 +183,8 @@ async function openBrowserTab(url) {
 		process.exit();
 	}
 
+	const jsHead = await minifyDefaultJs(defaultJs);
+
 	const pageTags = files.reduce((tags, file) => {
 		const fileType = file.split('.').pop();
 
@@ -150,7 +199,7 @@ async function openBrowserTab(url) {
 			case 'js':
 				return {
 					...tags,
-					code: (tags.code || defaultJs) + fileContent,
+					code: (tags.code || jsHead) + fileContent,
 				};
 			default:
 				return tags;
@@ -211,26 +260,10 @@ async function openBrowserTab(url) {
 	entryFile = path.join(testPath, entryFile);
 
 	const inputOptions = {
-		input: entryFile,
+		input: [entryFile],
 		plugins: [
 			resolve(),
-			babel({
-				babelrc: false,
-				presets: [
-					[
-						'@babel/env',
-						{
-							modules: false,
-						},
-					],
-				],
-				babelHelpers: 'bundled',
-				plugins: [
-					'@babel/plugin-proposal-optional-chaining',
-					'@babel/plugin-proposal-nullish-coalescing-operator',
-					['@babel/plugin-transform-react-jsx', { pragma: 'createElement' }],
-				],
-			}),
+			babelPlugin({ ...babelConfig, babelHelpers: 'bundled' }),
 			scss({
 				// Filename to write all styles to
 				output: function (styles) {
@@ -280,7 +313,7 @@ async function openBrowserTab(url) {
 			watch: {
 				buildDelay: 300,
 				exclude: [path.join(testPath, '.build', '**')],
-				include: [path.join(testPath, '**')],
+				include: [path.join(testPath, '**'), path.join(testPath, 'utils', '**')],
 				skipWrite: stylesOnly,
 			},
 		});
@@ -297,7 +330,5 @@ async function openBrowserTab(url) {
 			//   END          — finished building all bundles
 			//   ERROR        — encountered an error while bundling
 		});
-	} else {
-		openBrowserTab(testConfig.url);
 	}
 })();

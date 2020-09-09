@@ -1,2 +1,31 @@
-"use strict";
-function r(r,e){return i(r)||o(r,e)||t(r,e)||n()}function n(){throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.")}function t(r,n){if(r){if("string"==typeof r)return e(r,n);var t=Object.prototype.toString.call(r).slice(8,-1);return"Object"===t&&r.constructor&&(t=r.constructor.name),"Map"===t||"Set"===t?Array.from(r):"Arguments"===t||/^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t)?e(r,n):void 0}}function e(r,n){(null==n||n>r.length)&&(n=r.length);for(var t=0,e=new Array(n);t<n;t++)e[t]=r[t];return e}function o(r,n){if("undefined"!=typeof Symbol&&Symbol.iterator in Object(r)){var t=[],e=!0,o=!1,i=void 0;try{for(var u,a=r[Symbol.iterator]();!(e=(u=a.next()).done)&&(t.push(u.value),!n||t.length!==n);e=!0);}catch(r){o=!0,i=r}finally{try{e||null==a.t||a.t()}finally{if(o)throw i}}return t}}function i(r){if(Array.isArray(r))return r}var createElement=function(n,t){for(var e=arguments.length,o=new Array(e>2?e-2:0),i=2;i<e;i++)o[i-2]=arguments[i];if("function"==typeof n)return n.apply(void 0,[t].concat(o));var a=document.createElement(n);return Object.entries(t||{}).forEach((function(n){var t=r(n,2),e=t[0],o=t[1];e.startsWith("on")&&e.toLowerCase()in window?a.addEventListener(e.toLowerCase().substr(2),o):a.setAttribute(e,o.toString())})),o.forEach((function(r){u(a,r)})),a},u=function r(n,t){Array.isArray(t)?t.forEach((function(t){return r(n,t)})):n.appendChild(t.nodeType?t:document.createTextNode(t))},a=function(r){for(var n=arguments.length,t=new Array(n>1?n-1:0),e=1;e<n;e++)t[e-1]=arguments[e];return t};
+const createElement = (tag, props, ...children) => {
+  if (typeof tag === "function") return tag(props, ...children);
+  const element = document.createElement(tag);
+
+  Object.entries(props || {}).forEach(([name, value]) => {
+    if (name === "className") {
+      name = "class";
+		}
+		if(value === false || value === undefined) return;
+    if (name.startsWith("on") && name.toLowerCase() in window)
+      element.addEventListener(name.toLowerCase().substr(2), value);
+    else element.setAttribute(name, value.toString());
+  });
+
+  children.forEach((child) => {
+    appendChild(element, child);
+  });
+
+  return element;
+};
+
+const appendChild = (parent, child) => {
+  if (Array.isArray(child))
+    child.forEach((nestedChild) => appendChild(parent, nestedChild));
+  else
+    parent.appendChild(child.nodeType ? child : document.createTextNode(child));
+};
+
+const createFragment = (props, ...children) => {
+  return children;
+};
