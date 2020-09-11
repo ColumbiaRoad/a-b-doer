@@ -34,7 +34,17 @@ if (!testPath) {
 	console.log('Test folder is missing');
 	process.exit();
 }
+
 testPath = path.resolve(testPath);
+
+let entryFile = '';
+
+// If the test path argument is a file, use it as an entry
+if (!fs.lstatSync(testPath).isDirectory()) {
+	let testDir = path.dirname(testPath);
+	entryFile = testPath.replace(testDir, '.');
+	testPath = testDir;
+}
 
 if (!fs.existsSync(testPath)) {
 	console.log('Test folder does not exist', testPath);
@@ -104,20 +114,20 @@ if (!testConfig) {
 	process.exit();
 }
 
-let entryFile = '';
-
-if (testConfig.entry) {
-	entryFile = testConfig.entry;
-} else {
-	const files = fs.readdirSync(testPath, { encoding: 'utf8' });
-	// Find first index file
-	const indexFile = files.find((file) => /index\.(jsx?|tsx?|(sa|sc|c)ss)$/.test(file));
-	if (indexFile) {
-		entryFile = indexFile;
-	}
-	// Try some style file
-	else {
-		entryFile = files.find((file) => /styles?\.(sa|sc|c)ss$/.test(file));
+if (!entryFile) {
+	if (testConfig.entry) {
+		entryFile = testConfig.entry;
+	} else {
+		const files = fs.readdirSync(testPath, { encoding: 'utf8' });
+		// Find first index file
+		const indexFile = files.find((file) => /index\.(jsx?|tsx?|(sa|sc|c)ss)$/.test(file));
+		if (indexFile) {
+			entryFile = indexFile;
+		}
+		// Try some style file
+		else {
+			entryFile = files.find((file) => /styles?\.(sa|sc|c)ss$/.test(file));
+		}
 	}
 }
 
@@ -138,7 +148,7 @@ const babelConfig = {
 	],
 };
 
-const defaultJs = config.jsx || /\.jsx$/.test(entryFile) ? fs.readFileSync('./utils/createElement.js', 'utf8') : '';
+let defaultJs = config.jsx || /\.jsx$/.test(entryFile) ? fs.readFileSync('./utils/createElement.js', 'utf8') : '';
 let defautMinJs = '';
 
 /**
@@ -183,8 +193,6 @@ async function openBrowserTab(url) {
 		process.exit();
 	}
 
-	const jsHead = await minifyDefaultJs(defaultJs);
-
 	const pageTags = files.reduce((tags, file) => {
 		const fileType = file.split('.').pop();
 
@@ -199,7 +207,7 @@ async function openBrowserTab(url) {
 			case 'js':
 				return {
 					...tags,
-					code: (tags.code || jsHead) + fileContent,
+					code: (tags.code || '') + fileContent,
 				};
 			default:
 				return tags;
@@ -267,15 +275,19 @@ async function openBrowserTab(url) {
 			scss({
 				// Filename to write all styles to
 				output: function (styles) {
-					let styleFile = entryPart.split('.');
-					styleFile.pop();
-					styleFile.push('css');
-					fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
+					if (styles) {
+						let styleFile = entryPart.split('.');
+						styleFile.pop();
+						styleFile.push('css');
+						fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
+					}
 				},
 				// Determine if node process should be terminated on error (default: false)
 				failOnError: true,
 				// Get all style files with glob because scss plugin cannot handle them by it self
-				watch: watch ? glob.sync(path.join(testPath, '**', '*.s*ss')) : undefined,
+				watch: watch
+					? [].concat(glob.sync(path.join(testPath, '..', '*.s*ss')), glob.sync(path.join(testPath, '**', '*.s*ss')))
+					: undefined,
 				// Prefix global scss. Useful for variables and mixins.
 				// prefix: `@import "./fonts.scss";`,
 				processor: () => postcss([autoprefixer]),
@@ -293,8 +305,9 @@ async function openBrowserTab(url) {
 	const outputOptions = {
 		dir: buildDir,
 		strict: false,
+		banner: await minifyDefaultJs(defaultJs),
 		format: 'iife',
-		plugins: [terser()],
+		plugins: [testConfig.minify !== false && terser()].filter(Boolean),
 	};
 
 	const bundle = await rollup(inputOptions);
@@ -313,7 +326,6 @@ async function openBrowserTab(url) {
 			watch: {
 				buildDelay: 300,
 				exclude: [path.join(testPath, '.build', '**')],
-				include: [path.join(testPath, '**'), path.join(testPath, 'utils', '**')],
 				skipWrite: stylesOnly,
 			},
 		});

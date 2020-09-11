@@ -87,10 +87,11 @@ export default (props) => {
 
 ### Supported properties
 
-| Property |  Type  | Description                                            | Optional |
-| -------- | :----: | ------------------------------------------------------ | :------: |
-| url      | string | Web page url for the test                              |  false   |
-| entry    | string | Entry file for Rollup. Can be at least js or scss file |   true   |
+| Property |  Type   | Description                                            | Optional |
+| -------- | :-----: | ------------------------------------------------------ | :------: |
+| url      | string  | Web page url for the test                              |  false   |
+| entry    | string  | Entry file for Rollup. Can be at least js or scss file |   true   |
+| minify   | boolean | Should the bundle be minified                          |  false   |
 
 ### Example
 
