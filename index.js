@@ -1,4 +1,3 @@
-const puppeteer = require('puppeteer-core');
 const path = require('path');
 const fs = require('fs');
 const { rollup } = require('rollup');
@@ -12,8 +11,8 @@ const postcss = require('postcss');
 const glob = require('glob');
 const alias = require('@rollup/plugin-alias');
 const ejs = require('rollup-plugin-ejs');
-const babel = require('@babel/core');
-const { minify } = require('terser');
+const commonjs = require('@rollup/plugin-commonjs');
+const { openBrowserTab, initBrowser } = require('./lib/puppeteer');
 
 /**
  * Load the config for the whole testing project
@@ -35,15 +34,19 @@ if (!testPath) {
 	process.exit();
 }
 
-testPath = path.resolve(testPath);
+testPath = path.resolve(process.env.INIT_CWD, testPath);
 
 let entryFile = '';
 
-// If the test path argument is a file, use it as an entry
-if (!fs.lstatSync(testPath).isDirectory()) {
-	let testDir = path.dirname(testPath);
-	entryFile = testPath.replace(testDir, '.');
-	testPath = testDir;
+try {
+	// If the test path argument is a file, use it as an entry
+	if (!fs.lstatSync(testPath).isDirectory()) {
+		let testDir = path.dirname(testPath);
+		entryFile = testPath.replace(testDir, '.');
+		testPath = testDir;
+	}
+} catch (error) {
+	process.exit();
 }
 
 if (!fs.existsSync(testPath)) {
@@ -60,40 +63,6 @@ try {
 } catch (error) {}
 
 const watch = process.env.PROJECT_WATCH === 'true';
-
-let page = null;
-
-/**
- * Return a puppeteer page. If there's no page created then this also creates the page.
- *
- * @returns {Promise<import("puppeteer").Page>}
- */
-async function getBrowserPage() {
-	if (page) return page;
-
-	// Setup puppeteer
-	const browser = await puppeteer.launch({
-		headless: false,
-		executablePath: config.browser,
-		defaultViewport: null,
-		args: ['--start-maximized'],
-	});
-
-	page = (await browser.pages())[0];
-	if (!page) {
-		page = await browser.newPage();
-	}
-
-	page.on('close', () => {
-		process.exit();
-	});
-
-	return page;
-}
-
-let initial = true;
-let counter = 0;
-let loadListener = null;
 
 // Check & load build related data
 let testConfig;
@@ -144,113 +113,10 @@ const babelConfig = {
 	plugins: [
 		'@babel/plugin-proposal-optional-chaining',
 		'@babel/plugin-proposal-nullish-coalescing-operator',
-		['@babel/plugin-transform-react-jsx', { pragma: 'createElement' }],
+		['@babel/plugin-transform-react-jsx', { pragma: 'jsx.ce', pargmaFragment: 'jsx.cf' }],
 	],
+	exclude: /core-js/,
 };
-
-let defaultJs = config.jsx || /\.jsx$/.test(entryFile) ? fs.readFileSync('./utils/createElement.js', 'utf8') : '';
-let defautMinJs = '';
-
-/**
- * Run given JS string through babel and terser
- * @param {String} [defaultJs]
- */
-async function minifyDefaultJs(defaultJs) {
-	if (!defaultJs) {
-		return defaultJs;
-	}
-	if (defautMinJs) {
-		return defautMinJs;
-	}
-
-	const js = babel.transformSync(defaultJs, babelConfig);
-
-	defautMinJs = await minify(js.code, {
-		compress: {},
-		mangle: { toplevel: true, reserved: ['createElement', 'createFragment', 'appendChild'] },
-		output: {},
-		parse: {},
-		rename: {},
-	});
-
-	defautMinJs = defautMinJs.code;
-
-	return defautMinJs;
-}
-
-/**
- * Opens a browser tab and injects all required styles and scripts to the DOM
- * @param {String} url
- */
-async function openBrowserTab(url) {
-	const page = await getBrowserPage();
-
-	let files = [];
-	try {
-		files = fs.readdirSync(buildDir, { encoding: 'utf8' });
-	} catch (error) {
-		console.log('Cannot read build directory');
-		process.exit();
-	}
-
-	const pageTags = files.reduce((tags, file) => {
-		const fileType = file.split('.').pop();
-
-		const fileContent = fs.readFileSync(path.join(buildDir, file), 'utf8');
-
-		switch (fileType) {
-			case 'css':
-				return {
-					...tags,
-					styles: (tags.styles || '') + fileContent,
-				};
-			case 'js':
-				return {
-					...tags,
-					code: (tags.code || '') + fileContent,
-				};
-			default:
-				return tags;
-		}
-	}, {});
-
-	// Check which tags has some content. With style entries, js file is still generate on watch task for some reason.
-	const keysWithValues = Object.keys(pageTags).reduce(
-		(acc, key) => ((pageTags[key] || '').replace(/\s/gms, '') ? acc.concat(key) : acc),
-		[]
-	);
-	console.log(`#${++counter}`, initial ? 'Opening' : 'Reloading', `page "${url}"`, 'with custom:', keysWithValues);
-
-	try {
-		// Remove previous listener
-		if (loadListener) {
-			page.off('domcontentloaded', loadListener);
-		}
-
-		// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
-		loadListener = async () => {
-			try {
-				if (pageTags.styles && pageTags.styles) {
-					await page.addStyleTag({ content: pageTags.styles });
-				}
-				if (pageTags.code) {
-					await page.addScriptTag({ content: pageTags.code });
-				}
-			} catch (error) {
-				console.log(error.message);
-			}
-		};
-
-		page.on('domcontentloaded', loadListener);
-
-		await page.goto(url);
-	} catch (error) {
-		console.log(error.message);
-		process.exit();
-	}
-
-	initial = false;
-}
 
 /**
  * Async wrapper for the bundler and the bundle watcher.
@@ -264,14 +130,19 @@ async function openBrowserTab(url) {
 		process.exit();
 	}
 
+	if (watch) {
+		await initBrowser(config);
+	}
+
 	let entryPart = entryFile;
-	entryFile = path.join(testPath, entryFile);
+	entryFile = path.resolve(testPath, entryFile);
 
 	const inputOptions = {
 		input: [entryFile],
 		plugins: [
 			resolve(),
 			babelPlugin({ ...babelConfig, babelHelpers: 'bundled' }),
+			commonjs({ transformMixedEsModules: true }),
 			scss({
 				// Filename to write all styles to
 				output: function (styles) {
@@ -305,9 +176,14 @@ async function openBrowserTab(url) {
 	const outputOptions = {
 		dir: buildDir,
 		strict: false,
-		banner: await minifyDefaultJs(defaultJs),
 		format: 'iife',
-		plugins: [testConfig.minify !== false && terser()].filter(Boolean),
+		intro: 'var jsx = {}',
+		plugins: [
+			testConfig.minify !== false &&
+				terser({
+					mangle: { toplevel: true },
+				}),
+		].filter(Boolean),
 	};
 
 	const bundle = await rollup(inputOptions);
@@ -333,7 +209,7 @@ async function openBrowserTab(url) {
 		watcher.on('event', async (event) => {
 			if (event.code === 'END') {
 				await bundle.generate(outputOptions);
-				await openBrowserTab(testConfig.url);
+				await openBrowserTab(testConfig.url, buildDir, true);
 			}
 			// event.code can be one of:
 			//   START        — the watcher is (re)starting

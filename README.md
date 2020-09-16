@@ -18,6 +18,8 @@ and with a watcher for file changes `npm run watch path/to/test/folder`
 
 Command opens the test's URL in a browser and injects the built js and style files to site's DOM.
 
+Built tests can be previewed with command `npm run preview path/to/test/folder`. If the folder contains multiple entries, all of them will be opened to the same browser.
+
 # Test structure
 
 Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent's folder.
@@ -61,9 +63,10 @@ template.ejs content:
 <p><%= locals.text %></p>
 ```
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from config.json by adding `"jsx": true` or if the entry file is jsx
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib should not require any polyfills but if your code needs them you can import corejs3 files individually in `lib/polyfills.js` and import that file in your script.
 
 ```
+import '@/lib/jsx';
 import { pollQuerySelector } from '@/utils/dom';
 import tpl from './template.jsx';
 import './styles.scss';
