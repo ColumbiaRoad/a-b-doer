@@ -113,7 +113,7 @@ const babelConfig = {
 	plugins: [
 		'@babel/plugin-proposal-optional-chaining',
 		'@babel/plugin-proposal-nullish-coalescing-operator',
-		['@babel/plugin-transform-react-jsx', { pragma: 'jsx.ce', pargmaFragment: 'jsx.cf' }],
+		['@babel/plugin-transform-react-jsx', { pragma: 'jsx.ce', pragmaFrag: 'jsx.cf' }],
 	],
 	exclude: /core-js/,
 };

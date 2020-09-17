@@ -23,7 +23,7 @@ if (!testPath) {
 	process.exit();
 }
 
-testPath.testPath = path.resolve(process.env.INIT_CWD, testPath);
+testPath = path.resolve(process.env.INIT_CWD, testPath);
 
 let entryFile = '';
 
