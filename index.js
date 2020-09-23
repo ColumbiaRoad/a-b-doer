@@ -10,6 +10,7 @@ const autoprefixer = require('autoprefixer');
 const postcss = require('postcss');
 const glob = require('glob');
 const alias = require('@rollup/plugin-alias');
+const replace = require('@rollup/plugin-replace');
 const ejs = require('rollup-plugin-ejs');
 const commonjs = require('@rollup/plugin-commonjs');
 const { openBrowserTab, initBrowser } = require('./lib/puppeteer');
@@ -168,6 +169,9 @@ const babelConfig = {
 			}),
 			ejs({
 				include: ['**/*.ejs', '**/*.html'],
+			}),
+			replace({
+				'process.env.NODE_ENV': JSON.stringify('production'),
 			}),
 		],
 		watch: false,
