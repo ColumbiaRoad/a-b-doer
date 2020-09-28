@@ -68,6 +68,7 @@ JSX files are also supported but they do not support React stuff out of the box.
 ```
 import '@/lib/jsx';
 import { pollQuerySelector } from '@/utils/dom';
+import SomeSvgImage from '@/images/some-svg-image.svg';
 import tpl from './template.jsx';
 import './styles.scss';
 
@@ -80,6 +81,7 @@ export default (props) => {
 	return (
 		<div onClick={() => console.log('testing')}>
 			<h3>click me {props.test}</h3>
+			<SomeSvgImage />
 		</div>
 	);
 };

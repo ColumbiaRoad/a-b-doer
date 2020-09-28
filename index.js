@@ -14,6 +14,7 @@ const replace = require('@rollup/plugin-replace');
 const ejs = require('rollup-plugin-ejs');
 const commonjs = require('@rollup/plugin-commonjs');
 const { openBrowserTab, initBrowser } = require('./lib/puppeteer');
+const inlineSvg = require('rollup-plugin-inline-svg');
 
 /**
  * Load the config for the whole testing project
@@ -154,6 +155,7 @@ const babelConfig = {
 						fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
 					}
 				},
+				outputStyle: testConfig.minify !== false ? 'compressed' : undefined,
 				// Determine if node process should be terminated on error (default: false)
 				failOnError: true,
 				// Get all style files with glob because scss plugin cannot handle them by it self
@@ -173,6 +175,9 @@ const babelConfig = {
 			replace({
 				'process.env.NODE_ENV': JSON.stringify('production'),
 			}),
+			inlineSvg({
+				removeSVGTagAttrs: false,
+			}),
 		],
 		watch: false,
 	};
@@ -181,7 +186,7 @@ const babelConfig = {
 		dir: buildDir,
 		strict: false,
 		format: 'iife',
-		intro: 'var jsx = {}',
+		intro: 'var jsx = {};',
 		plugins: [
 			testConfig.minify !== false &&
 				terser({
@@ -199,6 +204,32 @@ const babelConfig = {
 		await bundle.write(outputOptions);
 	}
 
+	const createBundle = () => {
+		let js = '';
+		let styles = '';
+
+		try {
+			js = fs.readFileSync(path.resolve(buildDir, entryPart), 'utf8');
+			let styleFile = entryPart.split('.');
+			styleFile.pop();
+			styleFile.push('css');
+			styles = fs.readFileSync(path.resolve(buildDir, styleFile.join('.')), 'utf8');
+		} catch (error) {}
+
+		fs.writeFileSync(
+			path.resolve(buildDir, '.bundle.js'),
+			'(function(){' +
+				"var s=document.createElement('style');s.innerText='" +
+				styles.replace(/[\r\n]/g, ' ').replace(/'/g, "\\'") +
+				"';" +
+				'document.head.appendChild(s);' +
+				js +
+				'})()'
+		);
+	};
+
+	createBundle();
+
 	if (watch) {
 		const watcher = rollupWatch({
 			...inputOptions,
@@ -213,6 +244,7 @@ const babelConfig = {
 		watcher.on('event', async (event) => {
 			if (event.code === 'END') {
 				await bundle.generate(outputOptions);
+				createBundle();
 				await openBrowserTab(testConfig.url, buildDir, true);
 			}
 			// event.code can be one of:
