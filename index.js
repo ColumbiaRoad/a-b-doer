@@ -216,16 +216,19 @@ const babelConfig = {
 			styles = fs.readFileSync(path.resolve(buildDir, styleFile.join('.')), 'utf8');
 		} catch (error) {}
 
-		fs.writeFileSync(
-			path.resolve(buildDir, '.bundle.js'),
-			'(function(){' +
+		let bundle = js;
+		if (styles) {
+			bundle =
+				'(function(){' +
 				"var s=document.createElement('style');s.innerText='" +
 				styles.replace(/[\r\n]/g, ' ').replace(/'/g, "\\'") +
 				"';" +
 				'document.head.appendChild(s);' +
 				js +
-				'})()'
-		);
+				'})()';
+		}
+
+		fs.writeFileSync(path.resolve(buildDir, '.bundle.js'), bundle);
 	};
 
 	createBundle();
