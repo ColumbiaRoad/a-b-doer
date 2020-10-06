@@ -103,8 +103,11 @@ if (!indexFiles.length) {
 		if (!buildOnly) {
 			await openBrowserTab(testConfig.url, buildDir);
 		} else {
-			console.log('Test bundles built.');
-			process.exit(0);
+			console.log(entryFile.replace(process.env.INIT_CWD, ''), '\x1b[32mDone', '\x1b[0m');
 		}
 	});
+	if (!buildOnly) {
+		console.log('Test bundles built.');
+		process.exit(0);
+	}
 })();
