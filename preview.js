@@ -23,6 +23,8 @@ if (!testPath) {
 	process.exit();
 }
 
+const buildOnly = process.env.BUILD_ONLY === 'true';
+
 testPath = path.resolve(process.env.INIT_CWD, testPath);
 
 let entryFile = '';
@@ -91,11 +93,18 @@ if (!indexFiles.length) {
 }
 
 (async () => {
-	await initBrowser(config);
+	if (!buildOnly) {
+		await initBrowser(config);
+	}
 
 	indexFiles.forEach(async (entryFile) => {
 		const buildDir = path.join(path.dirname(entryFile), '.build');
 		execSync(`yarn run build ${entryFile}`);
-		await openBrowserTab(testConfig.url, buildDir);
+		if (!buildOnly) {
+			await openBrowserTab(testConfig.url, buildDir);
+		} else {
+			console.log('Test bundles built.');
+			process.exit(0);
+		}
 	});
 })();

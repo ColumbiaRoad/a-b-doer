@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "node index.js",
+    "build-all": "BUILD_ONLY=true node preview.js",
     "watch": "PROJECT_WATCH=true node index.js",
     "preview": "node preview.js"
   },
