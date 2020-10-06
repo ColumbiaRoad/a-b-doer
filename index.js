@@ -174,6 +174,9 @@ const babelConfig = {
 			}),
 			replace({
 				'process.env.NODE_ENV': JSON.stringify('production'),
+				'process.env.TEST_ID': JSON.stringify(
+					testConfig.id || path.dirname(testPath.replace(process.env.INIT_CWD, ''))
+				),
 			}),
 			inlineSvg({
 				removeSVGTagAttrs: false,

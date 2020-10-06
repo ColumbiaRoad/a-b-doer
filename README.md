@@ -46,7 +46,6 @@ In JS files ES6, imports, etc are supported and also Rollup will bundle and mini
 By default, JS supports nullish coalescing and optional chaining.
 
 If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
-
 HTML files can be imported like JS and Rollup creates a ejs template function from the file. Template can be rendered as string by calling the function, example below
 
 ```
@@ -63,23 +62,34 @@ template.ejs content:
 <p><%= locals.text %></p>
 ```
 
+Dom utils file contains helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
 JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib should not require any polyfills but if your code needs them you can import corejs3 files individually in `lib/polyfills.js` and import that file in your script.
 
 ```
 import '@/lib/jsx';
-import { pollQuerySelector } from '@/utils/dom';
+import { append, getTestID, pollQuerySelector } from '@/utils/dom';
 import SomeSvgImage from '@/images/some-svg-image.svg';
-import tpl from './template.jsx';
 import './styles.scss';
 
+import tpl from './template.jsx';
+
 pollQuerySelector('html body', (target) => {
-	target.appendChild(tpl({ test: 1 }));
+	append(target, tpl({ test: 1, id: getTestID() }));
+});
+
+// or
+
+import Tpl from './template.jsx';
+
+pollQuerySelector('html body', (target) => {
+	append(target, <Tpl test="1" id={getTestID()} />);
 });
 
 // template.jsx
 export default (props) => {
 	return (
-		<div onClick={() => console.log('testing')}>
+		<div data-o={props.id} onClick={() => console.log('testing')}>
 			<h3>click me {props.test}</h3>
 			<SomeSvgImage />
 		</div>
