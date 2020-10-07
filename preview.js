@@ -106,7 +106,7 @@ if (!indexFiles.length) {
 			console.log(entryFile.replace(process.env.INIT_CWD, ''), '\x1b[32mDone', '\x1b[0m');
 		}
 	});
-	if (!buildOnly) {
+	if (buildOnly) {
 		console.log('Test bundles built.');
 		process.exit(0);
 	}
