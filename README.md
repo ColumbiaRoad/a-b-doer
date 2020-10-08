@@ -75,7 +75,7 @@ import './styles.scss';
 import tpl from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-	append(target, tpl({ test: 1, id: getTestID() }));
+	append(tpl({ test: 1, id: getTestID() }), target);
 });
 
 // or
@@ -83,7 +83,7 @@ pollQuerySelector('html body', (target) => {
 import Tpl from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-	append(target, <Tpl test="1" id={getTestID()} />);
+	append(<Tpl test="1" id={getTestID()} />, target);
 });
 
 // template.jsx

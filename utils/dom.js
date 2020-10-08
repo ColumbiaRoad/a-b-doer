@@ -36,44 +36,50 @@ export function pollQuerySelectorAll(selector, callback, count = 5) {
 }
 
 /**
- * @param {HTMLElement} parent
  * @param {HTMLElement} child
+ * @param {HTMLElement} parent
  */
-function clearPrevious(parent, child) {
+function clearPrevious(child, parent) {
 	const id = child.getAttribute('data-o');
 	if (id) clear(parent, id);
 }
 
 /**
- * @param {HTMLElement} parent
  * @param {HTMLElement} child
+ * @param {HTMLElement} parent
+ * @returns {HTMLElement} child
  */
-export function append(parent, child) {
-	clearPrevious(parent, child);
+export function append(child, parent) {
+	clearPrevious(child, parent);
 	parent.appendChild(child);
+	return child;
 }
 
 /**
- * @param {HTMLElement} parent
  * @param {HTMLElement} child
+ * @param {HTMLElement} parent
+ * @returns {HTMLElement} child
  */
 export function prepend(parent, child) {
-	clearPrevious(parent, child);
+	clearPrevious(child, parent);
 	if (parent.firstElementChild) {
 		parent.insertBefore(child, parent.firstElementChild);
 	} else {
 		parent.appendChild(child);
 	}
+	return child;
 }
 
 /**
- * @param {HTMLElement} parent
  * @param {HTMLElement} child
+ * @param {HTMLElement} parent
  * @param {HTMLElement} before
+ * @returns {HTMLElement} child
  */
-export function insertBefore(parent, child, before) {
-	clearPrevious(parent, child);
+export function insertBefore(child, parent, before) {
+	clearPrevious(child, parent);
 	parent.insertBefore(child, before);
+	return child;
 }
 
 export function clear(target, id) {
