@@ -132,10 +132,6 @@ const babelConfig = {
 		process.exit();
 	}
 
-	if (watch) {
-		await initBrowser(config);
-	}
-
 	let entryPart = entryFile;
 	entryFile = path.resolve(testPath, entryFile);
 
@@ -198,13 +194,27 @@ const babelConfig = {
 		].filter(Boolean),
 	};
 
-	const bundle = await rollup(inputOptions);
+	let bundle;
+	let browser;
 
-	// Do not write bundle to disk if it's just a style file. CSS will be written to disk by the scss plugin.
-	if (stylesOnly) {
-		await bundle.generate(outputOptions);
-	} else {
-		await bundle.write(outputOptions);
+	try {
+		// First try to create bundle before opening the browser.
+		bundle = await rollup(inputOptions);
+
+		if (watch) {
+			browser = await initBrowser(config);
+		}
+
+		// Do not write bundle to disk if it's just a style file. CSS will be written to disk by the scss plugin.
+		if (stylesOnly) {
+			await bundle.generate(outputOptions);
+		} else {
+			await bundle.write(outputOptions);
+		}
+	} catch (error) {
+		console.log('\n\n\x1b[31m%s\x1b[0m', 'Bundle error!');
+		console.error(error.message);
+		process.exit();
 	}
 
 	const createBundle = () => {
@@ -247,11 +257,29 @@ const babelConfig = {
 			},
 		});
 
+		const page = (await browser.pages())[0];
+
 		watcher.on('event', async (event) => {
-			if (event.code === 'END') {
+			if (event.code === 'END' && bundle) {
 				await bundle.generate(outputOptions);
 				createBundle();
 				await openBrowserTab(testConfig.url, buildDir, true);
+			} else if (event.code === 'ERROR') {
+				console.log('\n\x1b[31m%s\x1b[0m', 'Bundle error!');
+				console.error(event.error.message, '\n');
+
+				if (page) {
+					page.evaluate((msg) => {
+						console.log('\n\x1b[31m%s\x1b[0m', 'Bundle error!');
+						console.warn(msg, '\n');
+					}, event.error.message);
+				}
+			} else if (event.code === 'BUNDLE_START') {
+				if (page) {
+					page.evaluate(() => {
+						console.log('\x1b[92m%s\x1b[0m', 'Source code changed. Starting bundler...');
+					});
+				}
 			}
 			// event.code can be one of:
 			//   START        — the watcher is (re)starting
