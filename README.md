@@ -2,9 +2,9 @@
 
 Create config.json to project root with the following minimum settings:
 
-```
+```json
 {
-	"browser": "<insert browser executable path here>"
+  "browser": "<insert browser executable path here>"
 }
 ```
 
@@ -48,17 +48,17 @@ By default, JS supports nullish coalescing and optional chaining.
 If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
 HTML files can be imported like JS and Rollup creates a ejs template function from the file. Template can be rendered as string by calling the function, example below
 
-```
-import tpl from './template.ejs'; 	// ./template.html is also okay
+```js
+import tpl from './template.ejs'; // ./template.html is also okay
 
 const domNode = document.createElement('div');
 
-domNode.innerHTML = tpl({text: 'Hello World'});
+domNode.innerHTML = tpl({ text: 'Hello World' });
 ```
 
 template.ejs content:
 
-```
+```html
 <p><%= locals.text %></p>
 ```
 
@@ -66,7 +66,7 @@ Dom utils file contains helpers for adding the created element to dom. Those hel
 
 JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib should not require any polyfills but if your code needs them you can import corejs3 files individually in `lib/polyfills.js` and import that file in your script.
 
-```
+```js
 import '@/lib/jsx';
 import { append, getTestID, pollQuerySelector } from '@/utils/dom';
 import SomeSvgImage from '@/images/some-svg-image.svg';
@@ -75,7 +75,7 @@ import './styles.scss';
 import tpl from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-	append(tpl({ test: 1, id: getTestID() }), target);
+  append(tpl({ test: 1, id: getTestID() }), target);
 });
 
 // or
@@ -83,19 +83,18 @@ pollQuerySelector('html body', (target) => {
 import Tpl from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-	append(<Tpl test="1" id={getTestID()} />, target);
+  append(<Tpl test="1" id={getTestID()} />, target);
 });
 
 // template.jsx
 export default (props) => {
-	return (
-		<div data-o={props.id} onClick={() => console.log('testing')}>
-			<h3>click me {props.test}</h3>
-			<SomeSvgImage />
-		</div>
-	);
+  return (
+    <div data-o={props.id} onClick={() => console.log('testing')}>
+      <h3>click me {props.test}</h3>
+      <SomeSvgImage />
+    </div>
+  );
 };
-
 ```
 
 ## buildspec.json contents
@@ -110,8 +109,30 @@ export default (props) => {
 
 ### Example
 
-```
+```json
 {
-	"url": "https://www.columbiaroad.com"
+  "url": "https://www.columbiaroad.com"
+}
+```
+
+## config.json contents
+
+### Supported properties
+
+| Property    |  Type  | Description                                 | Optional |
+| ----------- | :----: | ------------------------------------------- | :------: |
+| browser     | string | Path to browser excutable                   |  false   |
+| userDataDir | string | User data directory for puppeteer chromium. |   true   |
+
+You can e.g. copy you bookmarks to file < userDataDir >/Default/Bookmark
+
+You should add userData folder to your gitignore because it will be populated with Chromium profile stuff
+
+### Example
+
+```json
+{
+  "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "userDataDir": "./puppeteer"
 }
 ```
