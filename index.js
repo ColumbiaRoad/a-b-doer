@@ -13,7 +13,7 @@ const alias = require('@rollup/plugin-alias');
 const replace = require('@rollup/plugin-replace');
 const ejs = require('rollup-plugin-ejs');
 const commonjs = require('@rollup/plugin-commonjs');
-const { openBrowserTab, initBrowser } = require('./lib/puppeteer');
+const { openBrowserTab, initBrowser, getBrowserPage } = require('./lib/puppeteer');
 const inlineSvg = require('rollup-plugin-inline-svg');
 
 /**
@@ -257,7 +257,7 @@ const babelConfig = {
 			},
 		});
 
-		const page = (await browser.pages())[0];
+		const page = await getBrowserPage(true);
 
 		watcher.on('event', async (event) => {
 			if (event.code === 'END' && bundle) {

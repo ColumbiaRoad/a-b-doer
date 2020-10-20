@@ -101,7 +101,7 @@ if (!indexFiles.length) {
 		const buildDir = path.join(path.dirname(entryFile), '.build');
 		execSync(`yarn run build ${entryFile}`);
 		if (!buildOnly) {
-			await openBrowserTab(testConfig.url, buildDir);
+			await openBrowserTab(testConfig.url, buildDir, indexFiles.length === 1);
 		} else {
 			console.log(entryFile.replace(process.env.INIT_CWD, ''), '\x1b[32mDone', '\x1b[0m');
 		}
