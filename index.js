@@ -5,10 +5,9 @@ const rollupWatch = require('rollup').watch;
 const resolve = require('@rollup/plugin-node-resolve').default;
 const babelPlugin = require('@rollup/plugin-babel').default;
 const { terser } = require('rollup-plugin-terser');
-const scss = require('rollup-plugin-scss');
+const styles = require('rollup-plugin-styles');
+const stringHash = require('string-hash');
 const autoprefixer = require('autoprefixer');
-const postcss = require('postcss');
-const glob = require('glob');
 const alias = require('@rollup/plugin-alias');
 const replace = require('@rollup/plugin-replace');
 const ejs = require('rollup-plugin-ejs');
@@ -102,6 +101,10 @@ if (!entryFile) {
 	}
 }
 
+testConfig = { ...config, ...testConfig };
+
+const minify = testConfig.minify !== false;
+
 const babelConfig = {
 	babelrc: false,
 	presets: [
@@ -135,32 +138,33 @@ const babelConfig = {
 	let entryPart = entryFile;
 	entryFile = path.resolve(testPath, entryFile);
 
+	let styleFile = entryPart.split('.');
+	styleFile.pop();
+	styleFile.push('css');
+	styleFile = styleFile.join('.');
+
 	const inputOptions = {
 		input: [entryFile],
 		plugins: [
 			resolve(),
 			babelPlugin({ ...babelConfig, babelHelpers: 'bundled' }),
 			commonjs({ transformMixedEsModules: true }),
-			scss({
-				// Filename to write all styles to
-				output: function (styles) {
-					if (styles) {
-						let styleFile = entryPart.split('.');
-						styleFile.pop();
-						styleFile.push('css');
-						fs.writeFileSync(path.resolve(buildDir, styleFile.join('.')), styles);
-					}
-				},
-				outputStyle: testConfig.minify !== false ? 'compressed' : undefined,
-				// Determine if node process should be terminated on error (default: false)
-				failOnError: true,
-				// Get all style files with glob because scss plugin cannot handle them by it self
-				watch: watch
-					? [].concat(glob.sync(path.join(testPath, '..', '*.s*ss')), glob.sync(path.join(testPath, '**', '*.s*ss')))
-					: undefined,
-				// Prefix global scss. Useful for variables and mixins.
-				// prefix: `@import "./fonts.scss";`,
-				processor: () => postcss([autoprefixer]),
+			styles({
+				mode: ['extract'],
+				minimize: minify,
+				modules:
+					testConfig.modules !== false
+						? {
+								generateScopedName: minify
+									? (name, file) => {
+											const parentPath = path.dirname(path.dirname(file));
+											file = file.replace(parentPath, '');
+											return 't' + stringHash(file).toString(36).substr(0, 4) + '_' + name;
+									  }
+									: 't[name]_[local]__[hash:4]',
+						  }
+						: undefined,
+				plugins: [autoprefixer],
 			}),
 			alias({
 				entries: [{ find: /^@\/(.*)/, replacement: path.join(__dirname, '$1') }],
@@ -183,11 +187,12 @@ const babelConfig = {
 
 	const outputOptions = {
 		dir: buildDir,
+		assetFileNames: path.basename(styleFile),
 		strict: false,
 		format: 'iife',
 		intro: 'var jsx = {};',
 		plugins: [
-			testConfig.minify !== false &&
+			minify &&
 				terser({
 					mangle: { toplevel: true },
 				}),
@@ -195,14 +200,13 @@ const babelConfig = {
 	};
 
 	let bundle;
-	let browser;
 
 	try {
 		// First try to create bundle before opening the browser.
 		bundle = await rollup(inputOptions);
 
 		if (watch) {
-			browser = await initBrowser(config);
+			browser = await initBrowser(testConfig);
 		}
 
 		// Do not write bundle to disk if it's just a style file. CSS will be written to disk by the scss plugin.

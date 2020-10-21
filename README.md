@@ -99,19 +99,23 @@ export default (props) => {
 
 ## buildspec.json contents
 
+These settings can also be used to override settings from global config.
+
 ### Supported properties
 
 | Property |  Type   | Description                                            | Optional |
 | -------- | :-----: | ------------------------------------------------------ | :------: |
 | url      | string  | Web page url for the test                              |  false   |
 | entry    | string  | Entry file for Rollup. Can be at least js or scss file |   true   |
-| minify   | boolean | Should the bundle be minified                          |  false   |
+| minify   | boolean | Should the bundle be minified (default=true)           |  false   |
+| modules  | boolean | SCSS module support (default=true)                     |  false   |
 
 ### Example
 
 ```json
 {
-  "url": "https://www.columbiaroad.com"
+  "url": "https://www.columbiaroad.com",
+  "modules": false
 }
 ```
 
@@ -126,7 +130,7 @@ export default (props) => {
 
 You can e.g. copy you bookmarks to file < userDataDir >/Default/Bookmark
 
-You should add userData folder to your gitignore because it will be populated with Chromium profile stuff
+You should add userData folder to your gitignore because it will be populated with Chromium profile stuff. You could also set global buildspec options here.
 
 ### Example
 
