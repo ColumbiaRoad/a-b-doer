@@ -17,6 +17,57 @@ export function pollQuerySelector(selector, callback, count = 5) {
 }
 
 /**
+ * Waits x milliseconds for given selector to be visible in the DOM.
+ *
+ * @param {String} selector Element selector string
+ * @param {Number} [wait] default 5 seconds
+ * @returns {Promise<HTMLElement>}
+ */
+export function waitElement(selector, wait = 5000) {
+	return new Promise((resolve, reject) => {
+		const t = setTimeout(reject, wait + 10);
+		pollQuerySelector(
+			selector,
+			(element) => {
+				clearTimeout(t);
+				resolve(element);
+			},
+			wait / 100
+		);
+	});
+}
+
+/**
+ * @typedef {any} WaitedValue
+ */
+/**
+ * Waits x milliseconds for given function to return true.
+ *
+ * @param {() => WaitedValue} func
+ * @param {Number} [wait]
+ * @returns {Promise<WaitedValue>}
+ */
+export function waitFor(func, wait = 5000) {
+	return new Promise((resolve, reject) => {
+		const t = setTimeout(reject, wait + 10);
+
+		const _func = (count) => {
+			const res = func();
+			if (res) {
+				clearTimeout(t);
+				resolve(res);
+			} else if (count > 0) {
+				setTimeout(function () {
+					_func(count - 1);
+				}, 100);
+			}
+		};
+
+		_func(wait / 100);
+	});
+}
+
+/**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * This returns all elements that matches the selector.
  *

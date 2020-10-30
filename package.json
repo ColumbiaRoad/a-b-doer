@@ -24,6 +24,7 @@
     "@rollup/plugin-commonjs": "^15.0.0",
     "@rollup/plugin-node-resolve": "^9.0.0",
     "autoprefixer": "^9.8.6",
+    "babel-plugin-transform-async-to-promises": "^0.8.15",
     "clsx": "^1.1.1",
     "core-js": "3",
     "postcss-modules": "^3.2.2",
@@ -37,7 +38,7 @@
   },
   "browserslist": [
     "> 1%",
-    "last 2 versions",
-    "ie >= 11"
+    "defaults",
+    "ie 11"
   ]
 }
