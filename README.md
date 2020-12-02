@@ -97,18 +97,77 @@ export default (props) => {
 };
 ```
 
-## buildspec.json contents
+Test templates with `preact: true`
+
+```js
+import { render } from 'preact';
+import { useState } from 'preact/hooks';
+import clsx from 'clsx';
+import styles from './styles.scss';
+
+const MyComponent = (props) => {
+  const { val } = props;
+  const [value, setValue] = useState(val);
+
+  return (
+    <div class={{ [styles.active]: value > 1 }}>
+      <button onClick={() => setValue(value + 1)}>Increment</button>
+    </div>
+  );
+};
+
+pollQuerySelector('html #app', (target) => {
+  render(<MyComponent val={1} />, target);
+});
+```
+
+## buildspec.json usage
 
 These settings can also be used to override settings from global config.
 
-### Supported properties
+### url
 
-| Property |  Type   | Description                                            | Optional |
-| -------- | :-----: | ------------------------------------------------------ | :------: |
-| url      | string  | Web page url for the test                              |  false   |
-| entry    | string  | Entry file for Rollup. Can be at least js or scss file |   true   |
-| minify   | boolean | Should the bundle be minified (default=true)           |  false   |
-| modules  | boolean | SCSS module support (default=true)                     |  false   |
+Type `string`
+
+Web page url for the test.
+
+### entry
+
+Type `string` (optional)
+
+Entry file for Rollup. Can be at least js or scss file.
+
+### minify
+
+Type `boolean` (optional)
+
+Default `true`
+
+Should the bundle be minified.
+
+### modules
+
+Type `boolean` (optional)
+
+Default `true`
+
+CSS/SCSS module support.
+
+### preact
+
+Type `boolean` (optional)
+
+Default `false`
+
+Should test script use preact? If true, 'h' will be imported automatically.
+
+### chunkImages
+
+Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
+
+Default `true` (true=150)
+
+Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
 
 ### Example
 
@@ -119,14 +178,19 @@ These settings can also be used to override settings from global config.
 }
 ```
 
-## config.json contents
+## config.json usage
 
-### Supported properties
+### browser
 
-| Property    |  Type  | Description                                 | Optional |
-| ----------- | :----: | ------------------------------------------- | :------: |
-| browser     | string | Path to browser excutable                   |  false   |
-| userDataDir | string | User data directory for puppeteer chromium. |   true   |
+Type `string`
+
+Path to browser excutable.
+
+### userDataDir
+
+Type `string` (optional)
+
+User data directory for puppeteer chromium.
 
 You can e.g. copy you bookmarks to file < userDataDir >/Default/Bookmark
 
