@@ -16,16 +16,22 @@ const { openBrowserTab, initBrowser, getBrowserPage } = require('./lib/puppeteer
 const inlineSvg = require('rollup-plugin-inline-svg');
 const svgImport = require('rollup-plugin-svg-hyperscript');
 const image = require('@rollup/plugin-image');
-const chunkImages = require('./lib/plugins/rollup-chunk-images');
+const chunkImage = require('./lib/plugins/rollup-chunk-image');
 
 /**
  * Load the config for the whole testing project
  */
-let config = {};
+let config = {
+	chunkImages: true,
+	minify: true,
+	modules: true,
+	preact: false,
+};
+
 try {
 	const configPath = path.resolve(__dirname, 'config.json');
 	if (fs.existsSync(configPath)) {
-		config = require(configPath);
+		Object.assign(config, require(configPath));
 	}
 } catch (error) {
 	console.log('./config.json file is missing');
@@ -106,7 +112,7 @@ if (!entryFile) {
 
 testConfig = { ...config, ...testConfig };
 
-const minify = testConfig.minify !== false;
+const { minify, preact, modules, id, chunkImages } = testConfig;
 
 const babelConfig = {
 	babelrc: false,
@@ -125,9 +131,9 @@ const babelConfig = {
 		'@babel/plugin-proposal-nullish-coalescing-operator',
 		[
 			'@babel/plugin-transform-react-jsx',
-			testConfig.preact ? { pragma: 'h', pragmaFrag: 'Fragment' } : { pragma: 'jsx.ce', pragmaFrag: 'jsx.cf' },
+			preact ? { pragma: 'h', pragmaFrag: 'Fragment' } : { pragma: 'jsx.ce', pragmaFrag: 'jsx.cf' },
 		],
-		testConfig.preact && [
+		preact && [
 			'@emotion/babel-plugin-jsx-pragmatic',
 			{
 				module: 'preact',
@@ -169,7 +175,7 @@ const babelConfig = {
 				mode: ['extract', path.basename(styleFile)],
 				minimize: minify,
 				modules:
-					testConfig.modules !== false
+					modules !== false
 						? {
 								generateScopedName: minify
 									? (name, file) => {
@@ -202,16 +208,15 @@ const babelConfig = {
 				include: ['**/*.ejs', '**/*.html'],
 			}),
 			replace({
+				'process.env.preact': !!preact,
 				'process.env.NODE_ENV': JSON.stringify('production'),
-				'process.env.TEST_ID': JSON.stringify(
-					testConfig.id || path.dirname(testPath.replace(process.env.INIT_CWD, ''))
-				),
+				'process.env.TEST_ID': JSON.stringify(id || path.dirname(testPath.replace(process.env.INIT_CWD, ''))),
 			}),
 			image({
 				exclude: ['**/*.svg'],
 			}),
-			chunkImages(testConfig.chunkImages),
-			testConfig.preact
+			chunkImage(chunkImages),
+			preact
 				? svgImport({
 						importDeclaration: 'import {h} from "preact"',
 						pragma: 'h',
@@ -239,7 +244,7 @@ const babelConfig = {
 						{
 							mangle: { toplevel: true },
 						},
-						testConfig.chunkImages && {
+						chunkImages && {
 							compress: {
 								evaluate: false,
 							},
