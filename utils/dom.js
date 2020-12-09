@@ -93,6 +93,9 @@ export function pollQuerySelectorAll(selector, callback, count = 5) {
 function clearPrevious(child, parent) {
 	const id = child.getAttribute('data-o');
 	if (id) clear(parent, id);
+	else {
+		child.setAttribute('data-o', getTestID());
+	}
 }
 
 /**
@@ -111,7 +114,7 @@ export function append(child, parent) {
  * @param {HTMLElement} parent
  * @returns {HTMLElement} child
  */
-export function prepend(parent, child) {
+export function prepend(child, parent) {
 	clearPrevious(child, parent);
 	if (parent.firstElementChild) {
 		parent.insertBefore(child, parent.firstElementChild);
