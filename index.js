@@ -129,17 +129,20 @@ const babelConfig = {
 		'@babel/plugin-proposal-class-properties',
 		'@babel/plugin-proposal-optional-chaining',
 		'@babel/plugin-proposal-nullish-coalescing-operator',
+		['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: preact ? 'Fragment' : 'hf' }],
 		[
-			'@babel/plugin-transform-react-jsx',
-			preact ? { pragma: 'h', pragmaFrag: 'Fragment' } : { pragma: 'jsx.ce', pragmaFrag: 'jsx.cf' },
-		],
-		preact && [
 			'@emotion/babel-plugin-jsx-pragmatic',
-			{
-				module: 'preact',
-				import: 'h, Fragment',
-				export: 'h, Fragment',
-			},
+			preact
+				? {
+						module: 'preact',
+						import: 'h, Fragment',
+						export: 'h, Fragment',
+				  }
+				: {
+						module: '@/lib/jsx',
+						import: 'h, hf',
+						export: 'h, hf',
+				  },
 		],
 	].filter(Boolean),
 	exclude: /core-js/,
@@ -236,7 +239,6 @@ const babelConfig = {
 		format: 'iife',
 		exports: 'named',
 		name: path.basename(entryFile).split('.')[0],
-		intro: 'var jsx = {};',
 		plugins: [
 			minify &&
 				terser(
