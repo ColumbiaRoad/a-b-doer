@@ -64,32 +64,43 @@ template.ejs content:
 
 Dom utils file contains helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib should not require any polyfills but if your code needs them you can import corejs3 files individually in `lib/polyfills.js` and import that file in your script.
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills. If your code needs some other polyfills you can import corejs3 files individually in `lib/polyfills.js` which is imported by the jsx lib.
 
 ```js
 import '@/lib/jsx';
-import { append, getTestID, pollQuerySelector } from '@/utils/dom';
+import { append, pollQuerySelector } from '@/utils/dom';
 import SomeSvgImage from '@/images/some-svg-image.svg';
 import './styles.scss';
 
-import tpl from './template.jsx';
+import { Tpl } from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-  append(tpl({ test: 1, id: getTestID() }), target);
+  append(Tpl({ test: 1 }), target);
 });
 
 // or
 
-import Tpl from './template.jsx';
+import { Tpl } from './template.jsx';
 
 pollQuerySelector('html body', (target) => {
-  append(<Tpl test="1" id={getTestID()} />, target);
+  const child = target.querySelector('.child');
+  const AttrChild = target.querySelector('.attr-child');
+
+  append(
+    <Tpl test="1">
+      {/* without extra attributes */}
+      {child}
+      {/* with altered attributes */}
+      <AttrChild class="new-class" />
+    </Tpl>,
+    target
+  );
 });
 
 // template.jsx
-export default (props) => {
+export const Tpl = (props) => {
   return (
-    <div data-o={props.id} onClick={() => console.log('testing')}>
+    <div onClick={() => console.log('testing')}>
       <h3>click me {props.test}</h3>
       <SomeSvgImage />
     </div>
@@ -168,6 +179,16 @@ Type `boolean | number | { size: number, include: Array<string | RegExp> | strin
 Default `true` (true=150)
 
 Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
+
+### id
+
+Type `string` (optional)
+
+Default `t-xxxxxxxx` (hash from test folder)
+
+ID which is returned from getTestID() call. Is automatically used in data-o attributes.
+
+---
 
 ### Example
 

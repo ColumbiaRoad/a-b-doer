@@ -1,3 +1,5 @@
+import { Promise } from '@/lib/polyfills';
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  *
@@ -146,22 +148,6 @@ export function clear(target, id) {
 	}
 }
 
-function hashf(s) {
-	let hash = 0;
-	let strlen = s.length;
-
-	if (strlen === 0) {
-		return hash;
-	}
-	for (let i = 0; i < strlen; i++) {
-		let c = s.charCodeAt(i);
-		hash = (hash << 5) - hash + c;
-		hash = hash & hash; // Convert to 32bit integer
-	}
-	return hash;
-}
-
 export function getTestID() {
-	let id = process.env.TEST_ID;
-	return id ? 't' + hashf(id).toString(36) : 't-default';
+	return process.env.TEST_ID;
 }

@@ -213,7 +213,9 @@ const babelConfig = {
 			replace({
 				'process.env.preact': !!preact,
 				'process.env.NODE_ENV': JSON.stringify('production'),
-				'process.env.TEST_ID': JSON.stringify(id || path.dirname(testPath.replace(process.env.INIT_CWD, ''))),
+				'process.env.TEST_ID': JSON.stringify(
+					id || 't' + (hashf(path.dirname(testPath.replace(process.env.INIT_CWD, ''))).toString(36) || '-default')
+				),
 			}),
 			image({
 				exclude: ['**/*.svg'],
@@ -354,3 +356,18 @@ const babelConfig = {
 		});
 	}
 })();
+
+function hashf(s) {
+	let hash = 0;
+	let strlen = s.length;
+
+	if (strlen === 0) {
+		return hash;
+	}
+	for (let i = 0; i < strlen; i++) {
+		let c = s.charCodeAt(i);
+		hash = (hash << 5) - hash + c;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return hash;
+}
