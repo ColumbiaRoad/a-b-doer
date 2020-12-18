@@ -5,21 +5,40 @@ import { Promise } from '@/lib/polyfills';
  *
  * @param {String} selector Element selector string
  * @param {(targetNode: HTMLElement) => void} callback
- * @param {Number} [count] default 5
+ * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelector(selector, callback, count = 5) {
+export function pollQuerySelector(selector, callback, wait = 1000) {
 	var el = document.querySelector(selector);
 	if (el) {
 		callback(el);
-	} else if (count > 0) {
+	} else if (wait > 0) {
 		setTimeout(function () {
-			pollQuerySelector(selector, callback, count - 1);
+			pollQuerySelector(selector, callback, wait - 100);
 		}, 100);
 	}
 }
 
 /**
- * Waits x milliseconds for given selector to be visible in the DOM.
+ * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
+ * This returns all elements that matches the selector.
+ *
+ * @param {String} selector Element selector string
+ * @param {(targetNodes: HTMLElement[]) => void} callback
+ * @param {Number} [wait] how many milliseconds to poll, default 1000
+ */
+export function pollQuerySelectorAll(selector, callback, wait = 1000) {
+	var el = document.querySelectorAll(selector);
+	if (el) {
+		callback(Array.from(el));
+	} else if (wait > 0) {
+		setTimeout(function () {
+			pollQuerySelectorAll(selector, callback, wait - 100);
+		}, 100);
+	}
+}
+
+/**
+ * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  *
  * @param {String} selector Element selector string
  * @param {Number} [wait] default 5 seconds
@@ -34,7 +53,28 @@ export function waitElement(selector, wait = 5000) {
 				clearTimeout(t);
 				resolve(element);
 			},
-			wait / 100
+			wait
+		);
+	});
+}
+
+/**
+ * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
+ *
+ * @param {String} selector Element selector string
+ * @param {Number} [wait] default 5 seconds
+ * @returns {Promise<HTMLElement[]>}
+ */
+export function waitElements(selector, wait = 5000) {
+	return new Promise((resolve, reject) => {
+		const t = setTimeout(reject, wait + 10);
+		pollQuerySelectorAll(
+			selector,
+			(element) => {
+				clearTimeout(t);
+				resolve(element);
+			},
+			wait
 		);
 	});
 }
@@ -67,25 +107,6 @@ export function waitFor(func, wait = 5000) {
 
 		_func(wait / 100);
 	});
-}
-
-/**
- * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
- * This returns all elements that matches the selector.
- *
- * @param {String} selector Element selector string
- * @param {(targetNodes: HTMLElement[]) => void} callback
- * @param {Number} [count] default 5
- */
-export function pollQuerySelectorAll(selector, callback, count = 5) {
-	var el = document.querySelectorAll(selector);
-	if (el) {
-		callback(Array.from(el));
-	} else if (count > 0) {
-		setTimeout(function () {
-			pollQuerySelectorAll(selector, callback, count - 1);
-		}, 100);
-	}
 }
 
 /**

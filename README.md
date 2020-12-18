@@ -48,6 +48,8 @@ By default, JS supports nullish coalescing and optional chaining.
 If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
 HTML files can be imported like JS and Rollup creates a ejs template function from the file. Template can be rendered as string by calling the function, example below
 
+## Usage examples, ejs templates
+
 ```js
 import tpl from './template.ejs'; // ./template.html is also okay
 
@@ -64,10 +66,11 @@ template.ejs content:
 
 Dom utils file contains helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support can be enabled from the test file by importing the 'jsx' lib. JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills. If your code needs some other polyfills you can import corejs3 files individually in `lib/polyfills.js` which is imported by the jsx lib.
+## Usage examples, jsx templates
+
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support is done by custom lib but you don't have to import it because it is done automatically (if preact option is not set). JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills. If your code needs some other polyfills you can import corejs3 files individually in `lib/polyfills.js` which is imported by the jsx lib.
 
 ```js
-import '@/lib/jsx';
 import { append, pollQuerySelector } from '@/utils/dom';
 import SomeSvgImage from '@/images/some-svg-image.svg';
 import './styles.scss';
@@ -105,6 +108,169 @@ export const Tpl = (props) => {
       <SomeSvgImage />
     </div>
   );
+};
+```
+
+## Utility functions
+
+### pollQuerySelector
+
+Type `(selector: string, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
+
+Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
+
+### pollQuerySelectorAll
+
+Type `(selector: string, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
+
+Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
+
+### waitElement
+
+Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement>`
+
+Returns a promise which will be resolved if given selector is found. It runs the dom query every 100ms until the timeout (ms) has passed.
+
+Note: polyfills Promise automatically
+
+```js
+import { waitElement } from '@/utils/dom';
+
+async () => {
+  // Wait 10 seconds for window variable to be set.
+  try {
+    const node = await waitElement('.foo');
+    console.log(node.attributes, node.parentElement);
+  } catch (e) {
+    // Do nothing.
+  }
+};
+
+// or without async/await
+waitElement('.foo')
+  .then(function (node) {
+    console.log(node.attributes, node.parentElement);
+  })
+  .catch(function () {
+    // Do nothing.
+  });
+```
+
+### waitElements
+
+Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement[]>`
+
+Same as waitElement, but resolved value is always an array.
+
+Note: polyfills Promise automatically
+
+```js
+import { waitElements } from '@/utils/dom';
+
+async () => {
+  // Wait 10 seconds for window variable to be set.
+  try {
+    // Always an array
+    const nodes = await waitElements('.foo');
+    nodes.forEach((node) => {
+      console.log(node.attributes, node.parentElement);
+    });
+  } catch (e) {
+    // Do nothing.
+  }
+};
+
+// or without async/await
+waitElements('.foo')
+  .then(function (nodes) {
+    nodes.forEach((node) => {
+      console.log(node.attributes, node.parentElement);
+    });
+  })
+  .catch(function () {
+    // Do nothing.
+  });
+```
+
+### waitFor
+
+Type `(() => any, timeout?: number = 5000) => Promise<any>`
+
+Returns a promise which will be resolved if given function returns truthy value. It calls the function every 100ms until the timeout (ms) has passed.
+
+Note: polyfills Promise automatically
+
+```js
+import { waitFor } from '@/utils/dom';
+
+async () => {
+  // Wait 10 seconds for window variable to be set.
+  try {
+    const someLazyVar = await waitFor(() => window.someLazyVar, 10000);
+  } catch (e) {
+    console.log('No var');
+  }
+
+  // Do something with the lazy variable
+  console.log(someLazyVar);
+};
+
+// or without async/await
+waitFor(() => window.someLazyVar, 10000)
+  .then(function (someLazyVar) {
+    console.log(someLazyVar);
+  })
+  .catch(function () {
+    console.log('No var');
+  });
+```
+
+### ref (JSX only)
+
+Type `() => { current: null }`
+
+Ref function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
+
+```js
+import { ref } from '@/lib/jsx';
+import { append } from '@/utils/dom';
+
+const node = ref();
+append(
+  <div ref={node}>
+    <Sub node={node} />
+  </div>,
+  document.body
+);
+```
+
+### hook (JSX only)
+
+Hook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
+
+```js
+import { ref, hook } from '@/lib/jsx';
+import { append } from '@/utils/dom';
+
+const node = ref();
+append(
+  <div ref={node}>
+    <Sub node={node} />
+  </div>,
+  document.body
+);
+
+const Sub = (props) => {
+  // node.current is null here
+  const { node } = props;
+
+  // Same as setTimeout without the timeout
+  hook(() => {
+    // Do something with the node
+    console.log(node.current); // HTMLDivElement
+  });
+
+  return <span>Something</span>;
 };
 ```
 
@@ -170,7 +336,7 @@ Type `boolean` (optional)
 
 Default `false`
 
-Should test script use preact? If true, 'h' will be imported automatically.
+Should test script use preact? If true, 'h' will be imported automatically. Bundle size is approximately 5kb bigger (without preact/compat)
 
 ### chunkImages
 
