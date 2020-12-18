@@ -136,7 +136,7 @@ Note: polyfills Promise automatically
 ```js
 import { waitElement } from '@/utils/dom';
 
-async () => {
+(async () => {
   // Wait 10 seconds for window variable to be set.
   try {
     const node = await waitElement('.foo');
@@ -144,7 +144,7 @@ async () => {
   } catch (e) {
     // Do nothing.
   }
-};
+})();
 
 // or without async/await
 waitElement('.foo')
@@ -167,7 +167,7 @@ Note: polyfills Promise automatically
 ```js
 import { waitElements } from '@/utils/dom';
 
-async () => {
+(async () => {
   // Wait 10 seconds for window variable to be set.
   try {
     // Always an array
@@ -178,7 +178,7 @@ async () => {
   } catch (e) {
     // Do nothing.
   }
-};
+})();
 
 // or without async/await
 waitElements('.foo')
@@ -203,7 +203,7 @@ Note: polyfills Promise automatically
 ```js
 import { waitFor } from '@/utils/dom';
 
-async () => {
+(async () => {
   // Wait 10 seconds for window variable to be set.
   try {
     const someLazyVar = await waitFor(() => window.someLazyVar, 10000);
@@ -213,7 +213,7 @@ async () => {
 
   // Do something with the lazy variable
   console.log(someLazyVar);
-};
+})();
 
 // or without async/await
 waitFor(() => window.someLazyVar, 10000)
