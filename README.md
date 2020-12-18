@@ -111,6 +111,30 @@ export const Tpl = (props) => {
 };
 ```
 
+Test templates with `preact: true`
+
+```js
+import { render } from 'preact';
+import { useState } from 'preact/hooks';
+import clsx from 'clsx';
+import styles from './styles.scss';
+
+const MyComponent = (props) => {
+  const { val } = props;
+  const [value, setValue] = useState(val);
+
+  return (
+    <div class={{ [styles.active]: value > 1 }}>
+      <button onClick={() => setValue(value + 1)}>Increment</button>
+    </div>
+  );
+};
+
+pollQuerySelector('html #app', (target) => {
+  render(<MyComponent val={1} />, target);
+});
+```
+
 ## Utility functions
 
 ### pollQuerySelector
@@ -272,30 +296,6 @@ const Sub = (props) => {
 
   return <span>Something</span>;
 };
-```
-
-Test templates with `preact: true`
-
-```js
-import { render } from 'preact';
-import { useState } from 'preact/hooks';
-import clsx from 'clsx';
-import styles from './styles.scss';
-
-const MyComponent = (props) => {
-  const { val } = props;
-  const [value, setValue] = useState(val);
-
-  return (
-    <div class={{ [styles.active]: value > 1 }}>
-      <button onClick={() => setValue(value + 1)}>Increment</button>
-    </div>
-  );
-};
-
-pollQuerySelector('html #app', (target) => {
-  render(<MyComponent val={1} />, target);
-});
 ```
 
 ## buildspec.json usage
