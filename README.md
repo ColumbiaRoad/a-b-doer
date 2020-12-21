@@ -1,4 +1,4 @@
-![alt text](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
+![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
 Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser which outputs real DOM nodes. You can enable preact for more advanced tests with states etc. but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize)
 
@@ -18,13 +18,13 @@ Browser executable path is probably in macOs "/Applications/Google Chrome.app/Co
 
 # Usage
 
-Tests can be run with command `npm run build path/to/test/folder`
+Tests can be developed with command `npm run watch path/to/test/folder`. Command opens the test's URL in a browser and injects the built js and style files to site's DOM. This command also starts a file watcher for the folder and refreshes the browser on file changes.
 
-and with a watcher for file changes `npm run watch path/to/test/folder`
+If you want to just build the test without opening the browser `npm run build path/to/test/folder`
 
-Command opens the test's URL in a browser and injects the built js and style files to site's DOM.
+Tests can be previewed with command `npm run preview path/to/test/folder`. If the folder contains multiple entries, all of them will be opened to the same browser.
 
-Built tests can be previewed with command `npm run preview path/to/test/folder`. If the folder contains multiple entries, all of them will be opened to the same browser.
+You can build all tests from a folder with command `npm run build-all path/to/test/folder`
 
 # Test structure
 
@@ -237,12 +237,11 @@ import { waitFor } from '@/utils/dom';
   // Wait 10 seconds for window variable to be set.
   try {
     const someLazyVar = await waitFor(() => window.someLazyVar, 10000);
+    // Do something with the lazy variable
+    console.log(someLazyVar);
   } catch (e) {
     console.log('No var');
   }
-
-  // Do something with the lazy variable
-  console.log(someLazyVar);
 })();
 
 // or without async/await
@@ -362,7 +361,7 @@ ID which is returned from getTestID() call. Is automatically used in data-o attr
 
 ---
 
-### Example
+### Example buildspec.json
 
 ```json
 {
@@ -372,6 +371,8 @@ ID which is returned from getTestID() call. Is automatically used in data-o attr
 ```
 
 ## config.json usage
+
+Global config file for all tests. This is a great place to configure all global buildspec options.
 
 ### browser
 
@@ -387,9 +388,9 @@ User data directory for puppeteer chromium.
 
 You can e.g. copy you bookmarks to file < userDataDir >/Default/Bookmark
 
-You should add userData folder to your gitignore because it will be populated with Chromium profile stuff. You could also set global buildspec options here.
+You should add userData folder to your gitignore because it will be populated with Chromium profile stuff.
 
-### Example
+### Example config.json
 
 ```json
 {
