@@ -3,3 +3,5 @@ config.json
 *.lock
 node_modules
 testing
+.test
+.browserslistrc

@@ -47,7 +47,7 @@ tests/
 
 ## Test files
 
-In JS files ES6, imports, etc are supported and also Rollup will bundle and minify them. Styles should be created with SCSS/SASS syntax (imports are supported as well). If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Rollup will handle it.
+In JS files ES6, imports, etc are supported and also Rollup will bundle and minify them. Styles can be created with SCSS/SASS/CSS/LESS (imports are supported as well). If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Rollup will handle it.
 
 By default, JS supports nullish coalescing and optional chaining.
 
@@ -358,6 +358,14 @@ Type `string` (optional)
 Default `t-xxxxxxxx` (hash from test folder)
 
 ID which is returned from getTestID() call. Is automatically used in data-o attributes.
+
+### windowSize
+
+Type `Array<number>` (optional)
+
+Default `[1920, 1080]`
+
+Window dimension in pixels (width, height).
 
 ---
 
