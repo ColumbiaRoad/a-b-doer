@@ -1,4 +1,4 @@
-import { Promise } from '@/lib/polyfills';
+import { Promise } from '../polyfills';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.

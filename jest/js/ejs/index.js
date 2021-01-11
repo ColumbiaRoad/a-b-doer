@@ -1,4 +1,4 @@
-import { pollQuerySelector } from '@/utils/dom';
+import { pollQuerySelector } from 'a-b-doer';
 import ejsTpl from './template.ejs';
 import htmlTpl from './template.html';
 import './styles.scss';

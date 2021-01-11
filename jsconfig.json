@@ -2,6 +2,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "module": "commonjs",
+    "jsx": "react",
     "paths": {
       "@/*": [
         "./*"

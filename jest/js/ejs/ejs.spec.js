@@ -1,4 +1,4 @@
-const { bundler, openPage } = require('../../../lib/bundler');
+const { bundler, openPage } = require('../../../dist/lib/bundler');
 
 const config = { ...global.configDefaults, testPath: __dirname };
 

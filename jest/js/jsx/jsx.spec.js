@@ -1,4 +1,4 @@
-const { bundler, openPage } = require('../../../lib/bundler');
+const { bundler, openPage } = require('../../../dist/lib/bundler');
 
 const config = { ...global.configDefaults, testPath: __dirname };
 
@@ -10,7 +10,7 @@ describe('JSX', () => {
 		page = await openPage(output);
 		await page.waitForTimeout(500);
 		content = await page.content();
-		tpl = await page.$$('.tpl');
+		tpl = await page.$$('.simple');
 	});
 
 	test('should add test styles', () => {
@@ -27,6 +27,22 @@ describe('JSX', () => {
 			const html = await (await t.getProperty('innerHTML')).jsonValue();
 			expect(html).toMatch(`"foo":"${tpl.indexOf(t)}"`);
 		}
+		done();
+	});
+
+	test('should update sibling styles with ref', async (done) => {
+		const node = await page.$('#tpl4');
+		const html = await (await node.getProperty('innerHTML')).jsonValue();
+		expect(html).toMatch(/background:\s*red/);
+		expect(html).toMatch('Foo');
+		done();
+	});
+
+	test('should update parent styles with ref & hook', async (done) => {
+		const node = await page.$('#tpl5');
+		const html = await (await node.getProperty('outerHTML')).jsonValue();
+		expect(html).toMatch(/background:\s*blue/);
+		expect(html).toMatch('Bar');
 		done();
 	});
 });

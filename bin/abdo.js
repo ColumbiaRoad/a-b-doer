@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const buildspec = require('../lib/buildspec');
-const { bundler, openPage } = require('../lib/bundler');
-const { getBrowser } = require('../lib/puppeteer');
-const chalk = require('chalk');
+import { readdirSync } from 'fs';
+import { join } from 'path';
+import buildspec from '../lib/buildspec';
+import { bundler, openPage } from '../lib/bundler';
+import { getBrowser } from '../lib/puppeteer';
+import { cyan, yellow, green } from 'chalk';
 
 const cmd = process.argv[2];
 
@@ -22,6 +22,12 @@ const targetPath = process.argv[3];
 
 console.log('');
 
+// More graceful exit
+process.on('SIGINT', () => {
+	console.log('');
+	process.exit();
+});
+
 if (watch || cmd === 'build') {
 	buildSingleEntry();
 } else {
@@ -33,21 +39,21 @@ async function buildSingleEntry() {
 
 	switch (cmd) {
 		case 'watch':
-			console.log(chalk.cyan('Starting bundler with a file watcher...'));
+			console.log(cyan('Starting bundler with a file watcher...'));
 			break;
 		case 'build':
-			console.log(chalk.cyan('Building test bundle...'));
+			console.log(cyan('Building test bundle...'));
 			break;
 		default:
 			break;
 	}
 
-	console.log('Entry:', chalk.yellow(config.entryFile));
+	console.log('Entry:', yellow(config.entryFile));
 	console.log('');
 
 	try {
 		await bundler({ ...config, watch });
-		console.log(chalk.green('Bundle built.'));
+		console.log(green('Bundle built.'));
 		console.log('');
 	} catch (error) {
 		console.log(error);
@@ -65,8 +71,8 @@ async function buildMultiEntry() {
 		if (testConfig.entry) {
 			entryFile = testConfig.entry;
 		} else {
-			const files = fs.readdirSync(testPath, { encoding: 'utf8' });
-			indexFiles = indexFiles.concat(files).map((file) => path.join(testPath, file));
+			const files = readdirSync(testPath, { encoding: 'utf8' });
+			indexFiles = indexFiles.concat(files).map((file) => join(testPath, file));
 		}
 	} else {
 		indexFiles = indexFiles.concat(entryFile);
@@ -79,10 +85,10 @@ async function buildMultiEntry() {
 
 	switch (cmd) {
 		case 'preview':
-			console.log(chalk.cyan('Starting bundlers for preview...'));
+			console.log(cyan('Starting bundlers for preview...'));
 			break;
 		case 'build-all':
-			console.log(chalk.cyan('Building all test bundles...'));
+			console.log(cyan('Building all test bundles...'));
 			break;
 		default:
 			break;
@@ -100,13 +106,13 @@ async function buildMultiEntry() {
 			if (!buildOnly) {
 				await openPage(output);
 			} else {
-				console.log(entryFile.replace(process.env.INIT_CWD, ''), chalk.green('Done.'));
+				console.log(entryFile.replace(process.env.INIT_CWD, ''), green('Done.'));
 			}
 		}
 
 		if (buildOnly) {
 			console.log();
-			console.log(chalk.green('Test bundles built.'));
+			console.log(green('Test bundles built.'));
 			console.log();
 			process.exit(0);
 		}

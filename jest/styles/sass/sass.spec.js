@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { bundler } = require('../../../lib/bundler');
+const { bundler } = require('../../../dist/lib/bundler');
 
 const config = { ...global.configDefaults, testPath: __dirname };
 

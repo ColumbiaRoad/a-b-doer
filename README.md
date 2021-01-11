@@ -18,13 +18,13 @@ Browser executable path is probably in macOs "/Applications/Google Chrome.app/Co
 
 # Usage
 
-Tests can be developed with command `npm run watch path/to/test/folder`. Command opens the test's URL in a browser and injects the built js and style files to site's DOM. This command also starts a file watcher for the folder and refreshes the browser on file changes.
+Tests can be developed with command `abdo watch path/to/test/folder`. Command opens the test's URL in a browser and injects the built js and style files to site's DOM. This command also starts a file watcher for the folder and refreshes the browser on file changes.
 
-If you want to just build the test without opening the browser `npm run build path/to/test/folder`
+If you want to just build the test without opening the browser `abdo build path/to/test/folder`
 
-Tests can be previewed with command `npm run preview path/to/test/folder`. If the folder contains multiple entries, all of them will be opened to the same browser.
+Tests can be previewed with command `abdo preview path/to/test/folder`. If the folder contains multiple entries, all of them will be opened to the same browser.
 
-You can build all tests from a folder with command `npm run build-all path/to/test/folder`
+You can build all tests from a folder with command `abdo build-all path/to/test/folder`
 
 # Test structure
 
@@ -51,8 +51,8 @@ In JS files ES6, imports, etc are supported and also Rollup will bundle and mini
 
 By default, JS supports nullish coalescing and optional chaining.
 
-If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { pollQuerySelector } from '@/utils/dom';`. Also any other import from any folder at root will work without first adding it to path aliases.
-HTML files can be imported like JS and Rollup creates a ejs template function from the file. Template can be rendered as string by calling the function, example below
+If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { SVGIcon } from '@/icons/FooIcon.svg';`.
+HTML files can be imported like JS and Rollup creates ejs template function from the file. Template can be rendered as string by calling the function, example below
 
 ## Usage examples, ejs templates
 
@@ -70,14 +70,14 @@ template.ejs content:
 <p><%= locals.text %></p>
 ```
 
-Dom utils file contains helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+This lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
 ## Usage examples, jsx templates
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support is done by custom lib but you don't have to import it because it is done automatically (if preact option is not set). JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills. If your code needs some other polyfills you can import corejs3 files individually in `lib/polyfills.js` which is imported by the jsx lib.
+JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support is done by custom lib but you don't have to import it because it is done automatically (if preact option is not set). JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills.
 
 ```js
-import { append, pollQuerySelector } from '@/utils/dom';
+import { append, pollQuerySelector } from 'a-b-doer';
 import SomeSvgImage from '@/images/some-svg-image.svg';
 import './styles.scss';
 
@@ -164,7 +164,7 @@ Returns a promise which will be resolved if given selector is found. It runs the
 Note: polyfills Promise automatically
 
 ```js
-import { waitElement } from '@/utils/dom';
+import { waitElement } from 'a-b-doer';
 
 (async () => {
   // Wait 10 seconds for window variable to be set.
@@ -195,7 +195,7 @@ Same as waitElement, but resolved value is always an array.
 Note: polyfills Promise automatically
 
 ```js
-import { waitElements } from '@/utils/dom';
+import { waitElements } from 'a-b-doer';
 
 (async () => {
   // Wait 10 seconds for window variable to be set.
@@ -231,7 +231,7 @@ Returns a promise which will be resolved if given function returns truthy value.
 Note: polyfills Promise automatically
 
 ```js
-import { waitFor } from '@/utils/dom';
+import { waitFor } from 'a-b-doer';
 
 (async () => {
   // Wait 10 seconds for window variable to be set.
@@ -261,10 +261,10 @@ Type `() => { current: null }`
 Ref function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
 
 ```js
-import { ref } from '@/lib/jsx';
-import { append } from '@/utils/dom';
+import { append } from 'a-b-doer';
+import { useRef } from 'a-b-doer/hooks';
 
-const node = ref();
+const node = useRef();
 append(
   <div ref={node}>
     <Sub node={node} />
@@ -278,10 +278,10 @@ append(
 Hook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
 
 ```js
-import { ref, hook } from '@/lib/jsx';
-import { append } from '@/utils/dom';
+import { append } from 'a-b-doer';
+import { useRef, useHook } from 'a-b-doer/hooks';
 
-const node = ref();
+const node = useRef();
 append(
   <div ref={node}>
     <Sub node={node} />
@@ -294,7 +294,7 @@ const Sub = (props) => {
   const { node } = props;
 
   // Same as setTimeout without the timeout
-  hook(() => {
+  useHook(() => {
     // Do something with the node
     console.log(node.current); // HTMLDivElement
   });
