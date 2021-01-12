@@ -13,6 +13,7 @@
     "try:build-all": "node ./dist/bin/abdo.js build-all",
     "try:watch": "node ./dist/bin/abdo.js watch",
     "try:preview": "node ./dist/bin/abdo.js preview",
+    "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "jest --runInBand"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",

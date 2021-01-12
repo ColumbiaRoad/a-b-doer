@@ -26,6 +26,8 @@ Tests can be previewed with command `abdo preview path/to/test/folder`. If the f
 
 You can build all tests from a folder with command `abdo build-all path/to/test/folder`
 
+Take screenshots for every variant with command `abdo screenshot path/to/test/folder`. If path matches multiple tests/variants, screenshot will be taken from every variant + originals. Screenshots will be saved under the build folder of the test
+
 # Test structure
 
 Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent's folder.
@@ -254,11 +256,11 @@ waitFor(() => window.someLazyVar, 10000)
   });
 ```
 
-### ref (JSX only)
+### useRef (JSX only)
 
 Type `() => { current: null }`
 
-Ref function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
+useRef function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
 
 ```js
 import { append } from 'a-b-doer';
@@ -273,9 +275,9 @@ append(
 );
 ```
 
-### hook (JSX only)
+### useHook (JSX only)
 
-Hook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
+useHook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
 
 ```js
 import { append } from 'a-b-doer';
