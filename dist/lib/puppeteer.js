@@ -4,7 +4,7 @@
  * @param {Boolean} [singlePage]
  */async function openPage(config,singlePage){const{url,assetBundle}=config;const page=await getPage(config,singlePage);const pageTags=[];if(assetBundle.js)pageTags.push("js");if(assetBundle.styles)pageTags.push("css");if(!singlePage){initial=true}if(!isTest){console.log(...[`#${++counter}`,initial?"Opening":"Reloading",`page ${(0,_chalk.yellow)(url)}`].concat(pageTags.length?["with custom:",pageTags]:[]))}if(aboutpage){aboutpage.close();aboutpage=null}// Remove previous listener
 if(loadListener){page.off("domcontentloaded",loadListener)}// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
-loadListener=async()=>{try{await page.addScriptTag({content:assetBundle.bundle})}catch(error){console.log(error.message)}if(!isTest){await page.evaluate(pageTags=>{console.log("\x1B[92m%s\x1B[0m","AB test loaded.\nInserted following assets:",pageTags.join(", "))},pageTags)}else{page.off("domcontentloaded",loadListener);loadListener=null}};page.on("domcontentloaded",loadListener);await page.goto(url);initial=false;return page}/**
+loadListener=async()=>{try{await page.addScriptTag({content:assetBundle.bundle})}catch(error){console.log(error.message)}if(!isTest){await page.evaluate(pageTags=>{console.log("\x1B[92m%s\x1B[0m","AB test loaded.\nInserted following assets:",pageTags.join(", "))},pageTags)}else{page.off("domcontentloaded",loadListener);loadListener=null}};page.on("domcontentloaded",loadListener);await page.goto(url,{waitUntil:"networkidle0"});initial=false;return page}/**
  * @param {Object} config
  * @returns {Promise<import("puppeteer").Browser>}
  */async function getBrowser(config={}){// Test environment.

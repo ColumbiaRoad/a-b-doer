@@ -30,7 +30,7 @@ Take screenshots for every variant with command `abdo screenshot path/to/test/fo
 
 # Test structure
 
-Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent's folder.
+Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent folder.
 
 ```
 tests/

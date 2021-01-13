@@ -4,7 +4,7 @@ import path from 'path';
 import buildspec from '../lib/buildspec';
 import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
-import { cyan, yellow, green } from 'chalk';
+import { cyan, yellow, green, red } from 'chalk';
 
 const cmd = process.argv[2];
 
@@ -38,7 +38,7 @@ switch (cmd) {
 		buildMultiEntry();
 		break;
 	case 'screenshot':
-		createTestScreenshots();
+		createScreenshots();
 		break;
 	default:
 		process.exit();
@@ -50,12 +50,17 @@ switch (cmd) {
 async function buildSingleEntry() {
 	const config = buildspec(targetPath);
 
+	if (!config) {
+		console.log(red("Couldn't find buildspec.json for the variant", targetPath));
+		process.exit();
+	}
+
 	switch (cmd) {
 		case 'watch':
 			console.log(cyan('Starting bundler with a file watcher...'));
 			break;
 		case 'build':
-			console.log(cyan('Building test bundle...'));
+			console.log(cyan('Building variant bundle...'));
 			break;
 		default:
 			break;
@@ -94,7 +99,7 @@ function getMatchingEntries(testConfig) {
 		indexFiles = indexFiles.concat(entryFile);
 	}
 
-	return indexFiles;
+	return indexFiles.map((entryFile) => buildspec(entryFile)).filter(Boolean);
 }
 
 /**
@@ -106,7 +111,7 @@ async function buildMultiEntry() {
 	const indexFiles = getMatchingEntries(testConfig);
 
 	if (!indexFiles.length) {
-		console.log("Couldn't find any test files");
+		console.log("Couldn't find any variant files");
 		process.exit();
 	}
 
@@ -115,7 +120,7 @@ async function buildMultiEntry() {
 			console.log(cyan('Starting bundlers for preview...'));
 			break;
 		case 'build-all':
-			console.log(cyan('Building all test bundles...'));
+			console.log(cyan('Building all variant bundles...'));
 			break;
 		default:
 			break;
@@ -139,7 +144,7 @@ async function buildMultiEntry() {
 
 		if (buildOnly) {
 			console.log();
-			console.log(green('Test bundles built.'));
+			console.log(green('Variant bundles built.'));
 			console.log();
 			process.exit(0);
 		}
@@ -149,19 +154,20 @@ async function buildMultiEntry() {
 	}
 }
 
-async function createTestScreenshots() {
+async function createScreenshots() {
 	const testConfig = buildspec(targetPath, true);
-	const indexFiles = getMatchingEntries(testConfig);
+	const indexFileConfigs = getMatchingEntries(testConfig);
 
 	let origPage;
 
-	for (const entryFile of indexFiles) {
-		const config = buildspec(entryFile);
+	for (const config of indexFileConfigs) {
+		const nth = indexFileConfigs.indexOf(config) + 1;
+		const { entryFile } = config;
 		const output = await bundler(config);
 		const page = await openPage({ ...output, headless: true, devtools: false });
 		// Take screenshot from variant
 		await page.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-var${indexFiles.indexOf(entryFile) + 1}.png`),
+			path: path.join(config.testPath, '.build', `screenshot-var${nth}.png`),
 			fullPage: true,
 		});
 		// Get new page for the original (without listeners etc)
@@ -169,7 +175,7 @@ async function createTestScreenshots() {
 			origPage = await page.browser().newPage();
 		}
 		// Go to the same url and take the screenshot from the original as well.
-		await origPage.goto(config.url);
+		await origPage.goto(config.url, { waitUntil: 'networkidle0' });
 		await origPage.screenshot({ path: path.join(config.testPath, '.build', `screenshot-orig.png`), fullPage: true });
 		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
