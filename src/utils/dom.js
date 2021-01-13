@@ -1,4 +1,4 @@
-import { Promise } from '@/lib/polyfills';
+import { Promise } from '../polyfills';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -149,13 +149,12 @@ export function prepend(child, parent) {
 
 /**
  * @param {HTMLElement} child
- * @param {HTMLElement} parent
  * @param {HTMLElement} before
  * @returns {HTMLElement} child
  */
-export function insertBefore(child, parent, before) {
+export function insertBefore(child, before) {
 	clearPrevious(child, parent);
-	parent.insertBefore(child, before);
+	before.parentNode.insertBefore(child, before);
 	return child;
 }
 
@@ -171,4 +170,12 @@ export function clear(target, id) {
 
 export function getTestID() {
 	return process.env.TEST_ID;
+}
+
+export function clearAll() {
+	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
+		if (node.parentElement) {
+			node.parentElement.removeChild(node);
+		}
+	});
 }

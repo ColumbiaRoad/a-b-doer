@@ -132,24 +132,3 @@ function createFragment(props, ...children) {
 export const h = createElement;
 
 export const hf = createFragment;
-
-/**
- * @typedef {Object} Ref
- * @property {*|null} current
- */
-
-/**
- * Initializes the reference object.
- * @returns {Ref}
- */
-export const ref = () => {
-	return { current: null };
-};
-
-/**
- * Runs given function in the next tick.
- * @param {Function} cb
- */
-export const hook = (cb) => {
-	setTimeout(cb, 0);
-};

@@ -1,5 +1,5 @@
 config.json
-.build
-*.lock
 node_modules
 testing
+.test
+.browserslistrc
