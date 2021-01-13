@@ -4,6 +4,16 @@ Utility library which makes developing of A/B test variants easier (maybe) and a
 
 ---
 
+# Installing
+
+```
+npm i a-b-doer --save-dev
+
+# or with yarn
+
+yarn add a-b-doer --dev
+```
+
 # Prerequisites
 
 Create config.json to project root with the following minimum settings:
@@ -27,6 +37,21 @@ Tests can be previewed with command `abdo preview path/to/test/folder`. If the f
 You can build all tests from a folder with command `abdo build-all path/to/test/folder`
 
 Take screenshots for every variant with command `abdo screenshot path/to/test/folder`. If path matches multiple tests/variants, screenshot will be taken from every variant + originals. Screenshots will be saved under the build folder of the test
+
+You can add these commands to package.json scripts
+
+```
+{
+  ...
+  scripts: {
+    "build": "abdo build",
+    "build-all": "abdo build-all",
+    "start": "abdo watch",
+    "preview": "abdo preview",
+    "screenshot": "abdo screenshot"
+  }
+}
+```
 
 # Test structure
 
