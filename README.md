@@ -425,6 +425,16 @@ You can e.g. copy you bookmarks to file < userDataDir >/Default/Bookmark
 
 You should add userData folder to your gitignore because it will be populated with Chromium profile stuff.
 
+### include and exclude
+
+Type `string | RegExp | Array[String|RegExp]` (optional)
+
+A valid picomatch pattern, or array of patterns. If options.include is omitted or has zero length, filter will return true by default. Otherwise, an ID must match one or more of the picomatch patterns, and must not match any of the options.exclude patterns.
+
+Note that picomatch patterns are very similar to minimatch patterns.
+
+With this you can e.g. exclude js files that are in the same folder as buildspec.json but is not a variant.
+
 ### Example config.json
 
 ```json

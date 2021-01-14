@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { readdirSync } from 'fs';
+import { readdirSync, lstatSync } from 'fs';
 import path from 'path';
+import { createFilter } from '@rollup/pluginutils';
 import buildspec from '../lib/buildspec';
 import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
@@ -18,7 +19,7 @@ if (!cmds.includes(cmd)) {
 
 const watch = cmd === 'watch';
 
-const targetPath = process.argv[3];
+const targetPath = process.argv[3] || '.';
 
 console.log('');
 
@@ -31,14 +32,14 @@ process.on('SIGINT', () => {
 switch (cmd) {
 	case 'watch':
 	case 'build':
-		buildSingleEntry();
+		buildSingleEntry(targetPath);
 		break;
 	case 'preview':
 	case 'build-all':
-		buildMultiEntry();
+		buildMultiEntry(targetPath);
 		break;
 	case 'screenshot':
-		createScreenshots();
+		createScreenshots(targetPath);
 		break;
 	default:
 		process.exit();
@@ -46,9 +47,10 @@ switch (cmd) {
 
 /**
  * Builds a bundle for commands that have single matching entry.
+ * @param {string} targetPath
  */
-async function buildSingleEntry() {
-	const config = buildspec(targetPath);
+async function buildSingleEntry(targetPath) {
+	const [config] = getMatchingBuildspec(targetPath);
 
 	if (!config) {
 		console.log(red("Couldn't find buildspec.json for the variant", targetPath));
@@ -79,38 +81,15 @@ async function buildSingleEntry() {
 }
 
 /**
- * Returns all entries that matches given test configuration object..
- * @param {{testPath: string}} targetPath
- * @return {string[]}
- */
-function getMatchingEntries(testConfig) {
-	let indexFiles = [];
-
-	const { testPath, entryFile } = testConfig;
-
-	if (!entryFile) {
-		if (testConfig.entry) {
-			entryFile = testConfig.entry;
-		} else {
-			const files = readdirSync(testPath, { encoding: 'utf8' });
-			indexFiles = indexFiles.concat(files).map((file) => path.join(testPath, file));
-		}
-	} else {
-		indexFiles = indexFiles.concat(entryFile);
-	}
-
-	return indexFiles.map((entryFile) => buildspec(entryFile)).filter(Boolean);
-}
-
-/**
  * Builds a bundle for commands that may have multiple matching entries.
+ * @param {string} targetPath
  */
-async function buildMultiEntry() {
-	const testConfig = buildspec(targetPath, true);
+async function buildMultiEntry(targetPath) {
 	const buildOnly = cmd === 'build-all';
-	const indexFiles = getMatchingEntries(testConfig);
+	const buildspecs = getMatchingBuildspec(targetPath);
+	const [testConfig] = buildspecs;
 
-	if (!indexFiles.length) {
+	if (!testConfig) {
 		console.log("Couldn't find any variant files");
 		process.exit();
 	}
@@ -133,8 +112,9 @@ async function buildMultiEntry() {
 			await getBrowser(testConfig);
 		}
 
-		for (const entryFile of indexFiles) {
-			const output = await bundler(buildspec(entryFile));
+		for (const buildspec of buildspecs) {
+			const { entryFile } = buildspec;
+			const output = await bundler(buildspec);
 			if (!buildOnly) {
 				await openPage(output);
 			} else {
@@ -154,14 +134,23 @@ async function buildMultiEntry() {
 	}
 }
 
-async function createScreenshots() {
-	const testConfig = buildspec(targetPath, true);
-	const indexFileConfigs = getMatchingEntries(testConfig);
+/**
+ * Creates screenshots from variants that matches the given path.
+ * @param {string} targetPath
+ */
+async function createScreenshots(targetPath) {
+	const buildspecs = getMatchingBuildspec(targetPath);
+
+	if (!buildspecs.length) {
+		console.log(red('0 test variants found with path:'));
+		console.log(targetPath);
+		process.exit();
+	}
 
 	let origPage;
 
-	for (const config of indexFileConfigs) {
-		const nth = indexFileConfigs.indexOf(config) + 1;
+	for (const config of buildspecs) {
+		const nth = buildspecs.indexOf(config) + 1;
 		const { entryFile } = config;
 		const output = await bundler(config);
 		const page = await openPage({ ...output, headless: true, devtools: false });
@@ -181,6 +170,42 @@ async function createScreenshots() {
 		console.log();
 	}
 
-	await origPage.browser().close();
+	if (origPage) {
+		await origPage.browser().close();
+	}
+
 	console.log(green('Done.'));
+}
+
+/**
+ * Returns all entry buildspecs that matches the given path.
+ * @param {string} targetPath
+ * @return {Object[]}
+ */
+function getMatchingBuildspec(targetPath) {
+	let indexFiles = [];
+
+	targetPath = path.resolve(process.env.INIT_CWD, targetPath);
+
+	if (lstatSync(targetPath).isFile()) {
+		indexFiles = indexFiles.concat(targetPath);
+	}
+
+	if (!indexFiles.length) {
+		const files = readdirSync(targetPath, { encoding: 'utf8' });
+		indexFiles = indexFiles.concat(files).map((file) => path.join(targetPath, file));
+	}
+
+	return indexFiles
+		.map((entryFile) => {
+			const filter = createFilter([/\.(jsx?|tsx?|(le|sa|sc|c)ss)$/]);
+			if (entryFile.includes('.build')) {
+				return null;
+			}
+			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
+				return null;
+			}
+			return buildspec(entryFile);
+		})
+		.filter(Boolean);
 }
