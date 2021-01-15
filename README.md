@@ -16,7 +16,7 @@ yarn add a-b-doer --dev
 
 # Prerequisites
 
-Create config.json to project root with the following minimum settings:
+Create config.json (config.js) to project root with the following minimum settings:
 
 ```json
 {
@@ -25,6 +25,14 @@ Create config.json to project root with the following minimum settings:
 ```
 
 Browser executable path is probably in macOs "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" and in Windows "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe". With unix-like (not macOs) systems you could check the path with command `which google-chrome` or something like it.
+
+If you're using javascript configuration, then the file should export the config object
+
+```js
+module.exports = {
+  browser: '<insert browser executable path here>',
+};
+```
 
 # Usage
 
@@ -442,4 +450,53 @@ With this you can e.g. exclude js files that are in the same folder as buildspec
   "browser": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "userDataDir": "./puppeteer"
 }
+```
+
+### Advanced example config.js with custom bundler options
+
+```js
+const fooPlugin = require('rollup-foo-plugin');
+
+/*
+Supported plugins for array format are currently.
+Note, changing the configuration for these plugins might break something.
+
+alias,
+babel,
+commonjs,
+ejs,
+image,
+inline-svg,
+node-resolve,
+replace,
+styles,
+svg-hyperscript,
+*/
+
+module.exports = {
+  browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  userDataDir: './puppeteer',
+  exclude: ['**/components/**/*', '**/src/**/*'],
+  bundler: {
+    plugins: [
+      // Add extra entry to alias plugin configuration
+      [
+        'alias',
+        (options) => ({
+          ...options,
+          entries: [...options.entries, { find: 'something', replacement: '@/foo' }],
+        }),
+      ],
+      // Override rollup image plugin configuration
+      [
+        'image',
+        {
+          exclude: ['**/*.svg', '**/*.png'],
+        },
+      ],
+      // Add extra input plugin to rollup configuration
+      fooPlugin({ foo: 1 }),
+    ],
+  },
+};
 ```
