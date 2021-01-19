@@ -195,7 +195,7 @@ function getMatchingBuildspec(targetPath) {
 		const files = readdirSync(targetPath, { encoding: 'utf8' });
 		indexFiles = indexFiles.concat(
 			targetPath,
-			files.map((file) => path.join(targetPath, file))
+			files.map((file) => path.join(targetPath, file)).filter((path) => lstatSync(path).isDirectory())
 		);
 	}
 

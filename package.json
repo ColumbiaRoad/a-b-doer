@@ -14,7 +14,8 @@
     "try:watch": "node ./dist/bin/abdo.js watch",
     "try:preview": "node ./dist/bin/abdo.js preview",
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "release": "standard-version"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
@@ -63,7 +64,8 @@
     "jest": "^26.6.3",
     "npm-run-all": "^4.1.5",
     "puppeteer": "^5.5.0",
-    "rimraf": "^3.0.2"
+    "rimraf": "^3.0.2",
+    "standard-version": "^9.1.0"
   },
   "bin": {
     "abdo": "dist/bin/abdo.js"
@@ -75,8 +77,8 @@
     "testEnvironment": "./jest/puppeteer-environment.js",
     "globalSetup": "./jest/global-setup.js",
     "globalTeardown": "./jest/global-teardown.js"
-	},
-	"husky": {
+  },
+  "husky": {
     "hooks": {
       "pre-commit": "npm run build; git add hooks.js dist/*"
     }
