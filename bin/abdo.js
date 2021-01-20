@@ -151,12 +151,13 @@ async function createScreenshots(targetPath) {
 
 	for (const config of buildspecs) {
 		const nth = buildspecs.indexOf(config) + 1;
-		const { entryFile } = config;
+		const { entryFile, entryFileExt } = config;
+		const entryName = path.basename(entryFile, '.' + entryFileExt);
 		const output = await bundler(config);
 		const page = await openPage({ ...output, headless: true, devtools: false });
 		// Take screenshot from variant
 		await page.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-var${nth}.png`),
+			path: path.join(config.testPath, '.build', `screenshot-${entryName}-v${nth}.png`),
 			fullPage: true,
 		});
 		// Get new page for the original (without listeners etc)
@@ -165,7 +166,10 @@ async function createScreenshots(targetPath) {
 		}
 		// Go to the same url and take the screenshot from the original as well.
 		await origPage.goto(config.url, { waitUntil: 'networkidle0' });
-		await origPage.screenshot({ path: path.join(config.testPath, '.build', `screenshot-orig.png`), fullPage: true });
+		await origPage.screenshot({
+			path: path.join(config.testPath, '.build', `screenshot-${entryName}-orig.png`),
+			fullPage: true,
+		});
 		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
 	}
