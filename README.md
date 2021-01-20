@@ -443,6 +443,14 @@ Note that picomatch patterns are very similar to minimatch patterns.
 
 With this you can e.g. exclude js files that are in the same folder as buildspec.json but is not a variant.
 
+### devtools
+
+Type `boolean` (optional)
+
+Default `true`
+
+Is devtools open when browser opens
+
 ### Example config.json
 
 ```json
