@@ -72,11 +72,12 @@
   },
   "jest": {
     "setupFilesAfterEnv": [
-      "./jest/setup.js"
+      "./test/setup.js"
     ],
-    "testEnvironment": "./jest/puppeteer-environment.js",
-    "globalSetup": "./jest/global-setup.js",
-    "globalTeardown": "./jest/global-teardown.js"
+    "testEnvironment": "./test/puppeteer-environment.js",
+    "globalSetup": "./test/global-setup.js",
+    "globalTeardown": "./test/global-teardown.js",
+    "modulePathIgnorePatterns": [".build"]
   },
   "husky": {
     "hooks": {
