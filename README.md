@@ -402,6 +402,14 @@ Default `[1920, 1080]`
 
 Window dimension in pixels (width, height).
 
+### historyChanges
+
+Type `Boolean` (optional)
+
+Default `true`
+
+Should preview and watcher detect when URL is changed with history API? If true, and URL changes back to the test URL A/B doer will append tested assets to the DOM.
+
 ---
 
 ### Example buildspec.json
