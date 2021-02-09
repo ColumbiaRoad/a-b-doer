@@ -1,5 +1,5 @@
 global.configDefaults = {
-	url: 'http://example.com/',
+	url: ['http://example.com/'],
 	browser: process.env.BROWSER || '',
 };
 
