@@ -155,6 +155,7 @@ async function createScreenshots(targetPath) {
 		const entryName = path.basename(entryFile, '.' + entryFileExt);
 		const output = await bundler({ ...config, preview: true });
 		const page = await openPage({ ...output, headless: true, devtools: false });
+		const url = Array.isArray(config.url) ? config.url[0] : config.url;
 		// Take screenshot from variant
 		await page.screenshot({
 			path: path.join(config.testPath, '.build', `screenshot-${entryName}-v${nth}.png`),
@@ -165,7 +166,7 @@ async function createScreenshots(targetPath) {
 			origPage = await page.browser().newPage();
 		}
 		// Go to the same url and take the screenshot from the original as well.
-		await origPage.goto(config.url, { waitUntil: 'networkidle0' });
+		await origPage.goto(url, { waitUntil: 'networkidle0' });
 		await origPage.screenshot({
 			path: path.join(config.testPath, '.build', `screenshot-${entryName}-orig.png`),
 			fullPage: true,
