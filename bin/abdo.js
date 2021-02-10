@@ -153,7 +153,7 @@ async function createScreenshots(targetPath) {
 		const nth = buildspecs.indexOf(config) + 1;
 		const { entryFile, entryFileExt } = config;
 		const entryName = path.basename(entryFile, '.' + entryFileExt);
-		const output = await bundler(config);
+		const output = await bundler({ ...config, preview: true });
 		const page = await openPage({ ...output, headless: true, devtools: false });
 		// Take screenshot from variant
 		await page.screenshot({
