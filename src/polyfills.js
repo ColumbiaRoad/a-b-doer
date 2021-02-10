@@ -1,5 +1,5 @@
 // IE11 NodeList forEach support
-if (process.env.IE) {
+if (process.env.IE && !process.env.TEST_ENV) {
 	if ('NodeList' in window && !NodeList.prototype.forEach) {
 		NodeList.prototype.forEach = function (callback, thisArg) {
 			thisArg = thisArg || window;
@@ -50,7 +50,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 export function Promise(cb) {
 	// prettier-ignore
-	if (process.env.IE && typeof window.Promise !== 'function') {
+	if (process.env.IE && !process.env.TEST_ENV && typeof window.Promise !== 'function') {
 		var ww=window;
 		var wp="Promise";
 		var fn=function(a) {return 'function' == typeof a;}

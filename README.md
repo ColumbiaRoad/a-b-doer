@@ -344,9 +344,9 @@ These settings can also be used to override settings from global config.
 
 ### url
 
-Type `string`
+Type `string | Array<string>`
 
-Web page url for the test.
+Web page url(s) for the test. If this is an array, the first url will be the main url which is opened when the code changes. Puppeteer will watch navigation events for these urls and load the assets when the url matches one of these.
 
 ### entry
 
@@ -401,6 +401,22 @@ Type `Array<number>` (optional)
 Default `[1920, 1080]`
 
 Window dimension in pixels (width, height).
+
+### historyChanges
+
+Type `Boolean` (optional)
+
+Default `true`
+
+Should preview and watcher detect when URL is changed with history API? If true, and URL changes back to the test URL A/B doer will append tested assets to the DOM.
+
+### debug
+
+Type `Boolean` (optional)
+
+Default `false`
+
+Adds some extra logging for debug
 
 ---
 
