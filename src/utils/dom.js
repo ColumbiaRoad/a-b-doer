@@ -28,7 +28,7 @@ export function pollQuerySelector(selector, callback, wait = 1000) {
  */
 export function pollQuerySelectorAll(selector, callback, wait = 1000) {
 	var el = document.querySelectorAll(selector);
-	if (el) {
+	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
 		setTimeout(function () {
