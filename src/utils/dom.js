@@ -153,7 +153,7 @@ export function prepend(child, parent) {
  * @returns {HTMLElement} child
  */
 export function insertBefore(child, before) {
-	clearPrevious(child, parent);
+	clearPrevious(child, before.parentNode);
 	before.parentNode.insertBefore(child, before);
 	return child;
 }
