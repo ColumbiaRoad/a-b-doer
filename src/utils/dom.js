@@ -114,11 +114,9 @@ export function waitFor(func, wait = 5000) {
  * @param {HTMLElement} parent
  */
 function clearPrevious(child, parent) {
-	const id = child.getAttribute('data-o');
+	const id = child.getAttribute('data-o') || getTestID();
 	if (id) clear(parent, id);
-	else {
-		child.setAttribute('data-o', getTestID());
-	}
+	child.setAttribute('data-o', getTestID());
 }
 
 /**
