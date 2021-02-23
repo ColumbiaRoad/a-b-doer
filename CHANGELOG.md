@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.2.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.2.0...v1.2.1) (2021-02-23)
+
+
+### Bug Fixes
+
+* Fixed clearing of previous new element ([4f72760](https://github.com/ColumbiaRoad/a-b-doer/commit/4f72760562887059edafa8123f5aa8c7ea49993b))
+* parent was not defined ([e8360b6](https://github.com/ColumbiaRoad/a-b-doer/commit/e8360b6d154953223ddab90ae1d261bcbdbd62f7))
+* querySelectorAll returns always truthy value ([6f7db8b](https://github.com/ColumbiaRoad/a-b-doer/commit/6f7db8bf11c685e59c08fadf98fb6991aadff1f0))
+
 ## [1.2.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.1.1...v1.2.0) (2021-02-10)
 
 
