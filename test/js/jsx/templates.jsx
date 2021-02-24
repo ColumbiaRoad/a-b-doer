@@ -4,7 +4,7 @@ export const Simple = (props) => {
 	const { id, ...rest } = props;
 
 	return (
-		<div id={id} class="simple">
+		<div id={id} data-o={'t-temp-' + id} class="simple">
 			JSX Template {JSON.stringify(rest)}
 		</div>
 	);
@@ -23,7 +23,7 @@ export const RefHook = (props) => {
 	const node = useRef();
 
 	return (
-		<div id={id}>
+		<div id={id} data-o={'t-temp-' + id}>
 			<div ref={node}></div>
 			<SubTemplate sibling={node} />
 		</div>
@@ -45,7 +45,7 @@ export const Hooks = (props) => {
 	const node = useRef();
 
 	return (
-		<div id={id} ref={node}>
+		<div id={id} ref={node} data-o={'t-temp-' + id}>
 			<HookSubTemplate parent={node} />
 		</div>
 	);

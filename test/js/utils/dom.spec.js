@@ -12,10 +12,11 @@ describe('DOM', () => {
 
 	it('should append div to body', async () => {
 		const content = await page.evaluate(() => {
+			const { append } = utilFns;
 			const div = document.createElement('div');
 			div.id = 'foo123';
 			div.innerText = 'bar123';
-			utilFns['append'](div, document.body);
+			append(div, document.body);
 			return document.body.innerHTML;
 		});
 		expect(content).toMatch(`id="foo123"`);
@@ -41,14 +42,32 @@ describe('DOM', () => {
 
 	it('should create div before given element', async () => {
 		await page.evaluate(() => {
+			const { insertBefore } = utilFns;
 			const div = document.createElement('div');
 			div.id = 'foo123';
 			div.innerText = 'bar123';
-			utilFns['insertBefore'](div, document.querySelector('h1'));
+			insertBefore(div, document.querySelector('h1'));
 			return document.body.innerHTML;
 		});
 
 		const content = await page.$eval('h1', (h1) => h1.previousElementSibling.outerHTML);
+
+		expect(content).toMatch(`id="foo123"`);
+		expect(content).toMatch(`bar123`);
+		expect(content).toMatch(`data-o="t-`);
+	});
+
+	it('should create div after given element', async () => {
+		await page.evaluate(() => {
+			const { insertAfter } = utilFns;
+			const div = document.createElement('div');
+			div.id = 'foo123';
+			div.innerText = 'bar123';
+			insertAfter(div, document.querySelector('h1'));
+			return document.body.innerHTML;
+		});
+
+		const content = await page.$eval('h1', (h1) => h1.nextElementSibling.outerHTML);
 
 		expect(content).toMatch(`id="foo123"`);
 		expect(content).toMatch(`bar123`);

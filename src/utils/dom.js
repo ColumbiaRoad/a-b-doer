@@ -116,7 +116,7 @@ export function waitFor(func, wait = 5000) {
 function clearPrevious(child, parent) {
 	const id = child.getAttribute('data-o') || getTestID();
 	if (id) clear(parent, id);
-	child.setAttribute('data-o', getTestID());
+	child.setAttribute('data-o', id);
 }
 
 /**
@@ -153,6 +153,22 @@ export function prepend(child, parent) {
 export function insertBefore(child, before) {
 	clearPrevious(child, before.parentNode);
 	before.parentNode.insertBefore(child, before);
+	return child;
+}
+
+/**
+ * @param {HTMLElement} child
+ * @param {HTMLElement} after
+ * @returns {HTMLElement} child
+ */
+export function insertAfter(child, after) {
+	const parentNode = after.parentNode;
+	clearPrevious(child, parentNode);
+	if (after.nextElementSibling) {
+		parentNode.insertBefore(child, after.nextElementSibling);
+	} else {
+		parentNode.appendChild(child);
+	}
 	return child;
 }
 
