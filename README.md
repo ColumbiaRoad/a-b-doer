@@ -346,7 +346,7 @@ These settings can also be used to override settings from global config.
 
 Type `string | Array<string>`
 
-Web page url(s) for the test. If this is an array, the first url will be the main url which is opened when the code changes. Puppeteer will watch navigation events for these urls and load the assets when the url matches one of these.
+Web page url(s) for the test. If this is an array, the first proper url will be the main url which is opened when the code changes. Puppeteer will watch navigation events for these urls and load the assets when the url matches one of these. URL can also be RegExp like string which starts and ends with `/`. RegExp url cannot be the only url.
 
 ### entry
 
@@ -424,7 +424,7 @@ Adds some extra logging for debug
 
 ```json
 {
-  "url": "https://www.columbiaroad.com",
+  "url": ["https://www.columbiaroad.com", "/https?:\\/\\/www\\.columbiaroad\\.com/"],
   "modules": false
 }
 ```
