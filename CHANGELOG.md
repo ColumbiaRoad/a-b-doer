@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.2.1...v1.3.0) (2021-03-17)
+
+
+### Features
+
+* insertAfter utility, test fixes, moar debug ([d98fda0](https://github.com/ColumbiaRoad/a-b-doer/commit/d98fda08f7396a984f60a3fdf61f541515822406))
+* Optional clear for dom utils ([0d72de0](https://github.com/ColumbiaRoad/a-b-doer/commit/0d72de01b1d33cd454caf157fab6f0c8dd6ab790))
+* Support regex urls ([46a2bb5](https://github.com/ColumbiaRoad/a-b-doer/commit/46a2bb55165b08fee06c4cd329761ddf26f0eb1d))
+
+
+### Bug Fixes
+
+* Fix for rollup plugin replace config ([60a6c9d](https://github.com/ColumbiaRoad/a-b-doer/commit/60a6c9d281e0a6fbb36fdbc2b7adc8251b443c09))
+* Select the correct part of the regex url ([7812782](https://github.com/ColumbiaRoad/a-b-doer/commit/7812782979e8543064b225eef3c9ea79526a64d7))
+* Unified class and className props ([b9b1f79](https://github.com/ColumbiaRoad/a-b-doer/commit/b9b1f796bff9a52e8d4a9b6cb5a64db914b85a9a))
+
 ### [1.2.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.2.0...v1.2.1) (2021-02-23)
 
 
