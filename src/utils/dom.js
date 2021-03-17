@@ -122,10 +122,13 @@ function clearPrevious(child, parent) {
 /**
  * @param {HTMLElement} child
  * @param {HTMLElement} parent
+ * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
-export function append(child, parent) {
-	clearPrevious(child, parent);
+export function append(child, parent, clearPrev = true) {
+	if (clearPrev) {
+		clearPrevious(child, parent);
+	}
 	parent.appendChild(child);
 	return child;
 }
@@ -133,10 +136,13 @@ export function append(child, parent) {
 /**
  * @param {HTMLElement} child
  * @param {HTMLElement} parent
+ * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
-export function prepend(child, parent) {
-	clearPrevious(child, parent);
+export function prepend(child, parent, clearPrev = true) {
+	if (clearPrev) {
+		clearPrevious(child, parent);
+	}
 	if (parent.firstElementChild) {
 		parent.insertBefore(child, parent.firstElementChild);
 	} else {
@@ -148,10 +154,13 @@ export function prepend(child, parent) {
 /**
  * @param {HTMLElement} child
  * @param {HTMLElement} before
+ * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
-export function insertBefore(child, before) {
-	clearPrevious(child, before.parentNode);
+export function insertBefore(child, before, clearPrev = true) {
+	if (clearPrev) {
+		clearPrevious(child, before.parentNode);
+	}
 	before.parentNode.insertBefore(child, before);
 	return child;
 }
@@ -159,11 +168,14 @@ export function insertBefore(child, before) {
 /**
  * @param {HTMLElement} child
  * @param {HTMLElement} after
+ * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
-export function insertAfter(child, after) {
+export function insertAfter(child, after, clearPrev = true) {
 	const parentNode = after.parentNode;
-	clearPrevious(child, parentNode);
+	if (clearPrev) {
+		clearPrevious(child, parentNode);
+	}
 	if (after.nextElementSibling) {
 		parentNode.insertBefore(child, after.nextElementSibling);
 	} else {
