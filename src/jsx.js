@@ -56,6 +56,12 @@ function createElement(tag, props, ...children) {
 		value: children,
 	});
 
+	if (props.className) {
+		props.class = props.className;
+	} else if (props.class) {
+		props.className = props.class;
+	}
+
 	if (typeof tag === 'function') return tag(props, ...children);
 
 	/** @type {HTMLElement}*/
@@ -83,7 +89,7 @@ function createElement(tag, props, ...children) {
 		if (props.hasOwnProperty(name)) {
 			let value = props[name];
 			if (name === 'className') {
-				name = 'class';
+				continue;
 			} else if (name === 'style') {
 				value = getStyleString(value);
 			} else if (name === 'html') {
