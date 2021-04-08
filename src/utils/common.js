@@ -41,3 +41,15 @@ export function debounce(func, wait, immediate) {
 		if (callNow) func.apply(context, args);
 	};
 }
+
+/**
+ * Super simple class abstract for class like components.
+ */
+export class Component {
+	constructor(props) {
+		this.props = props;
+		if (!this.props.children) {
+			this.props.children = [];
+		}
+	}
+}

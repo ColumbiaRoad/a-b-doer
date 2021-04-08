@@ -42,6 +42,28 @@ const getStyleString = (style) => {
 const renderer = document.createElement('div');
 
 /**
+ *
+ * @param {HTMLElement} source
+ * @param {HTMLElement} target
+ */
+function mergeElementInto(source, target) {
+	const sourceAttrs = [...source.attributes];
+	const targetAttrs = [...target.attributes];
+	const removeAttrs = targetAttrs.filter((attr) => !source.hasAttribute(attr.nodeName));
+
+	removeAttrs.forEach((attr) => target.removeAttribute(attr.nodeName));
+	sourceAttrs.forEach((attr) => target.setAttribute(attr.nodeName, attr.nodeValue));
+
+	(target._evt || []).forEach((attr) => (target[attr] = null));
+	(source._evt || []).forEach((attr) => (target[attr] = source[attr]));
+
+	target.innerHTML = '';
+	source.childNodes.forEach((child) => target.appendChild(child));
+
+	return target;
+}
+
+/**
  * Creates a html element with given attributes and child nodes.
  * @param {String} tag
  * @param {Object} props
@@ -62,7 +84,36 @@ function createElement(tag, props, ...children) {
 		props.className = props.class;
 	}
 
-	if (typeof tag === 'function') return tag(props, ...children);
+	if (typeof tag === 'function') {
+		/** @type {HTMLElement} */
+		let ret;
+		if (tag.prototype?.render) {
+			const comp = new tag(props);
+			ret = comp.render();
+			const renderFn = comp.render.bind(comp);
+			comp.render = () => {
+				return mergeElementInto(renderFn(), ret);
+			};
+			ref = comp;
+		} else {
+			ret = tag(props, ...children);
+			ref = (newProps = {}) => {
+				if (typeof newProps === 'function') {
+					newProps = newProps({ ...props, children });
+				}
+				newProps.children = newProps.children || [];
+				return mergeElementInto(tag(newProps, ...newProps.children), ret);
+			};
+		}
+		if (props.ref) {
+			if (typeof props.ref === 'function') {
+				props.ref(ref);
+			} else if (props.ref.current !== undefined) {
+				props.ref.current = ref;
+			}
+		}
+		return ret;
+	}
 
 	/** @type {HTMLElement}*/
 	let element;
@@ -85,6 +136,8 @@ function createElement(tag, props, ...children) {
 		}
 	}
 
+	element._evt = [];
+
 	for (let name in props) {
 		if (props.hasOwnProperty(name)) {
 			let value = props[name];
@@ -104,9 +157,11 @@ function createElement(tag, props, ...children) {
 				continue;
 			}
 			if (value === false || value === undefined) continue;
-			if (name.indexOf('on') === 0 && name.toLowerCase() in window)
-				element.addEventListener(name.toLowerCase().substr(2), value);
-			else element.setAttribute(name, value.toString());
+			if (name.indexOf('on') === 0 && name.toLowerCase() in window) {
+				const key = name.toLowerCase();
+				element._evt.push(key);
+				element[name.toLowerCase()] = value;
+			} else element.setAttribute(name, value.toString());
 		}
 	}
 
