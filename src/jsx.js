@@ -85,6 +85,7 @@ function createElement(tag, props, ...children) {
 	}
 
 	if (typeof tag === 'function') {
+		let fnProps = props;
 		/** @type {HTMLElement} */
 		let ret;
 		if (tag.prototype?.render) {
@@ -99,10 +100,11 @@ function createElement(tag, props, ...children) {
 			ret = tag(props, ...children);
 			ref = (newProps = {}) => {
 				if (typeof newProps === 'function') {
-					newProps = newProps({ ...props, children });
+					newProps = newProps({ ...fnProps, children });
 				}
-				newProps.children = newProps.children || [];
-				return mergeElementInto(tag(newProps, ...newProps.children), ret);
+				fnProps = newProps;
+				fnProps.children = fnProps.children || [];
+				return mergeElementInto(tag(fnProps, ...fnProps.children), ret);
 			};
 		}
 		if (props.ref) {
