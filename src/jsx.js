@@ -84,29 +84,36 @@ function createElement(tag, props, ...children) {
 		props.className = props.class;
 	}
 
+	// Handle custom components
 	if (typeof tag === 'function') {
 		let fnProps = props;
+		let ref = null;
 		/** @type {HTMLElement} */
-		let ret;
+		let element;
+		// Class syntax components
 		if (tag.prototype?.render) {
 			const comp = new tag(props);
-			ret = comp.render();
+			element = comp.render();
 			const renderFn = comp.render.bind(comp);
 			comp.render = () => {
-				return mergeElementInto(renderFn(), ret);
+				return mergeElementInto(renderFn(), element);
 			};
 			ref = comp;
-		} else {
-			ret = tag(props, ...children);
+		}
+		// Functional components
+		else {
+			element = tag(props, ...children);
 			ref = (newProps = {}) => {
 				if (typeof newProps === 'function') {
 					newProps = newProps({ ...fnProps, children });
 				}
 				fnProps = newProps;
 				fnProps.children = fnProps.children || [];
-				return mergeElementInto(tag(fnProps, ...fnProps.children), ret);
+				return mergeElementInto(tag(fnProps, ...fnProps.children), element);
 			};
 		}
+
+		// If one of props is a ref, put the component instance or re-render function to the ref value.
 		if (props.ref) {
 			if (typeof props.ref === 'function') {
 				props.ref(ref);
@@ -114,7 +121,7 @@ function createElement(tag, props, ...children) {
 				props.ref.current = ref;
 			}
 		}
-		return ret;
+		return element;
 	}
 
 	/** @type {HTMLElement}*/
