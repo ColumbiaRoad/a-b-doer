@@ -15,7 +15,8 @@
     "try:preview": "node ./dist/bin/abdo.js preview",
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "jest --runInBand",
-    "release": "standard-version"
+    "release": "standard-version",
+    "prepare": "husky install"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
@@ -80,11 +81,6 @@
     "modulePathIgnorePatterns": [
       ".build"
     ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run build; git add hooks.js dist/*"
-    }
   },
   "files": [
     "dist",
