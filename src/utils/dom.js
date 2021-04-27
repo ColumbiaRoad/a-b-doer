@@ -116,9 +116,9 @@ export function waitFor(func, wait = 5000) {
 function clearPrevious(child, parent) {
 	const id = child.getAttribute('data-o') || getTestID();
 	if (id) {
-		parent.children.forEach((child) => {
+		Array.from(parent.children).forEach((child) => {
 			if (child.dataset.o === id) {
-				parent.removeChild(prevNode);
+				parent.removeChild(child);
 			}
 		});
 	}
