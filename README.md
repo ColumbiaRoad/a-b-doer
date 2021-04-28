@@ -112,7 +112,7 @@ This lib exports some helpers for adding the created element to dom. Those helpe
 JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support is done by custom lib but you don't have to import it because it is done automatically (if preact option is not set). JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
 
 ```js
-import { append, pollQuerySelector } from 'a-b-doer';
+import { append, pollQuerySelector, Component } from 'a-b-doer';
 import SomeSvgImage from '@/images/some-svg-image.svg';
 import './styles.scss';
 
@@ -150,6 +150,17 @@ export const Tpl = (props) => {
     </div>
   );
 };
+// OR with class syntax
+export class Tpl extends Component {
+  render() {
+    return (
+      <div onClick={() => console.log('testing')}>
+        <h3>click me {this.props.test}</h3>
+        <SomeSvgImage />
+      </div>
+    );
+  }
+}
 ```
 
 Test templates with `preact: true`
@@ -295,6 +306,8 @@ Type `() => { current: null }`
 
 useRef function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
 
+If you use refs with custom component, the ref will contain either the class instance of the component or a "re-render" function depending on the component type. Re-render updates the same DOM element and its contents.
+
 ```js
 import { append } from 'a-b-doer';
 import { useRef } from 'a-b-doer/hooks';
@@ -306,6 +319,24 @@ append(
   </div>,
   document.body
 );
+
+const componentRef = useRef();
+append(
+  <SomeFunctionalComponent ref={componentRef} fooProp={1} barProp={"a"} />
+  document.body
+);
+// Set all new props
+componentRef.current({ fooProp: 2, barProp: "b" });
+// Overwrite only some
+componentRef.current((oldProps) => ({ ...oldProps, fooProp: 2 }));
+// OR
+const componentRef = useRef();
+append(
+  <SomeClassComponent ref={componentRef} fooProp={1} />
+  document.body
+);
+componentRef.current.prop.fooProp = 2;
+componentRef.current.render();
 ```
 
 ### useHook (JSX only)

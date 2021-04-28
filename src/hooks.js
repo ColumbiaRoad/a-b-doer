@@ -5,10 +5,11 @@
 
 /**
  * Initializes the reference object.
+ * @param {*} current Initial value
  * @returns {Ref}
  */
-export const useRef = () => {
-	return { current: null };
+export const useRef = (current = null) => {
+	return { current };
 };
 
 /**
