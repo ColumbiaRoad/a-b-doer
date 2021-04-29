@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.3.0...v1.4.0) (2021-04-29)
+
+
+### Features
+
+* Component syntax and re-render support. ([6b98a0d](https://github.com/ColumbiaRoad/a-b-doer/commit/6b98a0d679bae5d6a0f0cb8871539e8ffafa32b8))
+* Possibility to add default value for the ref ([754fe1f](https://github.com/ColumbiaRoad/a-b-doer/commit/754fe1fa739dcb54869d7b69de3586dc5c359865))
+* Upgraded all dependencies ([925c9a3](https://github.com/ColumbiaRoad/a-b-doer/commit/925c9a37c1d3a69a775701929397686bfddfbc63))
+
+
+### Bug Fixes
+
+* Do not clear previous items with dom query ([d7a4b2d](https://github.com/ColumbiaRoad/a-b-doer/commit/d7a4b2d13ad5f13fbd7ccc3d72f663bb3fb55746))
+* Husky scripts ([9e5805f](https://github.com/ColumbiaRoad/a-b-doer/commit/9e5805f894ea0b1068d0f8d2676ca6bf3c1cd6f6))
+* Keep props param up-to-date ([72d7643](https://github.com/ColumbiaRoad/a-b-doer/commit/72d7643ce7345766b4222452c53cdb1fca1eb55a))
+* Puppeteer page.exposeFunction fix. ([6fc2a3f](https://github.com/ColumbiaRoad/a-b-doer/commit/6fc2a3ff5c01dc7a81bfb01790626d65043bfd00))
+* Re-built puppeteer.js file ([3fda75c](https://github.com/ColumbiaRoad/a-b-doer/commit/3fda75c9df4dcecf22da13bba260446c4bab1cbb))
+* Return the _pageBindings horror ([91ac001](https://github.com/ColumbiaRoad/a-b-doer/commit/91ac0012d515c1c29794d70a148fdc108f781e61))
+* Set isOneOfBuildspecUrl again when page loads ([26f7a47](https://github.com/ColumbiaRoad/a-b-doer/commit/26f7a47749d02c429853e670f961342b657b5cdf))
+* Updated the lock file ([005d39f](https://github.com/ColumbiaRoad/a-b-doer/commit/005d39f30f7eccb19850327862e342f1481f25a9))
+* Use exposeFunction when exposing functions to window context ([1424c0a](https://github.com/ColumbiaRoad/a-b-doer/commit/1424c0ab9f47ae72d647831737599b186aa5229e))
+
 ## [1.3.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.2.1...v1.3.0) (2021-03-17)
 
 
