@@ -16,8 +16,7 @@
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "jest --runInBand",
     "release": "standard-version",
-    "prepare": "husky install",
-    "preinstall": "npx npm-force-resolutions"
+    "prepare": "husky install"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
