@@ -15,6 +15,14 @@ if (process.env.IE && !process.env.TEST_ENV) {
 			return [].slice.call(object);
 		};
 	}
+
+	Document.prototype.append = Element.prototype.append = function append() {
+		var frag = document.createDocumentFragment();
+		for (var i = 0; i < arguments.length; i++) {
+			frag.appendChild(arguments[i]);
+		}
+		this.appendChild(frag);
+	};
 }
 
 /*

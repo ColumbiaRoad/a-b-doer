@@ -16,7 +16,8 @@
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "jest --runInBand",
     "release": "standard-version",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "preinstall": "([ ! -f package-lock.json ] && npm install --package-lock-only --ignore-scripts --no-audit); npx npm-force-resolutions"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
@@ -100,6 +101,7 @@
   "resolutions": {
     "meow": "8.1.2",
     "trim-newlines": "3.0.1",
-    "cssnano": "5.0.6"
+    "cssnano": "5.0.6",
+    "css-what": "5.0.1"
   }
 }
