@@ -140,8 +140,10 @@ function createMutation(children) {
 	if (Array.isArray(children)) {
 		const frag = document.createDocumentFragment();
 		children.forEach((child, index) => {
-			frag.appendChild(child);
-			setElementTestID(child, index);
+			if (child) {
+				frag.appendChild(child);
+				setElementTestID(child, index);
+			}
 		});
 		return frag;
 	} else {
