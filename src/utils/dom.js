@@ -109,29 +109,57 @@ export function waitFor(func, wait = 5000) {
 	});
 }
 
-/**
- * @param {HTMLElement} child
- * @param {HTMLElement} parent
- */
-function clearPrevious(child, parent) {
-	const id = child.getAttribute('data-o') || getTestID();
-	if (id) {
-		Array.from(parent.children).forEach((child) => {
-			if (child.dataset.o === id) {
-				parent.removeChild(child);
-			}
-		});
-	}
-	child.setAttribute('data-o', id);
+function setElementTestID(element, index) {
+	const id = element.dataset.o || `${getTestID()}${index ? index + 1 : ''}`;
+	element.dataset.o = id;
 }
 
 /**
- * @param {HTMLElement} child
+ * @param {HTMLElement|DocumentFragment} child
+ * @param {HTMLElement} parent
+ */
+function clearPrevious(child, parent) {
+	let children = [child];
+	// If document fragment, use its contents
+	if (child.nodeType === 11) {
+		children = Array.from(child.children);
+	}
+	children.forEach((child, index) => {
+		const id = child.dataset.o;
+		if (id) {
+			Array.from(parent.children).forEach((child) => {
+				if (child.dataset.o === id) {
+					parent.removeChild(child);
+				}
+			});
+		}
+	});
+}
+
+function createMutation(children) {
+	if (Array.isArray(children)) {
+		const frag = document.createDocumentFragment();
+		children.forEach((child, index) => {
+			if (child) {
+				frag.appendChild(child);
+				setElementTestID(child, index);
+			}
+		});
+		return frag;
+	} else {
+		setElementTestID(children);
+		return children;
+	}
+}
+
+/**
+ * @param {HTMLElement|HTMLElement[]} child
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
 export function append(child, parent, clearPrev = true) {
+	child = createMutation(child);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
@@ -140,12 +168,13 @@ export function append(child, parent, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement} child
+ * @param {HTMLElement|HTMLElement[]} child
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
 export function prepend(child, parent, clearPrev = true) {
+	child = createMutation(child);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
@@ -158,12 +187,13 @@ export function prepend(child, parent, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement} child
+ * @param {HTMLElement|HTMLElement[]} child
  * @param {HTMLElement} before
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
 export function insertBefore(child, before, clearPrev = true) {
+	child = createMutation(child);
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
 	}
@@ -172,12 +202,13 @@ export function insertBefore(child, before, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement} child
+ * @param {HTMLElement|HTMLElement[]} child
  * @param {HTMLElement} after
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement} child
  */
 export function insertAfter(child, after, clearPrev = true) {
+	child = createMutation(child);
 	const parentNode = after.parentNode;
 	if (clearPrev) {
 		clearPrevious(child, parentNode);
