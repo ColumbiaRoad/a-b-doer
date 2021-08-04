@@ -18,15 +18,13 @@ describe('EJS', () => {
 		expect(content).toMatch(`<style>body{background:red}</style>`);
 	});
 
-	it('should add ejs file content', async (done) => {
+	it('should add ejs file content', async () => {
 		expect(ejs).toBeTruthy();
 		expect(await (await ejs.getProperty('innerHTML')).jsonValue()).toMatch('<h3>text 1</h3>');
-		done();
 	});
 
-	it('should add html file content', async (done) => {
+	it('should add html file content', async () => {
 		expect(html).toBeTruthy();
 		expect(await (await html.getProperty('innerHTML')).jsonValue()).toMatch('<h3>text 2</h3>');
-		done();
 	});
 });
