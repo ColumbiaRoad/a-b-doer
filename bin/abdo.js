@@ -213,7 +213,11 @@ function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			return buildspec(entryFile);
+			const spec = buildspec(entryFile);
+			if (entryFile.includes(spec.buildDir)) {
+				return null;
+			}
+			return spec;
 		})
 		.filter(Boolean);
 }

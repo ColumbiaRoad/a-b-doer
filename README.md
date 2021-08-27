@@ -463,6 +463,14 @@ Default `false`
 
 Adds some extra logging for debug
 
+### appendStyles
+
+Type `Boolean` (optional)
+
+Default `true`
+
+Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
+
 ---
 
 ### Example buildspec.json
@@ -566,6 +574,9 @@ module.exports = {
       // Add extra input plugin to rollup configuration
       fooPlugin({ foo: 1 }),
     ],
+    output: {
+      // Some super options for bundler output
+    },
   },
 };
 ```
