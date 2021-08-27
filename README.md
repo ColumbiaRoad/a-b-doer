@@ -385,6 +385,20 @@ Type `string` (optional)
 
 Entry file for Rollup. Can be at least js or scss file.
 
+### buildDir
+
+Type `string` (optional)
+
+Default `.build`
+
+Output directory for Rollup.
+
+### entry
+
+Type `string` (optional)
+
+Entry file for Rollup. Can be at least js or scss file.
+
 ### minify
 
 Type `boolean` (optional)

@@ -158,7 +158,7 @@ async function createScreenshots(targetPath) {
 		const url = Array.isArray(config.url) ? config.url[0] : config.url;
 		// Take screenshot from variant
 		await page.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-${entryName}-v${nth}.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 			fullPage: true,
 		});
 		// Get new page for the original (without listeners etc)
@@ -168,7 +168,7 @@ async function createScreenshots(targetPath) {
 		// Go to the same url and take the screenshot from the original as well.
 		await origPage.goto(url, { waitUntil: 'networkidle0' });
 		await origPage.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-${entryName}-orig.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 			fullPage: true,
 		});
 		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
