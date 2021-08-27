@@ -214,7 +214,7 @@ function getMatchingBuildspec(targetPath) {
 				return null;
 			}
 			const spec = buildspec(entryFile);
-			if (spec && entryFile.includes(spec.buildDir)) {
+			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
 			return spec;
