@@ -520,6 +520,14 @@ Default `true`
 
 Is devtools open when browser opens
 
+### sourcemap
+
+Type `boolean` (optional)
+
+Default `true`
+
+Inlines source maps to the bundle with local file urls. This works only in watch mode.
+
 ### Example config.json
 
 ```json
