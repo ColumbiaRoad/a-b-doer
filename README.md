@@ -556,6 +556,7 @@ node-resolve,
 replace,
 styles,
 svg-hyperscript,
+preact-debug
 */
 
 module.exports = {
