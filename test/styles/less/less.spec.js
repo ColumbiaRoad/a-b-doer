@@ -13,7 +13,7 @@ describe('LESS', () => {
 	test('should create file with foo.less', async () => {
 		await bundler({ ...config, entry: './foo.less' });
 		const content = fs.readFileSync(__dirname + '/.build/foo.css', { encoding: 'utf8' });
-		expect(content).toBe('body{background:#00f}body #t1afo-wrapper{border:1px solid #00f}');
+		expect(content).toBe('body{background:blue}body #t1afo-wrapper{border:1px solid blue}');
 	});
 
 	test('should correct module file', async () => {
