@@ -6,6 +6,7 @@ import buildspec from '../lib/buildspec';
 import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
 import { cyan, yellow, green, red } from 'chalk';
+import chokidar from 'chokidar';
 
 const cmd = process.argv[2];
 
@@ -18,6 +19,8 @@ if (!cmds.includes(cmd)) {
 }
 
 const watch = cmd === 'watch';
+
+let rollupWatcher = null;
 
 const targetPath = process.argv[3] || '.';
 
@@ -59,7 +62,22 @@ async function buildSingleEntry(targetPath) {
 
 	switch (cmd) {
 		case 'watch':
-			console.log(cyan('Starting bundler with a file watcher...'));
+			if (rollupWatcher) {
+				rollupWatcher.close();
+			} else {
+				console.log(cyan('Starting bundler with a file watcher...'));
+			}
+			const watcher = chokidar.watch(config._specFiles, {
+				awaitWriteFinish: true,
+			});
+			watcher.on('change', (filepath) => {
+				console.log('');
+				console.log('Buildspec changed', yellow(filepath));
+				console.log(green('Restarting bundler...'));
+				console.log('');
+				buildSingleEntry(targetPath);
+				watcher.close();
+			});
 			break;
 		case 'build':
 			console.log(cyan('Building variant bundle...'));
@@ -72,7 +90,8 @@ async function buildSingleEntry(targetPath) {
 	console.log('');
 
 	try {
-		await bundler({ ...config, watch });
+		const output = await bundler({ ...config, watch });
+		rollupWatcher = output.watcher;
 		console.log(green('Bundle built.'));
 		console.log('');
 	} catch (error) {
@@ -158,7 +177,7 @@ async function createScreenshots(targetPath) {
 		const url = Array.isArray(config.url) ? config.url[0] : config.url;
 		// Take screenshot from variant
 		await page.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-${entryName}-v${nth}.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 			fullPage: true,
 		});
 		// Get new page for the original (without listeners etc)
@@ -168,7 +187,7 @@ async function createScreenshots(targetPath) {
 		// Go to the same url and take the screenshot from the original as well.
 		await origPage.goto(url, { waitUntil: 'networkidle0' });
 		await origPage.screenshot({
-			path: path.join(config.testPath, '.build', `screenshot-${entryName}-orig.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 			fullPage: true,
 		});
 		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
@@ -213,7 +232,11 @@ function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			return buildspec(entryFile);
+			const spec = buildspec(entryFile);
+			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
+				return null;
+			}
+			return spec;
 		})
 		.filter(Boolean);
 }

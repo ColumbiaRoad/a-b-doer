@@ -16,7 +16,7 @@ yarn add a-b-doer --dev
 
 # Prerequisites
 
-Create config.json (config.js) to project root with the following minimum settings:
+Create config.json (or config.js) to project root with the following minimum settings:
 
 ```json
 {
@@ -63,7 +63,7 @@ You can add these commands to package.json scripts
 
 # Test structure
 
-Tests can be created to under any folder. All tests should at least have buildspec.json created in test's own folder or its parent folder.
+Tests can be created to under any folder. All tests should at least have buildspec.json (or buildspec.js) created in test's own folder or its parent folder.
 
 ```
 tests/
@@ -385,6 +385,20 @@ Type `string` (optional)
 
 Entry file for Rollup. Can be at least js or scss file.
 
+### buildDir
+
+Type `string` (optional)
+
+Default `.build`
+
+Output directory for Rollup.
+
+### entry
+
+Type `string` (optional)
+
+Entry file for Rollup. Can be at least js or scss file.
+
 ### minify
 
 Type `boolean` (optional)
@@ -449,6 +463,14 @@ Default `false`
 
 Adds some extra logging for debug
 
+### appendStyles
+
+Type `Boolean` (optional)
+
+Default `true`
+
+Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
+
 ---
 
 ### Example buildspec.json
@@ -498,6 +520,14 @@ Default `true`
 
 Is devtools open when browser opens
 
+### sourcemap
+
+Type `boolean` (optional)
+
+Default `true`
+
+Inlines source maps to the bundle with local file urls. This works only in watch mode.
+
 ### Example config.json
 
 ```json
@@ -526,6 +556,7 @@ node-resolve,
 replace,
 styles,
 svg-hyperscript,
+preact-debug
 */
 
 module.exports = {
@@ -552,6 +583,15 @@ module.exports = {
       // Add extra input plugin to rollup configuration
       fooPlugin({ foo: 1 }),
     ],
+    output: {
+      // Some super options for bundler output
+    },
   },
 };
 ```
+
+#### Hashed file names
+
+You can turn on hashed file names by setting bundler option `{ output: { entryFileNames: "[name].[hash].js" } }`. `assetFileNames` option will be same as `entryFileNames` if not explicitly set to something else so both js and css file names will be in the format set by `entryFileNames`.
+
+If A/B Doer finds entryFileNames option with a hash tag, it will clear the build directory before each build.
