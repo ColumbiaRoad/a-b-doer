@@ -7,12 +7,12 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### ⚠ BREAKING CHANGES
 
-* ouput is not minified if not explicitly specified
+* In watch mode the output is not minified if not explicitly specified
 
 ### Features
 
 * Hashed file name support. Support also bundlespec.js ([066335d](https://github.com/ColumbiaRoad/a-b-doer/commit/066335d5da3b21e569523edc6c3dc1dcea8b0ea6))
-* minify is tied to watch mode by default ([e760c61](https://github.com/ColumbiaRoad/a-b-doer/commit/e760c6173a096a41073d1a5bbe6285b2401ea96e))
+* Minify is tied to watch mode by default ([e760c61](https://github.com/ColumbiaRoad/a-b-doer/commit/e760c6173a096a41073d1a5bbe6285b2401ea96e))
 * Possibility to control if styles should be added automatically, basic support for custom bundler output options ([30a4e82](https://github.com/ColumbiaRoad/a-b-doer/commit/30a4e82c8051d10cd162198ac19616a9737cf75e))
 * Preact.debug module, faster bundle time without synced file access ([3ff885e](https://github.com/ColumbiaRoad/a-b-doer/commit/3ff885ed48518edebd0555bc39e6f542e8ce995e))
 * Support custom build directory ([e0335ad](https://github.com/ColumbiaRoad/a-b-doer/commit/e0335ad22193a0310ff2925729898255f1853185))
