@@ -1,29 +1,14 @@
 /**
- * Returns a function, that, when invoked, will only be triggered at most once
- * during a given window of time.
- * @param fn
- * @param timeFrame
- */
-export function throttle(fn: Function, timeFrame: number);
-
-/**
- * Returns a function, that, as long as it continues to be invoked, will not
- * be triggered. The function will be called after it stops being called for
- * N milliseconds. If `immediate` is passed, trigger the function on the
- * leading edge, instead of the trailing.
- * @param func
- * @param wait
- * @param immediate
- */
-export function debounce(func: Function, wait: number, immediate?: boolean);
-
-/**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
  * @param {(targetNode: HTMLElement) => void} callback
  * @param [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelector(selector: string, callback: (targetNode: HTMLElement) => void, wait: number = 1000);
+export function pollQuerySelector(
+	selector: string,
+	callback: (targetNode: HTMLElement) => void,
+	wait: number = 1000
+): void;
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -36,7 +21,7 @@ export function pollQuerySelectorAll(
 	selector: string,
 	callback: (targetNodes: HTMLElement[]) => void,
 	wait?: number = 1000
-);
+): void;
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
