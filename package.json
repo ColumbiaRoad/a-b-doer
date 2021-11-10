@@ -93,6 +93,7 @@
     "dist",
     "lib",
     "src",
+    "index.d.ts",
     "hooks.js",
     "main.js"
   ],
