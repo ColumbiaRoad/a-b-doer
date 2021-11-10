@@ -4,12 +4,12 @@ export interface Ref<T> {
 
 /**
  * Initializes the reference object.
- * @param current Initial value
+ * @param current Initial value, defaults null
  */
-export function useRef<T = any>(current?: T = null): Ref<T>;
+export function useRef<T = any>(current?: T): Ref<T>;
 
 /**
  * Runs given function in the next tick.
- * @param {Function} cb
+ * @param cb Function to be executed
  */
 export function useHook(cb: Function): void;

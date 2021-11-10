@@ -1,8 +1,8 @@
 /**
  * Returns a function, that, when invoked, will only be triggered at most once
  * during a given window of time.
- * @param fn
- * @param timeFrame
+ * @param fn Function to be executed
+ * @param timeFrame Time frame in milliseconds
  */
 export function throttle(fn: Function, timeFrame: number): void;
 
@@ -11,8 +11,8 @@ export function throttle(fn: Function, timeFrame: number): void;
  * be triggered. The function will be called after it stops being called for
  * N milliseconds. If `immediate` is passed, trigger the function on the
  * leading edge, instead of the trailing.
- * @param func
- * @param wait
- * @param immediate
+ * @param func Function to be executed
+ * @param wait Debounce timeout in milliseconds
+ * @param immediate Immediate call, defaults false
  */
 export function debounce(func: Function, wait: number, immediate?: boolean): void;
