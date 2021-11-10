@@ -2,7 +2,7 @@
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
  * @param callback
- * @param wait how many milliseconds to poll, default 1000
+ * @param wait how many milliseconds to poll, default 1000 ms
  */
 export function pollQuerySelector(selector: string, callback: (targetNode: HTMLElement) => void, wait?: number): void;
 
@@ -44,7 +44,7 @@ export function waitFor<T = any>(func: () => T, wait?: number): Promise<T>;
  * Adds element(s) to beginning of the given parent element child list
  * @param child Created element
  * @param parent Targeted parent element
- * @param clearPrev Clear all matching same elements, defaults true
+ * @param clearPrev Clear all matching same elements, default true
  * @returns child
  */
 export function append(child: HTMLElement | HTMLElement[], parent: HTMLElement, clearPrev?: boolean): HTMLElement;
@@ -53,7 +53,7 @@ export function append(child: HTMLElement | HTMLElement[], parent: HTMLElement, 
  * Adds element(s) to end of the given parent element child list
  * @param child Created element
  * @param parent Targeted parent element
- * @param clearPrev Clear all matching same elements, defaults true
+ * @param clearPrev Clear all matching same elements, default true
  * @returns child
  */
 export function prepend(child: HTMLElement | HTMLElement[], parent: HTMLElement, clearPrev?: boolean): HTMLElement;
@@ -62,7 +62,7 @@ export function prepend(child: HTMLElement | HTMLElement[], parent: HTMLElement,
  * Inserts element(s) before given element.
  * @param child Created element
  * @param before Targeted element
- * @param clearPrev Clear all matching same elements, defaults true
+ * @param clearPrev Clear all matching same elements, default true
  * @returns child
  */
 export function insertBefore(child: HTMLElement | HTMLElement[], before: HTMLElement, clearPrev?: boolean): HTMLElement;
@@ -71,7 +71,7 @@ export function insertBefore(child: HTMLElement | HTMLElement[], before: HTMLEle
  * Inserts element(s) after given element.
  * @param child Created element
  * @param after Targeted element
- * @param clearPrev Clear all matching same elements, defaults true
+ * @param clearPrev Clear all matching same elements, default true
  * @returns child
  */
 export function insertAfter(child: HTMLElement | HTMLElement[], after: HTMLElement, clearPrev?: boolean): HTMLElement;

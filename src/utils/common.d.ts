@@ -13,6 +13,6 @@ export function throttle(fn: Function, timeFrame: number): void;
  * leading edge, instead of the trailing.
  * @param func Function to be executed
  * @param wait Debounce timeout in milliseconds
- * @param immediate Immediate call, defaults false
+ * @param immediate Immediate call, default false
  */
 export function debounce(func: Function, wait: number, immediate?: boolean): void;
