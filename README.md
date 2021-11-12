@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser which outputs real DOM nodes. You can enable preact for more advanced tests with states etc. but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize)
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser. You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize).
 
 ---
 
