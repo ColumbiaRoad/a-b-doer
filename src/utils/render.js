@@ -20,8 +20,17 @@ export function render(vnode, newProps) {
 		vnode = vnode._v;
 	}
 
+	if (Array.isArray(vnode)) {
+		const a = render({
+			type: Fragment,
+			props: { children: vnode },
+			key: '',
+		});
+		return a;
+	}
+
 	const { type: tag, props, svg } = vnode;
-	const children = props.children.flatMap((c) => c);
+	const children = props.children;
 	const frag = isFragment(tag);
 	const newestProps = newProps || props;
 
@@ -108,7 +117,11 @@ export function render(vnode, newProps) {
 			if (vnode.key && isDomNode(element) && !newestProps['data-o']) element.dataset.o = vnode.key;
 		}
 
-		const renderedChildren = children.map((child, index) => {
+		if (frag) {
+			element = document.createDocumentFragment();
+		}
+
+		children.map((child, index) => {
 			if (isRenderableElement(child)) {
 				if (vnode.svg) {
 					child.svg = true;
@@ -116,14 +129,9 @@ export function render(vnode, newProps) {
 				if (isVNode(child)) {
 					child.key = vnode.key + index;
 				}
-				return frag ? render(child) : appendChild(element, child);
+				return appendChild(element, child);
 			}
 		});
-
-		if (frag) {
-			vnode._n = renderedChildren;
-			return renderedChildren;
-		}
 	}
 
 	if (vnode._n && !merged) {
