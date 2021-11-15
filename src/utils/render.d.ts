@@ -15,7 +15,7 @@ type AnyObject = { [x: string]: any };
  * @param {AnyObject} [newProps]
  * @returns {HTMLElement}
  */
-export function render(vnode: VNode | HTMLElement | string | number | Component, newProps: AnyObject): HTMLElement;
+export function render(vnode: VNode | HTMLElement | string | number | Component, newProps?: AnyObject): HTMLElement;
 
 /**
  * Returns current test ID which is generated from the test file by the bundler.

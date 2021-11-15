@@ -1,1 +1,1 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:true});exports.useHook=exports.useRef=void 0;const useRef=(current=null)=>{return{current}};exports.useRef=useRef;const useHook=cb=>{setTimeout(cb,0)};exports.useHook=useHook;
+"use strict";Object.defineProperty(exports,"__esModule",{value:true});exports.useEffect=exports.useHook=exports.useRef=void 0;const useRef=(current=null)=>{return{current}};exports.useRef=useRef;const useHook=cb=>{setTimeout(cb,0)};exports.useHook=useHook;const useEffect=useHook;exports.useEffect=useEffect;

@@ -272,5 +272,3 @@ function isDomNode(tag) {
 export function isVNode(vnode) {
 	return !!vnode._n || !!vnode.props;
 }
-
-window.render = render;

@@ -19,3 +19,5 @@ export const useRef = (current = null) => {
 export const useHook = (cb) => {
 	setTimeout(cb, 0);
 };
+
+export const useEffect = useHook;

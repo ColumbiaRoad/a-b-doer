@@ -13,3 +13,10 @@ export function useRef<T = any>(current?: T): Ref<T>;
  * @param cb Function to be executed
  */
 export function useHook(cb: Function): void;
+
+/**
+ * For similar API with preact, actually is same as useHook
+ * @param cb Function to be executed
+ * @param deps Currently not in use
+ */
+export function useEffect(cb: Function, deps: Array<any>): void;

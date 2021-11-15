@@ -15,4 +15,8 @@ export function throttle(fn: Function, timeFrame: number): void;
  * @param wait Debounce timeout in milliseconds
  * @param immediate Immediate call, default false
  */
-export function debounce(func: Function, wait: number, immediate?: boolean): void;
+export function debounce<Params extends any[]>(
+	func: (...args: Params) => void,
+	wait: number,
+	immediate?: boolean
+): (...args: Params) => void;

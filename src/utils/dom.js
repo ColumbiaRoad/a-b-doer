@@ -146,6 +146,10 @@ function clearPrevious(child, parent) {
 }
 
 function createMutation(child) {
+	// Skip mutation check when we're adding elements in preact env, otherwise ab doer render() will be in the bundle with preact
+	if (process.env.preact) {
+		return child;
+	}
 	let node = child;
 	if (isVNode(child)) {
 		const rendered = render(child);
