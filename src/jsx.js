@@ -25,10 +25,7 @@ function createElement(tag, props, ...children) {
 		props.className = props.class;
 	}
 
-	Object.defineProperty(props, 'children', {
-		enumerable: false,
-		value: children || [],
-	});
+	props.children = children || [];
 
 	const vnode = {
 		type: tag,

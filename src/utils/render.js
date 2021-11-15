@@ -1,5 +1,11 @@
 import { domAppend } from './internal';
 
+function copyInternal(source, target) {
+	['_i', '_n', '_r', '_v'].forEach((a) => {
+		if (source[a] !== undefined) target[a] = source[a];
+	});
+}
+
 /**
  * Renders and re-renders given AB Doer VNode with optional new props.
  * @param {VNode|HTMLElement|string|number|Component} vnode
@@ -48,10 +54,12 @@ export function render(vnode, newProps) {
 		if (tag.prototype?.render) {
 			let comp = vnode._i;
 			// First render
-			if (!vnode._i) {
+			if (!comp) {
 				vnode._i = comp = new tag(props);
-				comp._v = vnode;
-				element = render(comp.render());
+				comp._v = vnode; // So render call inside of Component setState knows which VNode to render
+				const newVNode = comp.render();
+				vnode._r = newVNode;
+				element = render(newVNode);
 				if (comp.componentDidMount) {
 					comp.componentDidMount();
 				}
@@ -65,6 +73,14 @@ export function render(vnode, newProps) {
 				newProps = vnode.props;
 				const newVNode = comp.render();
 				newVNode.key = vnode.key;
+				newVNode.props.children = newVNode.props.children.map((child, index) => {
+					if (!child) return child;
+					const oldChild = vnode._r.props.children[index];
+					if (typeof child.type === 'function' && oldChild.type === child.type) {
+						copyInternal(oldChild, child);
+					}
+					return child;
+				});
 				element = render(newVNode);
 				mergeElementInto(element, vnode._n, props, newProps);
 				merged = true;
@@ -206,7 +222,7 @@ function setElementAttributes(element, props) {
 	for (let name in props) {
 		if (props.hasOwnProperty(name)) {
 			let value = props[name];
-			if (name === 'className') {
+			if (name === 'className' || name === 'children') {
 				continue;
 			} else if (name === 'style') {
 				value = getStyleString(value);
