@@ -72,6 +72,7 @@ export function render(vnode, newProps) {
 				}
 				newProps = vnode.props;
 				const newVNode = comp.render();
+				if (!newVNode) return newVNode;
 				newVNode.key = vnode.key;
 				newVNode.props.children = mergeChildren(vnode._r, newVNode);
 				element = render(newVNode);
@@ -89,7 +90,8 @@ export function render(vnode, newProps) {
 			hooks.h = vnode._h;
 			hooks.c = 0;
 			hooks.v = vnode;
-			const newVNode = tag(newProps || props, ...children);
+			const newVNode = tag(newProps || props);
+			if (!newVNode) return newVNode;
 			newVNode.key = vnode.key;
 			if (vnode._r) {
 				newVNode.props.children = mergeChildren(vnode._r, newVNode);
@@ -163,8 +165,8 @@ export function render(vnode, newProps) {
 
 function mergeChildren(source, target) {
 	return target.props.children.map((child, index) => {
-		if (!child) return child;
 		const oldChild = source.props.children[index];
+		if (!child || !oldChild) return child;
 		if (typeof child.type === 'function' && oldChild.type === child.type) {
 			copyInternal(oldChild, child);
 		}
@@ -179,6 +181,7 @@ function mergeChildren(source, target) {
 function appendChild(parent, child) {
 	if (isRenderableElement(child)) {
 		const node = render(child);
+		if (!node) return;
 		// Only root elements should have data-o attribute
 		if (node?.dataset) delete node.dataset.o;
 		domAppend(parent, node.nodeType ? node : document.createTextNode(node));

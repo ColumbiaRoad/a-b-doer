@@ -1,1 +1,66 @@
-"use strict";Object.defineProperty(exports,"__esModule",{value:true});exports.useState=exports.useEffect=exports.useHook=exports.useRef=void 0;var _internal=require("./utils/internal");var _render=require("./utils/render");const useRef=(current=null)=>{if(!_internal.hooks.h[_internal.hooks.c]){_internal.hooks.h[_internal.hooks.c]={current}}const ret=_internal.hooks.h[_internal.hooks.c];_internal.hooks.c++;return ret};exports.useRef=useRef;const useHook=cb=>{setTimeout(cb,0)};exports.useHook=useHook;const useEffect=(cb,deps)=>{const oldDeps=_internal.hooks.h[_internal.hooks.c]||[];let same=true;for(let index=0;index<deps.length;index++){if(deps[index]!==oldDeps[index]){same=false;break}}if(!same){_internal.hooks.h[_internal.hooks.c]=deps;setTimeout(cb)}_internal.hooks.c++};exports.useEffect=useEffect;const useState=defaultValue=>{if(!_internal.hooks.h[_internal.hooks.c]){_internal.hooks.h[_internal.hooks.c]=[defaultValue,((index,vnode)=>value=>{_internal.hooks.h[index][0]=value;if(vnode){setTimeout(()=>{(0,_render.render)(vnode)})}})(_internal.hooks.c,_internal.hooks.v)]}const state=_internal.hooks.h[_internal.hooks.c];_internal.hooks.c++;return state};exports.useState=useState;
+/**
+ * @typedef {Object} Ref
+ * @property {*|null} current
+ */
+
+import { hooks } from './src/utils/internal';
+import { render } from './src/utils/render';
+
+/**
+ * Initializes the reference object.
+ * @param {*} current Initial value
+ * @returns {Ref}
+ */
+export const useRef = (current = null) => {
+	if (!hooks.h[hooks.c]) {
+		hooks.h[hooks.c] = { current };
+	}
+	const ret = hooks.h[hooks.c];
+	hooks.c++;
+	return ret;
+};
+
+/**
+ * Runs given function in the next tick.
+ * @param {Function} cb
+ */
+export const useHook = (cb) => {
+	setTimeout(cb, 0);
+};
+
+export const useEffect = (cb, deps) => {
+	const oldDeps = hooks.h[hooks.c];
+	let shouldCall = !oldDeps || !deps;
+	if (!shouldCall && deps) {
+		for (let index = 0; index < deps.length; index++) {
+			if (deps[index] !== oldDeps[index]) {
+				shouldCall = true;
+				break;
+			}
+		}
+	}
+	if (shouldCall) {
+		hooks.h[hooks.c] = deps;
+		setTimeout(cb);
+	}
+	hooks.c++;
+};
+
+export const useState = (defaultValue) => {
+	if (!hooks.h[hooks.c]) {
+		hooks.h[hooks.c] = [
+			defaultValue,
+			((hooks, index, vnode) => (value) => {
+				hooks[index][0] = value;
+				if (vnode) {
+					setTimeout(() => {
+						render(vnode);
+					});
+				}
+			})(hooks.h, hooks.c, hooks.v),
+		];
+	}
+	const state = hooks.h[hooks.c];
+	hooks.c++;
+	return state;
+};

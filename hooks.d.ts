@@ -15,8 +15,14 @@ export function useRef<T = any>(current?: T): Ref<T>;
 export function useHook(cb: Function): void;
 
 /**
- * For similar API with preact, actually is same as useHook
+ * Effect hook that'll be called after component has been rendered.
  * @param cb Function to be executed
- * @param deps Currently not in use
+ * @param cache Values that works as a cache key
  */
-export function useEffect(cb: Function, deps: Array<any>): void;
+export function useEffect(cb: Function, cache?: Array<any>): void;
+
+/**
+ * Returns a tuple that contains a stateful value and a function to update it.
+ * @param defaultValue
+ */
+export function useState<T = any>(defaultValue?: T): [T, (value: T) => void];

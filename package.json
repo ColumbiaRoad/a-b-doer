@@ -7,7 +7,6 @@
     "build": "npm-run-all clean build:*",
     "build:lib": "babel ./lib -d ./dist/lib",
     "build:bin": "babel ./bin -d ./dist/bin",
-    "build:hooks": "babel ./src/hooks.js -o ./hooks.js",
     "clean": "rimraf ./dist",
     "try:build": "node ./dist/bin/abdo.js build",
     "try:build-all": "node ./dist/bin/abdo.js build-all",
