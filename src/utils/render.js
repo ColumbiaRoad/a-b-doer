@@ -1,7 +1,7 @@
-import { domAppend } from './internal';
+import { domAppend, hooks } from './internal';
 
 function copyInternal(source, target) {
-	['_i', '_n', '_r', '_v'].forEach((a) => {
+	['_h', '_i', '_n', '_r', '_v'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
 	});
 }
@@ -73,14 +73,7 @@ export function render(vnode, newProps) {
 				newProps = vnode.props;
 				const newVNode = comp.render();
 				newVNode.key = vnode.key;
-				newVNode.props.children = newVNode.props.children.map((child, index) => {
-					if (!child) return child;
-					const oldChild = vnode._r.props.children[index];
-					if (typeof child.type === 'function' && oldChild.type === child.type) {
-						copyInternal(oldChild, child);
-					}
-					return child;
-				});
+				newVNode.props.children = mergeChildren(vnode._r, newVNode);
 				element = render(newVNode);
 				mergeElementInto(element, vnode._n, props, newProps);
 				merged = true;
@@ -92,8 +85,16 @@ export function render(vnode, newProps) {
 		}
 		// Functional components
 		else {
+			vnode._h = vnode._h || [];
+			hooks.h = vnode._h;
+			hooks.c = 0;
+			hooks.v = vnode;
 			const newVNode = tag(newProps || props, ...children);
 			newVNode.key = vnode.key;
+			if (vnode._r) {
+				newVNode.props.children = mergeChildren(vnode._r, newVNode);
+			}
+			vnode._r = newVNode;
 			element = render(newVNode);
 		}
 
@@ -158,6 +159,17 @@ export function render(vnode, newProps) {
 	}
 
 	return element;
+}
+
+function mergeChildren(source, target) {
+	return target.props.children.map((child, index) => {
+		if (!child) return child;
+		const oldChild = source.props.children[index];
+		if (typeof child.type === 'function' && oldChild.type === child.type) {
+			copyInternal(oldChild, child);
+		}
+		return child;
+	});
 }
 
 /**

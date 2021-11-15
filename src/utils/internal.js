@@ -8,3 +8,9 @@ export function domInsertBefore(parent, child, target) {
 export function domRemove(parent, child) {
 	parent.removeChild(child);
 }
+
+export const hooks = {
+	c: 0,
+	h: [],
+	v: null,
+};
