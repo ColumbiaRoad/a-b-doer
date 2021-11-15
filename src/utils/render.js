@@ -21,7 +21,7 @@ export function render(vnode, newProps) {
 	}
 
 	const { type: tag, props, svg } = vnode;
-	const children = props.children;
+	const children = props.children.flatMap((c) => c);
 	const frag = isFragment(tag);
 	const newestProps = newProps || props;
 
