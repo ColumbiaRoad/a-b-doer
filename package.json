@@ -42,7 +42,6 @@
     "@rollup/plugin-image": "^2.1.1",
     "@rollup/plugin-node-resolve": "^13.0.5",
     "@rollup/plugin-replace": "^3.0.0",
-    "@rollup/plugin-typescript": "^8.3.0",
     "autoprefixer": "^10.3.6",
     "babel-plugin-transform-async-to-promises": "^0.8.15",
     "chalk": "^4.1.2",
@@ -56,13 +55,14 @@
     "preact": "^10.5.14",
     "puppeteer-core": "^10.4.0",
     "rollup": "^2.58.0",
-    "rollup-plugin-ejs": "^2.2.0",
     "rollup-plugin-inline-svg": "^2.0.0",
     "rollup-plugin-postcss": "^4.0.1",
     "rollup-plugin-styles": "^3.14.1",
     "rollup-plugin-svg-hyperscript": "^0.1.2",
     "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.30.0",
     "string-hash": "^1.1.3",
+    "tslib": "^2.3.1",
     "typescript": "^4.4.4"
   },
   "devDependencies": {
