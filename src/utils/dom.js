@@ -1,6 +1,7 @@
 import { render, isVNode, getTestID } from './render';
 import { Promise } from '../polyfills';
 import { domAppend, domInsertBefore, domRemove } from './internal';
+import { runUnmountCallbacks } from './render';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -157,6 +158,20 @@ function createMutation(child) {
 		node = document.createDocumentFragment();
 		children.forEach((child) => {
 			domAppend(node, child);
+		});
+		setTimeout(() => {
+			new MutationObserver((mutations, observer) => {
+				mutations.forEach((mutation) => {
+					mutation.removedNodes.forEach((el) => {
+						if (children.includes(el)) {
+							observer.disconnect();
+							runUnmountCallbacks(child);
+						}
+					});
+				});
+			}).observe(children[0].parentElement, {
+				childList: true,
+			});
 		});
 	}
 	return node;

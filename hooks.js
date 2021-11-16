@@ -29,7 +29,7 @@ export const useHook = (cb) => {
 };
 
 export const useEffect = (cb, deps) => {
-	const oldDeps = hooks.h[hooks.c];
+	const oldDeps = hooks.h[hooks.c]?.[1];
 	let shouldCall = !oldDeps || !deps;
 	if (!shouldCall && deps) {
 		for (let index = 0; index < deps.length; index++) {
@@ -40,8 +40,13 @@ export const useEffect = (cb, deps) => {
 		}
 	}
 	if (shouldCall) {
-		hooks.h[hooks.c] = deps;
-		setTimeout(cb);
+		if (oldDeps && hooks.h[hooks.c][2]) hooks.h[hooks.c][2]();
+		hooks.h[hooks.c] = ['e', deps, null];
+		((hooks, index) => {
+			setTimeout(() => {
+				hooks[index][2] = cb();
+			});
+		})(hooks.h, hooks.c);
 	}
 	hooks.c++;
 };

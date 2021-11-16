@@ -75,6 +75,7 @@ export function render(vnode, newProps) {
 				if (!newVNode) return newVNode;
 				newVNode.key = vnode.key;
 				newVNode.props.children = mergeChildren(vnode._r, newVNode);
+				vnode._r = newVNode;
 				element = render(newVNode);
 				mergeElementInto(element, vnode._n, props, newProps);
 				merged = true;
@@ -166,6 +167,9 @@ export function render(vnode, newProps) {
 function mergeChildren(source, target) {
 	return target.props.children.map((child, index) => {
 		const oldChild = source.props.children[index];
+		if (!child && typeof oldChild?.type === 'function') {
+			runUnmountCallbacks(oldChild);
+		}
 		if (!child || !oldChild) return child;
 		if (typeof child.type === 'function' && oldChild.type === child.type) {
 			copyInternal(oldChild, child);
@@ -181,7 +185,7 @@ function mergeChildren(source, target) {
 function appendChild(parent, child) {
 	if (isRenderableElement(child)) {
 		const node = render(child);
-		if (!node) return;
+		if (node === null) return;
 		// Only root elements should have data-o attribute
 		if (node?.dataset) delete node.dataset.o;
 		domAppend(parent, node.nodeType ? node : document.createTextNode(node));
@@ -265,6 +269,24 @@ function setElementAttributes(element, props) {
 
 function isRenderableElement(element) {
 	return !!element || element === 0;
+}
+
+export function runUnmountCallbacks(vnode) {
+	if (vnode._h) {
+		vnode._h.forEach((h) => {
+			if (h.length === 3 && typeof h[2] === 'function') {
+				h[2]();
+			}
+		});
+		vnode._h = [];
+	} else if (vnode._i && vnode._i.componentWillUnmount) {
+		vnode._i.componentWillUnmount();
+		delete vnode._i;
+	}
+	(vnode._r || vnode).props.children.forEach((vnode) => {
+		if (typeof vnode.type === 'function') runUnmountCallbacks(vnode);
+	});
+	delete vnode._n;
 }
 
 /**
