@@ -159,20 +159,23 @@ function createMutation(child) {
 		children.forEach((child) => {
 			domAppend(node, child);
 		});
-		setTimeout(() => {
-			new MutationObserver((mutations, observer) => {
-				mutations.forEach((mutation) => {
-					mutation.removedNodes.forEach((el) => {
-						if (children.includes(el)) {
-							observer.disconnect();
-							runUnmountCallbacks(child);
-						}
+		if (children[0]?.parentElement) {
+			setTimeout(() => {
+				// Add checker for root node's dom removal.
+				new MutationObserver((mutations, observer) => {
+					mutations.forEach((mutation) => {
+						mutation.removedNodes.forEach((el) => {
+							if (children.includes(el)) {
+								observer.disconnect();
+								runUnmountCallbacks(child);
+							}
+						});
 					});
+				}).observe(children[0].parentElement, {
+					childList: true,
 				});
-			}).observe(children[0].parentElement, {
-				childList: true,
 			});
-		});
+		}
 	}
 	return node;
 }

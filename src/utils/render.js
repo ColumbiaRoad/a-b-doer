@@ -164,6 +164,12 @@ export function render(vnode, newProps) {
 	return element;
 }
 
+/**
+ * Copy all internal values from source children to new children and run unmount callbacks from removed children.
+ * @param {Object} source
+ * @param {Object} target
+ * @returns {Array<Object>}
+ */
 function mergeChildren(source, target) {
 	return target.props.children.map((child, index) => {
 		const oldChild = source.props.children[index];
@@ -179,6 +185,7 @@ function mergeChildren(source, target) {
 }
 
 /**
+ * Renders given child VNode and appends it to the parent DOM node.
  * @param {HTMLElement} parent
  * @param {VNode|VNode[]} child
  */
@@ -194,7 +201,7 @@ function appendChild(parent, child) {
 }
 
 /**
- *
+ * Merges element DOM node to another. Removes events that are not present.
  * @param {HTMLElement} source
  * @param {HTMLElement} target
  */
@@ -272,21 +279,23 @@ function isRenderableElement(element) {
 }
 
 export function runUnmountCallbacks(vnode) {
-	if (vnode._h) {
-		vnode._h.forEach((h) => {
-			if (h.length === 3 && typeof h[2] === 'function') {
-				h[2]();
-			}
+	if (isVNode(vnode)) {
+		if (vnode._h) {
+			vnode._h.forEach((h) => {
+				if (h.length === 3 && typeof h[2] === 'function') {
+					h[2]();
+				}
+			});
+			vnode._h = [];
+		} else if (vnode._i && vnode._i.componentWillUnmount) {
+			vnode._i.componentWillUnmount();
+			delete vnode._i;
+		}
+		(vnode._r || vnode).props.children.forEach((vnode) => {
+			if (typeof vnode.type === 'function') runUnmountCallbacks(vnode);
 		});
-		vnode._h = [];
-	} else if (vnode._i && vnode._i.componentWillUnmount) {
-		vnode._i.componentWillUnmount();
-		delete vnode._i;
+		delete vnode._n;
 	}
-	(vnode._r || vnode).props.children.forEach((vnode) => {
-		if (typeof vnode.type === 'function') runUnmountCallbacks(vnode);
-	});
-	delete vnode._n;
 }
 
 /**
