@@ -255,6 +255,9 @@ function setElementAttributes(element, props) {
 			} else if (name === 'html') {
 				element.innerHTML = value;
 				continue;
+			} else if (name === 'dangerouslySetInnerHTML') {
+				element.innerHTML = value.__html;
+				continue;
 			} else if (name === 'ref' && value) {
 				if (typeof value === 'function') {
 					value(element);
@@ -264,10 +267,7 @@ function setElementAttributes(element, props) {
 				continue;
 			}
 			if (value === false || value === undefined) continue;
-			// const lcName = name.toLowerCase();
 			if (/^on[A-Z]/.test(name)) {
-				// element._evt.push(lcName);
-				// element[lcName] = value;
 				element.addEventListener(name.substr(2).toLowerCase(), value);
 			} else element.setAttribute(name, value.toString());
 		}
