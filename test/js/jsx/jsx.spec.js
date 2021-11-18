@@ -14,7 +14,7 @@ describe('JSX', () => {
 	});
 
 	it('should add test styles', () => {
-		expect(content).toMatch(`<style>body{background:red}</style>`);
+		expect(content).toMatch(/<style data-id="[\w-_]+">body{background:red}<\/style>/);
 	});
 
 	it('should add proper amount of elements', (done) => {

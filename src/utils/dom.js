@@ -1,4 +1,4 @@
-import { render, isVNode, getTestID } from './render';
+import { render, isVNode, getTestID, isDomNode } from './render';
 import { Promise } from '../polyfills';
 import { domAppend, domInsertBefore, domRemove } from './internal';
 import { runUnmountCallbacks } from './render';
@@ -147,6 +147,12 @@ function clearPrevious(child, parent) {
 }
 
 function createMutation(child) {
+	if (isDomNode(child)) {
+		if (!child.dataset.o) {
+			child.dataset.o = getTestID();
+		}
+		return child;
+	}
 	// Skip mutation check when we're adding elements in preact env, otherwise ab doer render() will be in the bundle with preact
 	if (process.env.preact) {
 		return child;

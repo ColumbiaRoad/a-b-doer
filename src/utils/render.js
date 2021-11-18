@@ -327,7 +327,7 @@ function isFragment(tag) {
 	return tag === Fragment;
 }
 
-function isDomNode(tag) {
+export function isDomNode(tag) {
 	return tag instanceof HTMLElement || tag instanceof SVGElement;
 }
 
