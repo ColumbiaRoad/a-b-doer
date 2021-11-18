@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser which outputs real DOM nodes. You can enable preact for more advanced tests with states etc. but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize)
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser. You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize).
 
 ---
 
@@ -87,29 +87,10 @@ In JS files ES6, imports, etc are supported and also Rollup will bundle and mini
 By default, JS supports nullish coalescing and optional chaining.
 
 If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { SVGIcon } from '@/icons/FooIcon.svg';`.
-HTML files can be imported like JS and Rollup creates ejs template function from the file. Template can be rendered as string by calling the function, example below
-
-## Usage examples, ejs templates
-
-```js
-import tpl from './template.ejs'; // ./template.html is also okay
-
-const domNode = document.createElement('div');
-
-domNode.innerHTML = tpl({ text: 'Hello World' });
-```
-
-template.ejs content:
-
-```html
-<p><%= locals.text %></p>
-```
-
-This lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
 ## Usage examples, jsx templates
 
-JSX files are also supported but they do not support React stuff out of the box. There's a simple createElement utility which works with babel and transforms jsx to dom nodes. JSX support is done by custom lib but you don't have to import it because it is done automatically (if preact option is not set). JSX lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
+JSX files are also supported and you can create custom components with either functional style or class style syntax. Custom component syntax is like in preact but implemented in much simpler way. This means that all hooks and component render cycle methods are not implemented (if you need them, use preact). This library uses a simple createElement utility which works with babel and transforms jsx to virtual nodes that'll be rendered automatically to DOM nodes when they're added to DOM with library's own DOM utilities.
 
 ```js
 import { append, pollQuerySelector, Component } from 'a-b-doer';
@@ -142,7 +123,15 @@ pollQuerySelector('html body', (target) => {
 });
 
 // template.jsx
+import { useState, useEffect } from 'a-b-doer/hooks';
 export const Tpl = (props) => {
+  useEffect(() => {
+    console.log('Mounted');
+    return () => {
+      console.log('Unmounted');
+    };
+  }, []);
+  const [state, setState] = useState({});
   return (
     <div onClick={() => console.log('testing')}>
       <h3>click me {props.test}</h3>
@@ -152,7 +141,18 @@ export const Tpl = (props) => {
 };
 // OR with class syntax
 export class Tpl extends Component {
+  componentDidMount() {
+    this.setState({ foo: 1 });
+    console.log('Mounted');
+  }
+  componentDidUpdate(prevProps) {
+    console.log('Updated', prevProps);
+  }
+  componentWillUnmount() {
+    console.log('Unmounted');
+  }
   render() {
+    console.log(this.state);
     return (
       <div onClick={() => console.log('testing')}>
         <h3>click me {this.props.test}</h3>
@@ -186,6 +186,10 @@ pollQuerySelector('html #app', (target) => {
   render(<MyComponent val={1} />, target);
 });
 ```
+
+## Polyfills
+
+This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
 
 ## Utility functions
 
@@ -306,8 +310,6 @@ Type `() => { current: null }`
 
 useRef function returns an object that has current property set to null. Useful when assigned to component prop which is required if you want to pass parent node to some child component.
 
-If you use refs with custom component, the ref will contain either the class instance of the component or a "re-render" function depending on the component type. Re-render updates the same DOM element and its contents.
-
 ```js
 import { append } from 'a-b-doer';
 import { useRef } from 'a-b-doer/hooks';
@@ -325,21 +327,17 @@ append(
   <SomeFunctionalComponent ref={componentRef} fooProp={1} barProp={"a"} />
   document.body
 );
-// Set all new props
-componentRef.current({ fooProp: 2, barProp: "b" });
-// Overwrite only some
-componentRef.current((oldProps) => ({ ...oldProps, fooProp: 2 }));
-// OR
-const componentRef = useRef();
-append(
-  <SomeClassComponent ref={componentRef} fooProp={1} />
-  document.body
-);
-componentRef.current.prop.fooProp = 2;
-componentRef.current.render();
 ```
 
-### useHook (JSX only)
+### useEffect (JSX only)
+
+Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact)
+
+### useState (JSX only)
+
+State hook for creating stateful values. This hook retuns a stateful value and a function to update it (like in preact).
+
+### useHook (JSX only, deprecated)
 
 useHook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
 
@@ -422,6 +420,24 @@ Type `boolean` (optional)
 Default `false`
 
 Should test script use preact? If true, 'h' will be imported automatically. Bundle size is approximately 5kb bigger (without preact/compat)
+
+### activationEvent
+
+Type `string` (optional)
+
+Use dataLayer event to activate the test in watch and preview modes. By default this is empty and the test will be acticated on DOM load.
+
+Example:
+
+```json
+{
+  ...
+  "activationEvent": "optimize.activate.mytest",
+  ...
+}
+```
+
+Activate the test by calling dataLayer.push({ event: "optimize.activate.mytest" }) manually or with e.g. Google Tag Manager.
 
 ### chunkImages
 
@@ -549,7 +565,6 @@ Note, changing the configuration for these plugins might break something.
 alias,
 babel,
 commonjs,
-ejs,
 image,
 inline-svg,
 node-resolve,
@@ -595,3 +610,43 @@ module.exports = {
 You can turn on hashed file names by setting bundler option `{ output: { entryFileNames: "[name].[hash].js" } }`. `assetFileNames` option will be same as `entryFileNames` if not explicitly set to something else so both js and css file names will be in the format set by `entryFileNames`.
 
 If A/B Doer finds entryFileNames option with a hash tag, it will clear the build directory before each build.
+
+## EJS support (removed from default config)
+
+EJS is no longer supported by default because the used ejs library is not actively maintained anymore, but you can add it easily to you config if needed.
+
+run `npm install rollup-plugin-ejs --save-dev`
+
+Update config.js:
+
+```js
+import ejs from 'rollup-plugin-ejs';
+
+module.exports = {
+  // ...
+  bundler: {
+    plugins: [
+      // ...
+      ejs({
+        include: ['**/*.ejs'],
+      }),
+    ],
+  },
+};
+```
+
+```js
+import tpl from './template.ejs'; // ./template.html is also okay
+
+const domNode = document.createElement('div');
+
+domNode.innerHTML = tpl({ text: 'Hello World' });
+```
+
+template.ejs content:
+
+```html
+<p><%= locals.text %></p>
+```
+
+The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
