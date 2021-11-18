@@ -304,7 +304,7 @@ waitFor(() => window.someLazyVar, 10000)
   });
 ```
 
-### useRef (JSX only)
+### useRef
 
 Type `() => { current: null }`
 
@@ -329,15 +329,15 @@ append(
 );
 ```
 
-### useEffect (JSX only)
+### useEffect
 
 Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact)
 
-### useState (JSX only)
+### useState
 
 State hook for creating stateful values. This hook retuns a stateful value and a function to update it (like in preact).
 
-### useHook (JSX only, deprecated)
+### useHook (deprecated)
 
 useHook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
 
@@ -613,7 +613,7 @@ If A/B Doer finds entryFileNames option with a hash tag, it will clear the build
 
 ## EJS support (removed from default config)
 
-EJS is no longer supported by default because the used ejs library is not actively maintained anymore, but you can add it easily to you config if needed.
+EJS is no longer supported by default because the used ejs library is not actively maintained anymore, but you can add it easily to your config if needed.
 
 run `npm install rollup-plugin-ejs --save-dev`
 
