@@ -1,4 +1,7 @@
+import { render, isVNode, getTestID, isDomNode } from './render';
 import { Promise } from '../polyfills';
+import { domAppend, domInsertBefore, domRemove } from './internal';
+import { runUnmountCallbacks } from './render';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -109,116 +112,147 @@ export function waitFor(func, wait = 5000) {
 	});
 }
 
-function setElementTestID(element, index) {
-	const id = element.dataset.o || `${getTestID()}${index ? index + 1 : ''}`;
-	element.dataset.o = id;
-}
-
-/**
- * @param {HTMLElement|DocumentFragment} child
- * @param {HTMLElement} parent
- */
-function clearPrevious(child, parent) {
+function getChildrenArray(child) {
+	if (Array.isArray(child)) return child;
+	if (!child) return [];
 	let children = [child];
 	// If document fragment, use its contents
 	if (child.nodeType === 11) {
 		children = Array.from(child.children);
 	}
-	children.forEach((child, index) => {
-		const id = child.dataset.o;
+	return children;
+}
+
+/**
+ * @param {HTMLElement|DocumentFragment|VNode} child
+ * @param {HTMLElement} parent
+ */
+function clearPrevious(child, parent) {
+	const children = getChildrenArray(child);
+	children.forEach((child) => {
+		let id;
+		if (isVNode(child)) {
+			id = child.key;
+		} else {
+			id = child.dataset?.o;
+		}
 		if (id) {
 			Array.from(parent.children).forEach((child) => {
 				if (child.dataset.o === id) {
-					parent.removeChild(child);
+					domRemove(parent, child);
 				}
 			});
 		}
 	});
 }
 
-function createMutation(children) {
-	if (Array.isArray(children)) {
-		const frag = document.createDocumentFragment();
-		children.forEach((child, index) => {
-			if (child) {
-				frag.appendChild(child);
-				setElementTestID(child, index);
-			}
-		});
-		return frag;
-	} else {
-		setElementTestID(children);
-		return children;
+function createMutation(child) {
+	if (isDomNode(child)) {
+		if (!child.dataset.o) {
+			child.dataset.o = getTestID();
+		}
+		return child;
 	}
+	// Skip mutation check when we're adding elements in preact env, otherwise ab doer render() will be in the bundle with preact
+	if (process.env.preact) {
+		return child;
+	}
+	let node = child;
+	if (isVNode(child)) {
+		const rendered = render(child);
+		const children = getChildrenArray(rendered);
+		node = document.createDocumentFragment();
+		children.forEach((child) => {
+			domAppend(node, child);
+		});
+		if (children[0]?.parentElement) {
+			setTimeout(() => {
+				// Add checker for root node's dom removal.
+				new MutationObserver((mutations, observer) => {
+					mutations.forEach((mutation) => {
+						mutation.removedNodes.forEach((el) => {
+							if (children.includes(el)) {
+								observer.disconnect();
+								runUnmountCallbacks(child);
+							}
+						});
+					});
+				}).observe(children[0].parentElement, {
+					childList: true,
+				});
+			});
+		}
+	}
+	return node;
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]} child
+ * @param {HTMLElement|VNode|VNode[]} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} child
+ * @returns {VNode} Rendered VNode
  */
-export function append(child, parent, clearPrev = true) {
-	child = createMutation(child);
+export function append(vnode, parent, clearPrev = true) {
+	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
-	parent.appendChild(child);
-	return child;
+	domAppend(parent, child);
+	return vnode;
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]} child
+ * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} child
+ * @returns {VNode} Rendered VNode
  */
-export function prepend(child, parent, clearPrev = true) {
-	child = createMutation(child);
+export function prepend(vnode, parent, clearPrev = true) {
+	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
 	if (parent.firstElementChild) {
-		parent.insertBefore(child, parent.firstElementChild);
+		domInsertBefore(parent, child, parent.firstElementChild);
 	} else {
-		parent.appendChild(child);
+		domAppend(parent, child);
 	}
-	return child;
+	return vnode;
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]} child
+ * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
  * @param {HTMLElement} before
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} child
+ * @returns {VNode} Rendered VNode
  */
-export function insertBefore(child, before, clearPrev = true) {
-	child = createMutation(child);
+export function insertBefore(vnode, before, clearPrev = true) {
+	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
 	}
-	before.parentNode.insertBefore(child, before);
-	return child;
+	domInsertBefore(before.parentNode, child, before);
+	return vnode;
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]} child
+ * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
  * @param {HTMLElement} after
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} child
+ * @returns {VNode} Rendered VNode
  */
-export function insertAfter(child, after, clearPrev = true) {
-	child = createMutation(child);
+export function insertAfter(vnode, after, clearPrev = true) {
+	const child = createMutation(vnode);
 	const parentNode = after.parentNode;
 	if (clearPrev) {
 		clearPrevious(child, parentNode);
 	}
 	if (after.nextElementSibling) {
-		parentNode.insertBefore(child, after.nextElementSibling);
+		domInsertBefore(parentNode, child, after.nextElementSibling);
 	} else {
-		parentNode.appendChild(child);
+		domAppend(parentNode, child);
 	}
-	return child;
+	return vnode;
 }
 
 export function clear(target, id) {
@@ -227,18 +261,14 @@ export function clear(target, id) {
 	}
 	prevNode = target.querySelector(`[data-o="${id}"]`);
 	if (prevNode) {
-		prevNode.parentNode.removeChild(prevNode);
+		domRemove(prevNode.parentNode, prevNode);
 	}
-}
-
-export function getTestID() {
-	return process.env.TEST_ID;
 }
 
 export function clearAll() {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
 		if (node.parentElement) {
-			node.parentElement.removeChild(node);
+			domRemove(node.parentElement, prevnodeNode);
 		}
 	});
 }

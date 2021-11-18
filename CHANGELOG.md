@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.4.1...v2.0.0) (2021-10-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* In watch mode the output is not minified if not explicitly specified
+
+### Features
+
+* Hashed file name support. Support also bundlespec.js ([066335d](https://github.com/ColumbiaRoad/a-b-doer/commit/066335d5da3b21e569523edc6c3dc1dcea8b0ea6))
+* Minify is tied to watch mode by default ([e760c61](https://github.com/ColumbiaRoad/a-b-doer/commit/e760c6173a096a41073d1a5bbe6285b2401ea96e))
+* Possibility to control if styles should be added automatically, basic support for custom bundler output options ([30a4e82](https://github.com/ColumbiaRoad/a-b-doer/commit/30a4e82c8051d10cd162198ac19616a9737cf75e))
+* Preact.debug module, faster bundle time without synced file access ([3ff885e](https://github.com/ColumbiaRoad/a-b-doer/commit/3ff885ed48518edebd0555bc39e6f542e8ce995e))
+* Support custom build directory ([e0335ad](https://github.com/ColumbiaRoad/a-b-doer/commit/e0335ad22193a0310ff2925729898255f1853185))
+* Support source maps (enabled by default) ([5a3c2c8](https://github.com/ColumbiaRoad/a-b-doer/commit/5a3c2c81614a5954bac17ea163961b791faa00e9))
+* Watch also buildspec files ([dc6a32d](https://github.com/ColumbiaRoad/a-b-doer/commit/dc6a32d9c7790ee3520b5e9325cdc1d6d1303e44))
+
+
+### Bug Fixes
+
+* Assign env variables more globally ([07163cf](https://github.com/ColumbiaRoad/a-b-doer/commit/07163cf1c8489d49ce622026e94d2421513894d0))
+* Correct way to check preact entry. ([f08120f](https://github.com/ColumbiaRoad/a-b-doer/commit/f08120f651e74a85de5d29c094511fd1b466fab2))
+* Force bundle IIFE to return boolean (for CDN) ([0ea74cc](https://github.com/ColumbiaRoad/a-b-doer/commit/0ea74cca0a85fcea1d6269d3616032e2837b5043))
+* Parse env variable before using ([2cbc7c1](https://github.com/ColumbiaRoad/a-b-doer/commit/2cbc7c1aff7b2744f2b5239397b1ca8590cdd93c))
+
+### [1.4.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.4.0...v1.4.1) (2021-08-04)
+
+
+### Bug Fixes
+
+* Can't use plugins array as is with splice ([64b43a3](https://github.com/ColumbiaRoad/a-b-doer/commit/64b43a378e7ffd97637fe45e8b9716463270c86b))
+
 ## [1.4.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.3.0...v1.4.0) (2021-04-29)
 
 

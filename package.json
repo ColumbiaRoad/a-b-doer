@@ -1,13 +1,12 @@
 {
   "name": "a-b-doer",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "description": "Utility library which makes developing of A/B test variants easier (maybe)",
   "main": "./main.js",
   "scripts": {
     "build": "npm-run-all clean build:*",
     "build:lib": "babel ./lib -d ./dist/lib",
     "build:bin": "babel ./bin -d ./dist/bin",
-    "build:hooks": "babel ./src/hooks.js -o ./hooks.js",
     "clean": "rimraf ./dist",
     "try:build": "node ./dist/bin/abdo.js build",
     "try:build-all": "node ./dist/bin/abdo.js build-all",
@@ -35,6 +34,7 @@
     "@babel/plugin-proposal-optional-chaining": "^7.14.5",
     "@babel/plugin-transform-react-jsx": "^7.14.9",
     "@babel/preset-env": "^7.15.6",
+    "@babel/preset-typescript": "^7.16.0",
     "@emotion/babel-plugin-jsx-pragmatic": "^0.1.5",
     "@rollup/plugin-alias": "^3.1.5",
     "@rollup/plugin-babel": "^5.3.0",
@@ -55,13 +55,15 @@
     "preact": "^10.5.14",
     "puppeteer-core": "^10.4.0",
     "rollup": "^2.58.0",
-    "rollup-plugin-ejs": "^2.2.0",
     "rollup-plugin-inline-svg": "^2.0.0",
     "rollup-plugin-postcss": "^4.0.1",
     "rollup-plugin-styles": "^3.14.1",
     "rollup-plugin-svg-hyperscript": "^0.1.2",
     "rollup-plugin-terser": "^7.0.2",
-    "string-hash": "^1.1.3"
+    "rollup-plugin-typescript2": "^0.30.0",
+    "string-hash": "^1.1.3",
+    "tslib": "^2.3.1",
+    "typescript": "^4.4.4"
   },
   "devDependencies": {
     "glob": "^7.2.0",
@@ -90,7 +92,9 @@
     "dist",
     "lib",
     "src",
+    "index.d.ts",
     "hooks.js",
+    "hooks.d.ts",
     "main.js"
   ],
   "repository": {
