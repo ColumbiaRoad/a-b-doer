@@ -8,8 +8,6 @@
     "esModuleInterop": true,
     "noEmitOnError": false,
     "allowSyntheticDefaultImports": true,
-    "noUnusedParameters": true,
-    "noUnusedLocals": true,
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./*"]

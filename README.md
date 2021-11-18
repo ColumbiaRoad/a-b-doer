@@ -421,6 +421,24 @@ Default `false`
 
 Should test script use preact? If true, 'h' will be imported automatically. Bundle size is approximately 5kb bigger (without preact/compat)
 
+### activationEvent
+
+Type `string` (optional)
+
+Use dataLayer event to activate the test in watch and preview modes. By default this is empty and the test will be acticated on DOM load.
+
+Example:
+
+```json
+{
+  ...
+  "activationEvent": "optimize.activate.mytest",
+  ...
+}
+```
+
+Activate the test by calling dataLayer.push({ event: "optimize.activate.mytest" }) manually or with e.g. Google Tag Manager.
+
 ### chunkImages
 
 Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
