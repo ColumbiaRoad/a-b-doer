@@ -8,4 +8,5 @@ pollQuerySelector('html body', (body) => {
 	append(<Simple id="tpl3" foo="2" bar="1" />, body);
 	append(<RefHook id="tpl4" />, body);
 	append(<Hooks id="tpl5" />, body);
+	append(<Hooks id="tpl6" />, body);
 });

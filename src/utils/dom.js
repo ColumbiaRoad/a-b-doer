@@ -155,7 +155,7 @@ function getChildrenAsFragment(child) {
 	children.forEach((c) => {
 		domAppend(node, c);
 		if (!c.dataset.o) {
-			c.dataset.o = child.key;
+			c.dataset.o = child.key || getTestID();
 		}
 	});
 	return node;
@@ -173,7 +173,7 @@ function createMutation(child) {
 	if (isVNode(child)) {
 		const rendered = _render(child);
 		node = getChildrenAsFragment(rendered);
-		const children = node.childNodes;
+		const children = [...node.childNodes];
 		onNextTick(() => {
 			const parent = children[0]?.parentElement;
 			if (parent) {

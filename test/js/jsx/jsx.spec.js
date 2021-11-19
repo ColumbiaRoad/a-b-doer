@@ -42,4 +42,29 @@ describe('JSX', () => {
 		expect(html).toMatch(/background:\s*blue/);
 		expect(html).toMatch('Bar');
 	});
+
+	it('should call state hook', async () => {
+		await page.evaluate(() => {
+			window.effectCb = false;
+		});
+		const node = await page.$('#tpl6');
+		let html = '';
+		const updateHtml = async () => {
+			html = await (await node.getProperty('outerHTML')).jsonValue();
+			await page.waitForTimeout(100);
+		};
+		await updateHtml();
+		expect(html).toMatch(/Val:2/);
+		await page.click('#tpl6click');
+		await updateHtml();
+		expect(html).toMatch(/Val:3/);
+		await page.evaluate(() => {
+			document.querySelectorAll('#tpl6').forEach((node) => {
+				node.remove();
+			});
+		});
+		await updateHtml();
+		const cbCalled = await page.evaluate(() => window.effectCb);
+		expect(cbCalled).toBe(true);
+	});
 });
