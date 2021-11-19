@@ -30,7 +30,7 @@ function createElement(tag, props, ...children) {
 	const vnode = {
 		type: tag,
 		props,
-		key: getTestID(),
+		key: props.key || props['data-o'] || getTestID(),
 	};
 
 	if (tag === 'svg') {

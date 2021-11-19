@@ -1,7 +1,6 @@
-import { render, isVNode, getTestID, isDomNode } from './render';
+import { _render, isVNode, isDomNode, runUnmountCallbacks, getTestID } from './render';
 import { Promise } from '../polyfills';
-import { domAppend, domInsertBefore, domRemove } from './internal';
-import { runUnmountCallbacks } from './render';
+import { createDocumentFragment, domAppend, domInsertBefore, domRemove, onNextTick } from './internal';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -146,27 +145,38 @@ function clearPrevious(child, parent) {
 	});
 }
 
+/**
+ * @param {HTMLElement} child
+ * @returns {HTMLElement}
+ */
+function getChildrenAsFragment(child) {
+	const children = getChildrenArray(child);
+	const node = createDocumentFragment();
+	children.forEach((c) => {
+		domAppend(node, c);
+		if (!c.dataset.o) {
+			c.dataset.o = child.key;
+		}
+	});
+	return node;
+}
+
 function createMutation(child) {
 	if (isDomNode(child)) {
-		if (!child.dataset.o) {
-			child.dataset.o = getTestID();
-		}
-		return child;
+		return getChildrenAsFragment(child);
 	}
-	// Skip mutation check when we're adding elements in preact env, otherwise ab doer render() will be in the bundle with preact
+	// Skip VNode check when we're adding elements in preact env, otherwise ab doer _) will be in the bundle with preact
 	if (process.env.preact) {
 		return child;
 	}
 	let node = child;
 	if (isVNode(child)) {
-		const rendered = render(child);
-		const children = getChildrenArray(rendered);
-		node = document.createDocumentFragment();
-		children.forEach((child) => {
-			domAppend(node, child);
-		});
-		if (children[0]?.parentElement) {
-			setTimeout(() => {
+		const rendered = _render(child);
+		node = getChildrenAsFragment(rendered);
+		const children = node.childNodes;
+		onNextTick(() => {
+			const parent = children[0]?.parentElement;
+			if (parent) {
 				// Add checker for root node's dom removal.
 				new MutationObserver((mutations, observer) => {
 					mutations.forEach((mutation) => {
@@ -177,11 +187,11 @@ function createMutation(child) {
 							}
 						});
 					});
-				}).observe(children[0].parentElement, {
+				}).observe(parent, {
 					childList: true,
 				});
-			});
-		}
+			}
+		});
 	}
 	return node;
 }

@@ -1,3 +1,5 @@
+import { createDocumentFragment } from './utils/internal';
+
 // IE11 NodeList forEach support
 if (process.env.IE && !process.env.TEST_ENV) {
 	if ('NodeList' in window && !NodeList.prototype.forEach) {
@@ -17,7 +19,7 @@ if (process.env.IE && !process.env.TEST_ENV) {
 	}
 
 	Document.prototype.append = Element.prototype.append = function append() {
-		var frag = document.createDocumentFragment();
+		var frag = createDocumentFragment();
 		for (var i = 0; i < arguments.length; i++) {
 			frag.appendChild(arguments[i]);
 		}

@@ -1,33 +1,36 @@
-import { domAppend, hooks } from './internal';
+import { domAppend, hooks, onNextTick, isFunction, isString, createDocumentFragment } from './internal';
 
 function copyInternal(source, target) {
-	['_h', '_i', '_n', '_r', '_v'].forEach((a) => {
+	['_h', '_i', '_n', '_r'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
 	});
 }
 
 /**
- * Renders and re-renders given AB Doer VNode with optional new props.
+ * Renders given AB Doer VNode.
  * @param {VNode|HTMLElement|string|number|Component} vnode
- * @param {Object} [newProps]
+ * @param {VNode|HTMLElement|string|number|Component} [oldVnode]
  * @returns {HTMLElement}
  */
-export function render(vnode, newProps) {
-	if (isDomNode(vnode) || typeof vnode === 'string' || typeof vnode === 'number' || vnode === undefined) {
+export function _render(vnode, oldVnode) {
+	if (isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
 		return vnode;
 	}
 
 	/** @type {HTMLElement} */
 	let element;
-	let merged = false;
-
-	// If we're rendering a component that has a reference to VNode, use it instead.
-	if (vnode._v) {
-		vnode = vnode._v;
+	const oldProps = oldVnode?.props;
+	if (oldVnode) {
+		copyInternal(oldVnode, vnode);
+		// Component instance holds a reference to VNode tree, update it
+		if (vnode._i) {
+			vnode._i._v = vnode;
+			vnode._i._r = oldVnode;
+		}
 	}
 
 	if (Array.isArray(vnode)) {
-		const a = render({
+		const a = _render({
 			type: Fragment,
 			props: { children: vnode },
 			key: '',
@@ -38,15 +41,10 @@ export function render(vnode, newProps) {
 	const { type: tag, props, svg } = vnode;
 	const children = props.children;
 	const frag = isFragment(tag);
-	const newestProps = newProps || props;
 
 	// Handle custom components
-	if (typeof tag === 'function' && !frag) {
+	if (isFunction(tag) && !frag) {
 		functionType = tag;
-
-		if (newProps && !newProps.children) {
-			newProps.children = children;
-		}
 
 		let ref = vnode;
 
@@ -58,30 +56,24 @@ export function render(vnode, newProps) {
 				vnode._i = comp = new tag(props);
 				comp._v = vnode; // So render call inside of Component setState knows which VNode to render
 				const newVNode = comp.render();
-				vnode._r = newVNode;
-				element = render(newVNode);
+				newVNode.key = vnode.key;
+				comp._r = vnode._r = newVNode;
+				element = _render(newVNode);
 				if (comp.componentDidMount) {
-					comp.componentDidMount();
+					onNextTick(() => comp.componentDidMount());
 				}
 			}
 			// Subsequent render
 			else {
-				const oldProps = vnode.props;
-				if (newProps) {
-					vnode._i.props = vnode.props = newProps;
-				}
-				newProps = vnode.props;
+				const prevState = Object.assign({}, comp.state);
 				const newVNode = comp.render();
 				if (!newVNode) return newVNode;
 				newVNode.key = vnode.key;
-				newVNode.props.children = mergeChildren(vnode._r, newVNode);
-				vnode._r = newVNode;
-				element = render(newVNode);
-				mergeElementInto(element, vnode._n, props, newProps);
-				merged = true;
+				element = _render(newVNode, vnode._r);
+				comp._r = vnode._r = newVNode;
 				element = vnode._n;
 				if (comp.componentDidUpdate) {
-					comp.componentDidUpdate(oldProps);
+					onNextTick(() => comp.componentDidUpdate(oldProps, prevState));
 				}
 			}
 		}
@@ -91,19 +83,16 @@ export function render(vnode, newProps) {
 			hooks.h = vnode._h;
 			hooks.c = 0;
 			hooks.v = vnode;
-			const newVNode = tag(newProps || props);
+			const newVNode = tag(props);
 			if (!newVNode) return newVNode;
 			newVNode.key = vnode.key;
-			if (vnode._r) {
-				newVNode.props.children = mergeChildren(vnode._r, newVNode);
-			}
+			element = _render(newVNode, vnode._r);
 			vnode._r = newVNode;
-			element = render(newVNode);
 		}
 
 		// If one of props is a ref, put the component instance or re-render function to the ref value.
 		if (props.ref) {
-			if (typeof props.ref === 'function') {
+			if (isFunction(props.ref)) {
 				props.ref(ref);
 			} else if (props.ref.current !== undefined) {
 				props.ref.current = ref;
@@ -118,8 +107,12 @@ export function render(vnode, newProps) {
 				element = tag;
 			}
 
+			if (!element && oldVnode?._n && oldVnode.type === tag) {
+				element = oldVnode._n;
+			}
+
 			if (!element) {
-				if (typeof tag !== 'string') return;
+				if (!isString(tag)) return;
 
 				// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
 				// At least in Google Optimize there's quite small size limit for assets.
@@ -132,97 +125,76 @@ export function render(vnode, newProps) {
 				}
 			}
 
-			setElementAttributes(element, props);
-
-			if (vnode.key && isDomNode(element) && !newestProps['data-o']) element.dataset.o = vnode.key;
+			setElementAttributes(element, props, oldProps);
 		}
 
 		if (frag) {
-			element = document.createDocumentFragment();
+			element = createDocumentFragment();
 		}
 
-		children.map((child, index) => {
-			if (isRenderableElement(child)) {
-				if (vnode.svg) {
-					child.svg = true;
-				}
-				if (isVNode(child)) {
-					child.key = vnode.key + index;
-				}
-				return appendChild(element, child);
-			}
-		});
+		setChildren(vnode, element, children, oldProps?.children);
 	}
 
-	if (vnode._n && !merged) {
-		mergeElementInto(element, vnode._n, props, newestProps);
-		element = vnode._n;
-	} else {
-		vnode._n = element;
-	}
+	vnode._n = oldVnode?._n || element;
 
 	return element;
 }
 
 /**
- * Copy all internal values from source children to new children and run unmount callbacks from removed children.
- * @param {Object} source
- * @param {Object} target
- * @returns {Array<Object>}
+ * @param {VNode} vnode
+ * @param {HTMLElement} element
+ * @param {Array} children
+ * @param {Array} [oldChildren]
  */
-function mergeChildren(source, target) {
-	return target.props.children.map((child, index) => {
-		const oldChild = source.props.children[index];
-		if (!child && typeof oldChild?.type === 'function') {
-			runUnmountCallbacks(oldChild);
+function setChildren(vnode, element, children, oldChildren) {
+	element.innerHTML = '';
+
+	// Set of old children that could have unmount callbacks (same string/number values can be grouped to one)
+	const oldChildrenSet = new Set(oldChildren);
+
+	children.map((child, index) => {
+		let oldChild = oldChildren?.[index];
+		if (isRenderableElement(child)) {
+			if (vnode.svg) {
+				child.svg = true;
+			}
+			if (isVNode(child)) {
+				child.key = vnode.key + (!isFragment(vnode) ? index : '');
+				// Only root elements should have data-o attribute
+				child.props['data-o'] = null;
+
+				if (oldChildren) {
+					const oldWithKey = child.key === oldChild?.key ? oldChild : oldChildren.find((c) => c.key === child.key);
+					if (oldWithKey) {
+						if (oldWithKey.type === child.type) {
+							oldChildrenSet.delete(oldWithKey);
+							oldChild = oldWithKey;
+						} else {
+							oldChild = undefined;
+						}
+					}
+				}
+			}
+			return appendRenderedChild(element, child, oldChild);
 		}
-		if (!child || !oldChild) return child;
-		if (typeof child.type === 'function' && oldChild.type === child.type) {
-			copyInternal(oldChild, child);
-		}
-		return child;
 	});
+
+	for (const oldChild of oldChildrenSet) {
+		if (isVNode(oldChild)) runUnmountCallbacks(oldChild);
+	}
 }
 
 /**
  * Renders given child VNode and appends it to the parent DOM node.
  * @param {HTMLElement} parent
  * @param {VNode|VNode[]} child
+ * @param {VNode|VNode[]} [oldVnode]
  */
-function appendChild(parent, child) {
-	if (isRenderableElement(child)) {
-		const node = render(child);
-		if (node === null) return;
-		// Only root elements should have data-o attribute
-		if (node?.dataset) delete node.dataset.o;
-		domAppend(parent, node.nodeType ? node : document.createTextNode(node));
-		return node;
-	}
-}
-
-/**
- * Merges element DOM node to another. Removes events that are not present.
- * @param {HTMLElement} source
- * @param {HTMLElement} target
- */
-function mergeElementInto(source, target, oldProps, newProps) {
-	const sourceAttrs = [...source.attributes];
-
-	Object.entries(oldProps).forEach(([key, value]) => {
-		if (!newProps[key]) target.removeAttribute(key);
-		if (/^on[A-Z]/.test(key)) {
-			target.removeEventListener(key.substr(2).toLowerCase(), value);
-		}
-	});
-
-	sourceAttrs.forEach((attr) => target.setAttribute(attr.nodeName, attr.nodeValue));
-
-	target.innerHTML = '';
-	[...source.childNodes].forEach((child) => {
-		domAppend(target, child);
-	});
-
-	return target;
+function appendRenderedChild(parent, child, oldVnode) {
+	let node = _render(child, oldVnode);
+	if (!isRenderableElement(node)) return;
+	// if (node?.dataset) delete node.dataset.o;
+	domAppend(parent, node.nodeType ? node : document.createTextNode(node));
 }
 
 /**
@@ -231,7 +203,7 @@ function mergeElementInto(source, target, oldProps, newProps) {
  * @returns {String}
  */
 const getStyleString = (style) => {
-	if (typeof style === 'string') return style;
+	if (isString(style)) return style;
 	if (!style || typeof style !== 'object') return '';
 
 	return Object.keys(style).reduce((prev, curr) => {
@@ -244,33 +216,44 @@ const getStyleString = (style) => {
 
 const renderer = document.createElement('div');
 
-function setElementAttributes(element, props) {
-	for (let name in props) {
-		if (props.hasOwnProperty(name)) {
-			let value = props[name];
-			if (name === 'className' || name === 'children') {
-				continue;
-			} else if (name === 'style') {
-				value = getStyleString(value);
-			} else if (name === 'html') {
-				element.innerHTML = value;
-				continue;
-			} else if (name === 'dangerouslySetInnerHTML') {
-				element.innerHTML = value.__html;
-				continue;
-			} else if (name === 'ref' && value) {
-				if (typeof value === 'function') {
-					value(element);
-				} else if (value.current !== undefined) {
-					value.current = element;
-				}
-				continue;
-			}
-			if (value === false || value === undefined) continue;
-			if (/^on[A-Z]/.test(name)) {
-				element.addEventListener(name.substr(2).toLowerCase(), value);
-			} else element.setAttribute(name, value.toString());
+/**
+ *
+ * @param {HTMLElement} element
+ * @param {Object} props
+ * @param {Object} [oldProps]
+ */
+function setElementAttributes(element, props = {}, oldProps = {}) {
+	for (let name in oldProps) {
+		let value = oldProps[name];
+		if (!props[name]) element.removeAttribute(name);
+		if (/^on[A-Z]/.test(name)) {
+			element.removeEventListener(name.substr(2).toLowerCase(), value);
 		}
+	}
+	for (let name in props) {
+		let value = props[name];
+		if (name === 'className' || name === 'children') {
+			continue;
+		} else if (name === 'style') {
+			value = getStyleString(value);
+		} else if (name === 'html') {
+			element.innerHTML = value;
+			continue;
+		} else if (name === 'dangerouslySetInnerHTML') {
+			element.innerHTML = value.__html;
+			continue;
+		} else if (name === 'ref' && value) {
+			if (isFunction(value)) {
+				value(element);
+			} else if (value.current !== undefined) {
+				value.current = element;
+			}
+			continue;
+		}
+		if (value === false || value === undefined) continue;
+		if (/^on[A-Z]/.test(name)) {
+			element.addEventListener(name.substr(2).toLowerCase(), value);
+		} else if (value !== null) element.setAttribute(name, value.toString());
 	}
 }
 
@@ -282,7 +265,7 @@ export function runUnmountCallbacks(vnode) {
 	if (isVNode(vnode)) {
 		if (vnode._h) {
 			vnode._h.forEach((h) => {
-				if (h.length === 3 && typeof h[2] === 'function') {
+				if (h.length === 3 && isFunction(h[2])) {
 					h[2]();
 				}
 			});
@@ -292,26 +275,9 @@ export function runUnmountCallbacks(vnode) {
 			delete vnode._i;
 		}
 		(vnode._r || vnode).props.children.forEach((vnode) => {
-			if (typeof vnode.type === 'function') runUnmountCallbacks(vnode);
+			if (isFunction(vnode.type)) runUnmountCallbacks(vnode);
 		});
 		delete vnode._n;
-	}
-}
-
-/**
- * Super simple class abstract for class like components.
- */
-export class Component {
-	state = {};
-	constructor(props) {
-		this.props = props;
-		if (!this.props.children) {
-			this.props.children = [];
-		}
-	}
-	setState(newState) {
-		Object.assign(this.state, newState);
-		render(this);
 	}
 }
 
@@ -324,6 +290,7 @@ export function getTestID() {
 }
 
 function isFragment(tag) {
+	if (isVNode(tag)) tag = tag.type;
 	return tag === Fragment;
 }
 
@@ -332,5 +299,5 @@ export function isDomNode(tag) {
 }
 
 export function isVNode(vnode) {
-	return !!vnode._n || !!vnode.props;
+	return !!vnode && (!!vnode._n || !!vnode.props);
 }
