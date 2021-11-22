@@ -18,6 +18,11 @@ export function createDocumentFragment() {
 	return document.createDocumentFragment();
 }
 
+// Internal object for storing details of current output/etc
+export const config = {
+	jsx: false, // Helps terser to detect if jsx support should be bundled
+};
+
 // Internal object for storing details of currently rendered component's hooks
 export const hooks = {
 	c: 0,

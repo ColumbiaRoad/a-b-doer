@@ -1,4 +1,5 @@
 import './polyfills.js';
+import { config } from './utils/internal';
 import { getTestID, Fragment } from './utils/render';
 
 /**
@@ -36,6 +37,8 @@ function createElement(tag, props, ...children) {
 	if (tag === 'svg') {
 		vnode.svg = true;
 	}
+
+	config.jsx = true; // Helps terser to detect if jsx support should be bundled
 
 	return vnode;
 }

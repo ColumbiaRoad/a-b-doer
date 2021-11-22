@@ -1,6 +1,6 @@
 import { _render, isVNode, isDomNode, runUnmountCallbacks, getTestID } from './render';
 import { Promise } from '../polyfills';
-import { createDocumentFragment, domAppend, domInsertBefore, domRemove, onNextTick } from './internal';
+import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, onNextTick } from './internal';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -165,8 +165,9 @@ function createMutation(child) {
 	if (isDomNode(child)) {
 		return getChildrenAsFragment(child);
 	}
-	// Skip VNode check when we're adding elements in preact env, otherwise ab doer _) will be in the bundle with preact
-	if (process.env.preact) {
+	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
+	// If there's no jsx at all, do not add MutationObserver.
+	if (process.env.preact || !config.jsx) {
 		return child;
 	}
 	let node = child;

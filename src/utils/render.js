@@ -1,4 +1,4 @@
-import { domAppend, hooks, onNextTick, isFunction, isString, createDocumentFragment } from './internal';
+import { domAppend, hooks, onNextTick, isFunction, isString, createDocumentFragment, config } from './internal';
 
 function copyInternal(source, target) {
 	['_h', '_i', '_n', '_r'].forEach((a) => {
@@ -6,16 +6,21 @@ function copyInternal(source, target) {
 	});
 }
 
-const NAMESPACES = window.__namespaces || {
-	svg: '2000/svg',
-	space: 'XML/1998/namespace',
-	xlink: '1999/xlink',
-	xmlns: '2000/xmlns/',
-};
+let NAMESPACES;
 
-window.__namespaces = NAMESPACES;
+function initNs() {
+	if (NAMESPACES) return;
+	NAMESPACES = window.__namespaces || {
+		svg: '2000/svg',
+		space: 'XML/1998/namespace',
+		xlink: '1999/xlink',
+		xmlns: '2000/xmlns/',
+	};
+	window.__namespaces = NAMESPACES;
+}
 
 function getNs(key) {
+	if (!config.jsx) return null;
 	const ns = NAMESPACES[key];
 	if (!ns) return null;
 	if (ns.indexOf('http') !== 0) {
@@ -31,9 +36,11 @@ function getNs(key) {
  * @returns {HTMLElement}
  */
 export function _render(vnode, oldVnode) {
-	if (isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
+	if (!config.jsx || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
 		return vnode;
 	}
+
+	initNs();
 
 	/** @type {HTMLElement} */
 	let element;
