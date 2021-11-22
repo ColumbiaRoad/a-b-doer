@@ -81,6 +81,7 @@ export function _render(vnode, oldVnode) {
 				vnode._i = comp = new tag(props);
 				comp._v = vnode; // So render call inside of Component setState knows which VNode to render
 				const newVNode = comp.render();
+				if (!isVNode(newVNode)) return newVNode;
 				newVNode.key = vnode.key;
 				comp._r = vnode._r = newVNode;
 				element = _render(newVNode);
@@ -91,8 +92,9 @@ export function _render(vnode, oldVnode) {
 			// Subsequent render
 			else {
 				const prevState = Object.assign({}, comp.state);
+				vnode._i.props = props;
 				const newVNode = comp.render();
-				if (!newVNode) return newVNode;
+				if (!isVNode(newVNode)) return newVNode;
 				newVNode.key = vnode.key;
 				element = _render(newVNode, vnode._r);
 				comp._r = vnode._r = newVNode;
