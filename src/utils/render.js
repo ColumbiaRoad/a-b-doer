@@ -6,6 +6,24 @@ function copyInternal(source, target) {
 	});
 }
 
+const NAMESPACES = window.__namespaces || {
+	svg: '2000/svg',
+	space: 'XML/1998/namespace',
+	xlink: '1999/xlink',
+	xmlns: '2000/xmlns/',
+};
+
+window.__namespaces = NAMESPACES;
+
+function getNs(key) {
+	const ns = NAMESPACES[key];
+	if (!ns) return null;
+	if (ns.indexOf('http') !== 0) {
+		return `http://www.w3.org/${ns}`;
+	}
+	return ns;
+}
+
 /**
  * Renders given AB Doer VNode.
  * @param {VNode|HTMLElement|string|number|Component} vnode
@@ -121,7 +139,7 @@ export function _render(vnode, oldVnode) {
 					element = renderer.firstElementChild.cloneNode(true);
 					renderer.innerHTML = '';
 				} else {
-					element = svg ? document.createElementNS('http://www.w3.org/2000/svg', tag) : document.createElement(tag);
+					element = svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 				}
 			}
 
@@ -253,7 +271,15 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 		if (value === false || value === undefined) continue;
 		if (/^on[A-Z]/.test(name)) {
 			element.addEventListener(name.substr(2).toLowerCase(), value);
-		} else if (value !== null) element.setAttribute(name, value.toString());
+		} else if (value !== null) {
+			value = value.toString();
+			if (name.includes(':') && element.tagName.toLowerCase() != 'svg') {
+				const [ns, nsName] = name.split(':');
+				element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
+			} else {
+				element.setAttribute(name, value);
+			}
+		}
 	}
 }
 

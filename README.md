@@ -104,6 +104,8 @@ If you're more familiar with path aliases in import calls, there is path alias f
 
 JSX files are also supported and you can create custom components with either functional style or class style syntax. Custom component syntax is like in preact but implemented in much simpler way. This means that all hooks and component render cycle methods are not implemented (if you need them, use preact). This library uses a simple createElement utility which works with babel and transforms jsx to virtual nodes that'll be rendered automatically to DOM nodes when they're added to DOM with library's own DOM utilities.
 
+The lib handles element attributes as is and does not do any camelCase to hyphenated conversion to them. Also some namespaced attributes are supported by default.
+
 ```js
 import { append, pollQuerySelector, Component } from 'a-b-doer';
 import SomeSvgImage from '@/images/some-svg-image.svg';
@@ -198,6 +200,21 @@ pollQuerySelector('html #app', (target) => {
   render(<MyComponent val={1} />, target);
 });
 ```
+
+### Namespace attributes
+
+Supported attribute namespaces by default are these:
+
+```js
+{
+  svg: '2000/svg',
+	space: 'XML/1998/namespace',
+	xlink: '1999/xlink',
+	xmlns: '2000/xmlns/',
+}
+```
+
+If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_namespaces or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
 
 ## Polyfills
 
