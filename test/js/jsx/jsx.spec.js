@@ -49,14 +49,14 @@ describe('JSX', () => {
 		});
 		const node = await page.$('#tpl6');
 		let html = '';
-		const updateHtml = async (timeout = 100) => {
+		const updateHtml = async (timeout = 200) => {
 			html = await (await node.getProperty('outerHTML')).jsonValue();
 			await page.waitForTimeout(timeout);
 		};
 		await updateHtml();
 		expect(html).toMatch(/Val:2/);
 		await page.click('#tpl6click');
-		await updateHtml(200);
+		await updateHtml(500);
 		expect(html).toMatch(/Val:3/);
 		await page.evaluate(() => {
 			document.querySelectorAll('#tpl6').forEach((node) => {
