@@ -1,3 +1,4 @@
+require('expect-puppeteer');
 const { config } = require('../lib/buildspec');
 
 global.configDefaults = {

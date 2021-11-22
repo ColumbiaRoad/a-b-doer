@@ -55,11 +55,13 @@ export const Hooks = (props) => {
 	}, []);
 
 	return (
-		<div id={id} ref={node} data-o={'t-temp-' + id}>
-			<div id={id + 'click'} onClick={() => setVal(val + 1)}>
-				Val:{val}
+		<div id={id} data-o={'t-temp-' + id}>
+			<div ref={node}>
+				<div id={id + 'click'} onClick={() => setVal(val + 1)}>
+					Val:{val}
+				</div>
+				<HookSubTemplate parent={node} />
 			</div>
-			<HookSubTemplate parent={node} />
 		</div>
 	);
 };
