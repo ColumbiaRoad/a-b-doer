@@ -121,7 +121,7 @@ export function _render(vnode, oldVnode) {
 			hooks.c = 0;
 			hooks.v = vnode;
 			const newVNode = tag(props);
-			if (!newVNode) return newVNode;
+			if (!isVNode(newVNode)) return newVNode;
 			newVNode.key = vnode.key;
 			element = _render(newVNode, vnode._r);
 			vnode._r = newVNode;
@@ -183,7 +183,7 @@ export function _render(vnode, oldVnode) {
 
 function isSameChild(vnode, vnode2) {
 	if (!vnode || !vnode2) return false;
-	return vnode === vnode2 || vnode.key === vnode2.key;
+	return vnode === vnode2 || (vnode.key === vnode2.key && vnode.type === vnode2.type);
 }
 
 /**
@@ -193,16 +193,15 @@ function isSameChild(vnode, vnode2) {
  * @param {Array} [oldChildren]
  */
 function createChildren(vnode, element, children = [], oldChildren) {
-	// Map of old children that could have unmount callbacks (same string/number values can be grouped to one)
 	const oldChildrenMap = new Map();
 	const oldChildrenArr = oldChildren || [];
-	oldChildrenArr.forEach((child) => {
+	for (const child of oldChildrenArr) {
 		if (child?.key) oldChildrenMap.set(child.key, child);
-	});
+	}
 
 	const newChildren = children
 		.reduce((acc, val) => acc.concat(val), [])
-		.flatMap((child, index) => {
+		.map((child, index) => {
 			let oldChild;
 			if (isRenderableElement(child)) {
 				if (!isVNode(child)) {
@@ -234,7 +233,7 @@ function createChildren(vnode, element, children = [], oldChildren) {
 	for (const [_, oldChild] of oldChildrenMap) {
 		if (isVNode(oldChild)) {
 			runUnmountCallbacks(oldChild);
-			const node = oldChild._n || oldChild._r._n;
+			const node = oldChild._n || oldChild._r?._n;
 			if (node) domRemove(node.parentNode, node);
 		}
 	}

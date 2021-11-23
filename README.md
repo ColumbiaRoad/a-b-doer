@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 4.3kb when minified:
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5kb when minified:
 
 ```js
 import { append } from 'a-b-doer';
@@ -12,7 +12,7 @@ const Foo = () => {
 append(<Foo />, document.body);
 ```
 
-You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds ~5kb) and it could be an issue (at least in Optimize).
+You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb) and it could be an issue (at least in Optimize).
 
 ---
 
