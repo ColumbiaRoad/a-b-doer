@@ -1,0 +1,9 @@
+#wrapper {
+  display: none; }
+
+#app {
+  background: white !important;
+  overflow: auto !important;
+  display: block !important; }
+  #app a {
+    cursor: pointer; }

@@ -24,10 +24,7 @@ export class Component {
  * @returns {VNode}
  */
 export function render(vnode, targetNode) {
-	if (targetNode) {
-		return append(vnode, targetNode);
-	}
-	return _render(vnode);
+	return targetNode ? append(vnode, targetNode) : _render(vnode);
 }
 
 export const Fragment = _Fragment;

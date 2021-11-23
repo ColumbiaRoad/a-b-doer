@@ -10,6 +10,26 @@ import {
 	domRemove,
 } from './internal';
 
+export const Fragment = (props) => props.children;
+
+export const getTestID = () => process.env.TEST_ID;
+
+export const isDomNode = (tag) => tag instanceof HTMLElement || tag instanceof SVGElement;
+
+export const isVNode = (vnode) => !!vnode && (!!vnode._n || !!vnode.props);
+
+const getVNodeDom = (vnode) => (vnode ? vnode._n || vnode._r?._n : null);
+
+const isRenderableElement = (element) => !!element || element === 0;
+
+const isSameChild = (vnode, vnode2) =>
+	vnode && vnode2 && (vnode === vnode2 || (vnode.key === vnode2.key && vnode.type === vnode2.type));
+
+function isFragment(tag) {
+	if (isVNode(tag)) tag = tag.type;
+	return tag === Fragment;
+}
+
 function copyInternal(source, target) {
 	['_h', '_i', '_n', '_r'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
@@ -19,24 +39,22 @@ function copyInternal(source, target) {
 let NAMESPACES;
 
 function initNs() {
-	if (NAMESPACES) return;
-	NAMESPACES = window.__namespaces || {
-		svg: '2000/svg',
-		space: 'XML/1998/namespace',
-		xlink: '1999/xlink',
-		xmlns: '2000/xmlns/',
-	};
-	window.__namespaces = NAMESPACES;
+	if (!NAMESPACES) {
+		NAMESPACES = window.__namespaces || {
+			svg: '2000/svg',
+			space: 'XML/1998/namespace',
+			xlink: '1999/xlink',
+			xmlns: '2000/xmlns/',
+		};
+		window.__namespaces = NAMESPACES;
+	}
 }
 
 function getNs(key) {
 	if (!config.jsx) return null;
 	const ns = NAMESPACES[key];
 	if (!ns) return null;
-	if (ns.indexOf('http') !== 0) {
-		return `http://www.w3.org/${ns}`;
-	}
-	return ns;
+	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
 }
 
 /**
@@ -82,37 +100,38 @@ export function _render(vnode, oldVnode) {
 		functionType = tag;
 
 		let ref = vnode;
+		const prevVNode = vnode._r;
 
 		// Class syntax components
 		if (tag.prototype?.render) {
 			let comp = vnode._i;
+			const cb = [];
 			// First render
 			if (!comp) {
 				vnode._i = comp = new tag(props);
 				comp._v = vnode; // So render call inside of Component setState knows which VNode to render
-				const newVNode = comp.render();
-				if (!isVNode(newVNode)) return newVNode;
-				newVNode.key = vnode.key;
-				comp._r = vnode._r = newVNode;
-				element = _render(newVNode);
 				if (comp.componentDidMount) {
-					onNextTick(() => comp.componentDidMount());
+					cb.push(() => comp.componentDidMount());
 				}
 			}
 			// Subsequent render
 			else {
 				const prevState = Object.assign({}, comp.state);
 				vnode._i.props = props;
-				const newVNode = comp.render();
-				if (!isVNode(newVNode)) return newVNode;
-				newVNode.key = vnode.key;
-				element = _render(newVNode, vnode._r);
-				comp._r = vnode._r = newVNode;
-				element = vnode._n;
 				if (comp.componentDidUpdate) {
-					onNextTick(() => comp.componentDidUpdate(oldProps, prevState));
+					cb.push(() => comp.componentDidUpdate(oldProps, prevState));
 				}
 			}
+			const newVNode = comp.render();
+			if (!isVNode(newVNode)) {
+				delete vnode._n;
+				delete vnode._r;
+				return newVNode;
+			}
+			newVNode.key = vnode.key;
+			comp._r = vnode._r = newVNode;
+			element = _render(newVNode, prevVNode);
+			cb.forEach((c) => onNextTick(c()));
 		}
 		// Functional components
 		else {
@@ -121,7 +140,10 @@ export function _render(vnode, oldVnode) {
 			hooks.c = 0;
 			hooks.v = vnode;
 			const newVNode = tag(props);
-			if (!isVNode(newVNode)) return newVNode;
+			if (!isVNode(newVNode)) {
+				delete vnode._n;
+				return newVNode;
+			}
 			newVNode.key = vnode.key;
 			element = _render(newVNode, vnode._r);
 			vnode._r = newVNode;
@@ -144,8 +166,9 @@ export function _render(vnode, oldVnode) {
 				element = tag;
 			}
 
-			if (!element && oldVnode?._n && isSameChild(oldVnode, vnode)) {
-				element = oldVnode._n;
+			const nNode = getVNodeDom(oldVnode);
+			if (!element && nNode && isSameChild(oldVnode, vnode)) {
+				element = nNode;
 			}
 
 			if (!element) {
@@ -181,11 +204,6 @@ export function _render(vnode, oldVnode) {
 	return vnode._n;
 }
 
-function isSameChild(vnode, vnode2) {
-	if (!vnode || !vnode2) return false;
-	return vnode === vnode2 || (vnode.key === vnode2.key && vnode.type === vnode2.type);
-}
-
 /**
  * @param {VNode} vnode
  * @param {HTMLElement} element
@@ -203,6 +221,7 @@ function createChildren(vnode, element, children = [], oldChildren) {
 		.reduce((acc, val) => acc.concat(val), [])
 		.map((child, index) => {
 			let oldChild;
+			let node = child;
 			if (isRenderableElement(child)) {
 				if (!isVNode(child)) {
 					child = createVNode('', { text: child });
@@ -220,20 +239,22 @@ function createChildren(vnode, element, children = [], oldChildren) {
 				if (!isSameChild(child, oldChild)) {
 					oldChild = undefined;
 				}
-				if (isVNode(oldChild)) {
+				node = _render(child, oldChild);
+				if (getVNodeDom(child) && isVNode(oldChild)) {
 					oldChildrenMap.delete(oldChild.key);
 				}
 			}
-			let node = _render(child, oldChild);
-			if (!isRenderableElement(node)) return;
-			if (element.childNodes[index] !== node) domAppend(element, node);
-			return child;
+			if (isRenderableElement(node)) {
+				if (element.childNodes[index] !== node) domAppend(element, node);
+				return child;
+			}
 		});
 
 	for (const [_, oldChild] of oldChildrenMap) {
 		if (isVNode(oldChild)) {
 			runUnmountCallbacks(oldChild);
-			const node = oldChild._n || oldChild._r?._n;
+			const node = getVNodeDom(oldChild);
+			// console.log(node, oldChild);
 			if (node) domRemove(node.parentNode, node);
 		}
 	}
@@ -250,12 +271,14 @@ const getStyleString = (style) => {
 	if (isString(style)) return style;
 	if (!style || typeof style !== 'object') return '';
 
-	return Object.keys(style).reduce((prev, curr) => {
-		return `${(prev += curr
-			.split(/(?=[A-Z])/)
-			.join('-')
-			.toLowerCase())}:${style[curr]};`;
-	}, '');
+	return Object.keys(style).reduce(
+		(prev, curr) =>
+			`${(prev += curr
+				.split(/(?=[A-Z])/)
+				.join('-')
+				.toLowerCase())}:${style[curr]};`,
+		''
+	);
 };
 
 const renderer = document.createElement('div');
@@ -319,11 +342,6 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 		}
 	}
 }
-
-function isRenderableElement(element) {
-	return !!element || element === 0;
-}
-
 export function runUnmountCallbacks(vnode) {
 	if (isVNode(vnode)) {
 		if (vnode._h) {
@@ -342,25 +360,4 @@ export function runUnmountCallbacks(vnode) {
 		});
 		delete vnode._n;
 	}
-}
-
-export function Fragment(props) {
-	return props.children;
-}
-
-export function getTestID() {
-	return process.env.TEST_ID;
-}
-
-function isFragment(tag) {
-	if (isVNode(tag)) tag = tag.type;
-	return tag === Fragment;
-}
-
-export function isDomNode(tag) {
-	return tag instanceof HTMLElement || tag instanceof SVGElement;
-}
-
-export function isVNode(vnode) {
-	return !!vnode && (!!vnode._n || !!vnode.props);
 }
