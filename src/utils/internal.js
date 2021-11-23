@@ -44,3 +44,11 @@ export function isSame(iter, iter2) {
 export function onNextTick(callback) {
 	setTimeout(callback, 0);
 }
+
+export function createVNode(tag = '', props) {
+	return {
+		type: tag,
+		props,
+		key: props.key || props['data-o'] || process.env.TEST_ID,
+	};
+}

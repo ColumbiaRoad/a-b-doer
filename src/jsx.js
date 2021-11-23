@@ -1,6 +1,6 @@
 import './polyfills.js';
-import { config } from './utils/internal';
-import { getTestID, Fragment } from './utils/render';
+import { config, createVNode } from './utils/internal';
+import { Fragment } from './utils/render';
 
 /**
  * Simple parser utility for jsx syntax. Converts JSX syntax to simple objects that can be rendered to DOM nodes with render utility (@see render() [./utils/render.js])
@@ -28,11 +28,7 @@ function createElement(tag, props, ...children) {
 
 	props.children = children || [];
 
-	const vnode = {
-		type: tag,
-		props,
-		key: props.key || props['data-o'] || getTestID(),
-	};
+	const vnode = createVNode(tag, props);
 
 	if (tag === 'svg') {
 		vnode.svg = true;
