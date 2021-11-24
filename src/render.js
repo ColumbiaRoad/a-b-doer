@@ -6,14 +6,13 @@ import { _render, Fragment as _Fragment, getTestID as _getTestID } from './utils
  */
 export class Component {
 	_v;
-	_r;
 	state = {};
 	constructor(props) {
 		this.props = props;
 	}
 	setState(newState) {
 		Object.assign(this.state, newState);
-		_render(this._v, this._r);
+		_render(this._v, this._v._p);
 	}
 }
 

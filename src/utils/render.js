@@ -8,6 +8,7 @@ import {
 	config,
 	createVNode,
 	domRemove,
+	domInsertBefore,
 } from './internal';
 
 /**
@@ -60,7 +61,7 @@ function isFragment(tag) {
  * @param {VNode2} source
  */
 function copyInternal(source, target) {
-	['_h', '_i', '_n', '_r'].forEach((a) => {
+	['_h', '_i', '_n', '_p', '_r'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
 	});
 }
@@ -107,7 +108,6 @@ export function _render(vnode, oldVnode) {
 		// Component instance holds a reference to VNode tree, update it
 		if (vnode._i) {
 			vnode._i._v = vnode;
-			vnode._i._r = oldVnode;
 		}
 	}
 
@@ -177,6 +177,7 @@ export function _render(vnode, oldVnode) {
 			element = _render(newVNode, vnode._r);
 			vnode._r = newVNode;
 		}
+		vnode._p = { ...vnode };
 
 		// If one of props is a ref, put the component instance or re-render function to the ref value.
 		if (props.ref) {
@@ -274,7 +275,14 @@ function createChildren(vnode, element, children = [], oldChildren) {
 				}
 			}
 			if (isRenderableElement(node)) {
-				if (element.childNodes[index] !== node) domAppend(element, node);
+				const prevNode = element.childNodes[index];
+				if (prevNode !== node) {
+					if (!index) {
+						domAppend(element, node);
+					} else {
+						domInsertBefore(element, node, prevNode);
+					}
+				}
 				return child;
 			}
 		});

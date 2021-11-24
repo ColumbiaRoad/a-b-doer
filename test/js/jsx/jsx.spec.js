@@ -56,4 +56,10 @@ describe('JSX', () => {
 		const cbCalled = await page.evaluate(() => window.effectCb);
 		expect(cbCalled).toBe(true);
 	});
+
+	it('should render a terniary child properly', async () => {
+		const node = await page.$('#tpl7');
+		await expect(node).toMatchElement('p');
+		await expect(node).toMatch(/First\s*ValP:1\s*Last/ms);
+	});
 });

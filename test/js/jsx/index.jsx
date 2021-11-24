@@ -1,5 +1,5 @@
 import { append, pollQuerySelector } from 'a-b-doer';
-import { Simple, RefHook, Hooks } from './templates';
+import { Simple, RefHook, Hooks, Switch } from './templates';
 import './styles.scss';
 
 pollQuerySelector('html body', (body) => {
@@ -9,4 +9,5 @@ pollQuerySelector('html body', (body) => {
 	append(<RefHook id="tpl4" />, body);
 	append(<Hooks id="tpl5" />, body);
 	append(<Hooks id="tpl6" />, body);
+	append(<Switch id="tpl7" />, body);
 });

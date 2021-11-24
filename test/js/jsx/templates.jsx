@@ -65,3 +65,19 @@ export const Hooks = (props) => {
 		</div>
 	);
 };
+
+export const Switch = ({ id }) => {
+	const [val, setVal] = useState(0);
+
+	useEffect(() => {
+		setVal(1);
+	}, []);
+
+	return (
+		<div id={id} data-o={'t-temp-' + id}>
+			<div>First</div>
+			{!val ? <div>Val:{val}</div> : <p>ValP:{val}</p>}
+			<div>Last</div>
+		</div>
+	);
+};

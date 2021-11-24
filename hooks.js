@@ -35,7 +35,9 @@ export const useEffect = (cb, deps) => {
 		shouldCall = !isSame(deps, oldDeps || []);
 	}
 	if (shouldCall) {
-		if (oldDeps && hooks.h[hooks.c][2]) hooks.h[hooks.c][2]();
+		if (oldDeps && hooks.h[hooks.c][2]) {
+			hooks.h[hooks.c][2]();
+		}
 		hooks.h[hooks.c] = ['e', deps, null];
 		((hooks, index) => {
 			onNextTick(() => {
@@ -53,7 +55,13 @@ export const useState = (defaultValue) => {
 			((hooks, index, vnode) => (value) => {
 				hooks[index][0] = value;
 				if (vnode) {
-					onNextTick(() => _render(vnode, vnode._r));
+					onNextTick(() => {
+						vnode._h = hooks;
+						if (vnode._p) {
+							vnode._p._h = hooks;
+						}
+						_render(vnode, vnode._p);
+					});
 				}
 			})(hooks.h, hooks.c, hooks.v),
 		];
