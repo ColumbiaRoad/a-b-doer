@@ -1,11 +1,13 @@
 import { pollQuerySelector } from 'a-b-doer';
-import { append } from 'a-b-doer';
+import { render } from 'a-b-doer';
 import { useEffect, useState } from 'a-b-doer/hooks';
+import { init } from './src/stats';
 // import { render } from 'preact';
 // import { useEffect, useState } from 'preact/hooks';
 import './styles.scss';
 
 function shuffle(array) {
+	console.log('Shuffling shuffling');
 	let currentIndex = array.length,
 		randomIndex;
 
@@ -19,7 +21,7 @@ function shuffle(array) {
 		[array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
 	}
 
-	return array;
+	return [].concat(array);
 }
 
 const Arr = Array(10000)
@@ -54,8 +56,8 @@ const TestComponent = () => {
 };
 
 pollQuerySelector('#app', (target) => {
+	init();
 	console.time();
-	append(<TestComponent />, target);
-	// render(<TestComponent />, target);
+	render(<TestComponent />, target);
 	console.timeEnd();
 });

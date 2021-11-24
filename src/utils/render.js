@@ -10,18 +10,43 @@ import {
 	domRemove,
 } from './internal';
 
+/**
+ * @typedef VNode
+ * @prop {String} key Identifier for the VNode
+ * @prop {Array} children
+ * @prop {String|Function} type VNode type
+ * @prop {Object} props Element/Component props
+ * @prop {Array} [_h] Hooks of custom component
+ * @prop {*} [_i] Class component instance
+ * @prop {HTMLElement} [_n] Rendered DOM node
+ * @prop {VNode} [_r] Rendered VNode of custom component
+ */
+
 export const Fragment = (props) => props.children;
 
 export const getTestID = () => process.env.TEST_ID;
 
 export const isDomNode = (tag) => tag instanceof HTMLElement || tag instanceof SVGElement;
 
+/**
+ * @param {VNode} vnode
+ * @returns {boolean}
+ */
 export const isVNode = (vnode) => !!vnode && (!!vnode._n || !!vnode.props);
 
+/**
+ * @param {VNode} vnode
+ * @returns {HTMLElement}
+ */
 const getVNodeDom = (vnode) => (vnode ? vnode._n || vnode._r?._n : null);
 
 const isRenderableElement = (element) => !!element || element === 0;
 
+/**
+ * @param {VNode} vnode
+ * @param {VNode} vnode2
+ * @returns {boolean}
+ */
 const isSameChild = (vnode, vnode2) =>
 	vnode && vnode2 && (vnode === vnode2 || (vnode.key === vnode2.key && vnode.type === vnode2.type));
 
@@ -30,6 +55,10 @@ function isFragment(tag) {
 	return tag === Fragment;
 }
 
+/**
+ * @param {VNode} source
+ * @param {VNode2} source
+ */
 function copyInternal(source, target) {
 	['_h', '_i', '_n', '_r'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
@@ -250,13 +279,9 @@ function createChildren(vnode, element, children = [], oldChildren) {
 			}
 		});
 
+	// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
 	for (const [_, oldChild] of oldChildrenMap) {
-		if (isVNode(oldChild)) {
-			runUnmountCallbacks(oldChild);
-			const node = getVNodeDom(oldChild);
-			// console.log(node, oldChild);
-			if (node) domRemove(node.parentNode, node);
-		}
+		runUnmountCallbacks(oldChild);
 	}
 
 	return newChildren;
@@ -309,7 +334,7 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 				continue;
 			}
 			let value = props[name];
-			if (name === 'className' || name === 'children' || name === 'key') {
+			if (/^className|children|key$/.test(name)) {
 				continue;
 			} else if (name === 'style') {
 				value = getStyleString(value);
@@ -342,6 +367,10 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 		}
 	}
 }
+
+/**
+ * @param {VNode} vnode
+ */
 export function runUnmountCallbacks(vnode) {
 	if (isVNode(vnode)) {
 		if (vnode._h) {
@@ -355,9 +384,11 @@ export function runUnmountCallbacks(vnode) {
 			vnode._i.componentWillUnmount();
 			delete vnode._i;
 		}
+		const node = getVNodeDom(vnode);
 		(vnode._r || vnode).props.children.forEach((child) => {
 			if (isVNode(child) && isFunction(child.type)) runUnmountCallbacks(child);
 		});
+		if (node?.parentNode) domRemove(node.parentNode, node);
 		delete vnode._n;
 	}
 }
