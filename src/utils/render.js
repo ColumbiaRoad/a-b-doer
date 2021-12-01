@@ -126,8 +126,6 @@ export function _render(vnode, oldVnode) {
 
 	// Handle custom components
 	if (isFunction(tag) && !frag) {
-		functionType = tag;
-
 		let ref = vnode;
 		const prevVNode = vnode._r;
 

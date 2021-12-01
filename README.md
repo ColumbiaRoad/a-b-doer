@@ -472,7 +472,7 @@ Activate the test by calling dataLayer.push({ event: "optimize.activate.mytest" 
 
 Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
 
-Default `true` (true=150)
+Default `false` (true=150)
 
 Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
 
