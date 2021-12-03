@@ -360,11 +360,52 @@ append(
 
 ### useEffect
 
-Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact)
+Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact).
+If component is so called root component and has either a return value in useEffect or componentWillUnmount method, it will be called when the root element was removed from DOM (by any interaction). All sub components has the same functionality but the DOM node removal must happen by some component logic in parent components.
+
+```js
+import { append } from 'a-b-doer';
+import { useEffect } from 'a-b-doer/hooks';
+
+const SomeFunctionalComponent = (props) => {
+  useEffect({} => {
+    console.log("Do something when element was added to DOM.")
+    return () => {
+      console.log("Do something when element was removed from DOM.")
+    }
+  }, [])
+
+   useEffect({} => {
+    console.log("Do something when foo changes.")
+  }, [props.foo])
+
+  return <div>Foo</div>
+}
+
+append(
+  <SomeFunctionalComponent ref={componentRef} foo={1} />
+  document.body
+);
+```
 
 ### useState
 
 State hook for creating stateful values. This hook retuns a stateful value and a function to update it (like in preact).
+
+```js
+import { append } from 'a-b-doer';
+import { useState } from 'a-b-doer/hooks';
+
+const SomeFunctionalComponent = (props) => {
+  const [value, setValue] = useState(0);
+  return <a onClick={() = setValue(value + 1)}>Click {value}</a>
+}
+
+append(
+  <SomeFunctionalComponent ref={componentRef} foo={1} />
+  document.body
+);
+```
 
 ### useHook (deprecated)
 
@@ -467,6 +508,32 @@ Example:
 ```
 
 Activate the test by calling dataLayer.push({ event: "optimize.activate.mytest" }) manually or with e.g. Google Tag Manager.
+
+### chunks
+
+Type `boolean`
+
+Default `false`
+
+Enabled support of manual code splitting and produces chunks in AMD format. Initial chunk will be injected with custom AMD loader that is just 560 bytes. Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
+
+```js
+import { append, pollQuerySelector, waitElement } from 'a-b-doer';
+
+export default async () => {
+  pollQuerySelector('#wrapper', (target) => {
+    import('./src/TestComponent').then(({ default: TestComponent }) => {
+      append(<TestComponent />, target);
+    });
+  });
+
+  // OR
+
+  const target = await waitElement('#wrapper');
+  const { default: TestComponent } = await import('./src/TestComponent');
+  append(<TestComponent />, target);
+};
+```
 
 ### chunkImages
 
