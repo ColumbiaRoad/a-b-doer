@@ -1,6 +1,18 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Supports e.g. JSX templates with custom JSX parser. You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (~5kb) and it could be an issue (at least in Optimize).
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 4.9kb when minified:
+
+```js
+import { append } from 'a-b-doer';
+import { useState } from 'a-b-doer/hooks';
+const Foo = () => {
+  const [inc, setInc] = useState(1);
+  return <div onClick={() => setInc(inc + 1)}>{inc}</div>;
+};
+append(<Foo />, document.body);
+```
+
+You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb) and it could be an issue (at least in Optimize).
 
 ---
 
@@ -91,6 +103,8 @@ If you're more familiar with path aliases in import calls, there is path alias f
 ## Usage examples, jsx templates
 
 JSX files are also supported and you can create custom components with either functional style or class style syntax. Custom component syntax is like in preact but implemented in much simpler way. This means that all hooks and component render cycle methods are not implemented (if you need them, use preact). This library uses a simple createElement utility which works with babel and transforms jsx to virtual nodes that'll be rendered automatically to DOM nodes when they're added to DOM with library's own DOM utilities.
+
+The lib handles element attributes as is and does not do any camelCase to hyphenated conversion to them. Also some namespaced attributes are supported by default.
 
 ```js
 import { append, pollQuerySelector, Component } from 'a-b-doer';
@@ -186,6 +200,21 @@ pollQuerySelector('html #app', (target) => {
   render(<MyComponent val={1} />, target);
 });
 ```
+
+### Namespace attributes
+
+Supported attribute namespaces by default are these:
+
+```js
+{
+  svg: '2000/svg',
+	space: 'XML/1998/namespace',
+	xlink: '1999/xlink',
+	xmlns: '2000/xmlns/',
+}
+```
+
+If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_namespaces or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
 
 ## Polyfills
 
@@ -331,11 +360,52 @@ append(
 
 ### useEffect
 
-Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact)
+Effect hook that'll be called after component render. If useEffect call returns a function, it will be called when component leaves from DOM (like in preact).
+If component is so called root component and has either a return value in useEffect or componentWillUnmount method, it will be called when the root element was removed from DOM (by any interaction). All sub components has the same functionality but the DOM node removal must happen by some component logic in parent components.
+
+```js
+import { append } from 'a-b-doer';
+import { useEffect } from 'a-b-doer/hooks';
+
+const SomeFunctionalComponent = (props) => {
+  useEffect({} => {
+    console.log("Do something when element was added to DOM.")
+    return () => {
+      console.log("Do something when element was removed from DOM.")
+    }
+  }, [])
+
+   useEffect({} => {
+    console.log("Do something when foo changes.")
+  }, [props.foo])
+
+  return <div>Foo</div>
+}
+
+append(
+  <SomeFunctionalComponent ref={componentRef} foo={1} />
+  document.body
+);
+```
 
 ### useState
 
 State hook for creating stateful values. This hook retuns a stateful value and a function to update it (like in preact).
+
+```js
+import { append } from 'a-b-doer';
+import { useState } from 'a-b-doer/hooks';
+
+const SomeFunctionalComponent = (props) => {
+  const [value, setValue] = useState(0);
+  return <a onClick={() = setValue(value + 1)}>Click {value}</a>
+}
+
+append(
+  <SomeFunctionalComponent ref={componentRef} foo={1} />
+  document.body
+);
+```
 
 ### useHook (deprecated)
 
@@ -439,11 +509,37 @@ Example:
 
 Activate the test by calling dataLayer.push({ event: "optimize.activate.mytest" }) manually or with e.g. Google Tag Manager.
 
+### chunks
+
+Type `boolean`
+
+Default `false`
+
+Enabled support of manual code splitting and produces chunks in AMD format. Initial chunk will be injected with custom AMD loader that is just 560 bytes. Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
+
+```js
+import { append, pollQuerySelector, waitElement } from 'a-b-doer';
+
+export default async () => {
+  pollQuerySelector('#wrapper', (target) => {
+    import('./src/TestComponent').then(({ default: TestComponent }) => {
+      append(<TestComponent />, target);
+    });
+  });
+
+  // OR
+
+  const target = await waitElement('#wrapper');
+  const { default: TestComponent } = await import('./src/TestComponent');
+  append(<TestComponent />, target);
+};
+```
+
 ### chunkImages
 
 Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
 
-Default `true` (true=150)
+Default `false` (true=150)
 
 Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
 

@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from 'a-b-doer/hooks';
 
 export const Simple = (props) => {
-	const { id, ...rest } = props;
+	const { id, className, ...rest } = props;
 
 	return (
-		<div id={id} data-o={'t-temp-' + id} class="simple">
+		<div id={id} data-o={'t-temp-' + id} class={['simple', className].filter(Boolean).join(' ')}>
 			JSX Template {JSON.stringify(rest)}
 		</div>
 	);

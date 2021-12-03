@@ -1,0 +1,14 @@
+:global {
+	#wrapper {
+		display: none;
+	}
+	#app {
+		background: white !important;
+		overflow: auto !important;
+		display: block !important;
+
+		a {
+			cursor: pointer;
+		}
+	}
+}

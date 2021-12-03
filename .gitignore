@@ -1,6 +1,6 @@
 config.json
-config.js
 node_modules
 testing
 .test
 .browserslistrc
+.env

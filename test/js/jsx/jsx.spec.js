@@ -24,22 +24,42 @@ describe('JSX', () => {
 
 	it('should pass props correctly', async () => {
 		for (const t of tpl) {
-			const html = await (await t.getProperty('innerHTML')).jsonValue();
-			expect(html).toMatch(`"foo":"${tpl.indexOf(t)}"`);
+			await expect(t).toMatch(`"foo":"${tpl.indexOf(t)}"`);
 		}
 	});
 
 	it('should update sibling styles with ref', async () => {
 		const node = await page.$('#tpl4');
-		const html = await (await node.getProperty('innerHTML')).jsonValue();
-		expect(html).toMatch(/background:\s*red/);
-		expect(html).toMatch('Foo');
+		await expect(node).toMatchElement('[style*="background: red"]');
+		await expect(node).toMatch('Foo');
 	});
 
 	it('should update parent styles with ref & hook', async () => {
 		const node = await page.$('#tpl5');
-		const html = await (await node.getProperty('outerHTML')).jsonValue();
-		expect(html).toMatch(/background:\s*blue/);
-		expect(html).toMatch('Bar');
+		await expect(node).toMatchElement('[style*="background: blue"]');
+		await expect(node).toMatch('Bar');
+	});
+
+	it('should call state hook', async () => {
+		await page.evaluate(() => {
+			window.effectCb = false;
+		});
+		const node = await page.$('#tpl6');
+		await expect(node).toMatch(/Val:2/);
+		await page.click('#tpl6click');
+		await expect(node).toMatch(/Val:3/);
+		await page.evaluate(() => {
+			document.querySelectorAll('#tpl6').forEach((node) => {
+				node.remove();
+			});
+		});
+		const cbCalled = await page.evaluate(() => window.effectCb);
+		expect(cbCalled).toBe(true);
+	});
+
+	it('should render a terniary child properly', async () => {
+		const node = await page.$('#tpl7');
+		await expect(node).toMatchElement('p');
+		await expect(node).toMatch(/First\s*ValP:1\s*Last/ms);
 	});
 });

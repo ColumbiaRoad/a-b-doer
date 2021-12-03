@@ -3,8 +3,8 @@
  * @property {*|null} current
  */
 
-import { hooks } from './src/utils/internal';
-import { render } from './src/utils/render';
+import { hooks, isSame, onNextTick } from './src/utils/internal';
+import { _render } from './src/utils/render';
 
 /**
  * Initializes the reference object.
@@ -25,25 +25,22 @@ export const useRef = (current = null) => {
  * @param {Function} cb
  */
 export const useHook = (cb) => {
-	setTimeout(cb, 0);
+	onNextTick(cb);
 };
 
 export const useEffect = (cb, deps) => {
 	const oldDeps = hooks.h[hooks.c]?.[1];
 	let shouldCall = !oldDeps || !deps;
 	if (!shouldCall && deps) {
-		for (let index = 0; index < deps.length; index++) {
-			if (deps[index] !== oldDeps[index]) {
-				shouldCall = true;
-				break;
-			}
-		}
+		shouldCall = !isSame(deps, oldDeps || []);
 	}
 	if (shouldCall) {
-		if (oldDeps && hooks.h[hooks.c][2]) hooks.h[hooks.c][2]();
+		if (oldDeps && hooks.h[hooks.c][2]) {
+			hooks.h[hooks.c][2]();
+		}
 		hooks.h[hooks.c] = ['e', deps, null];
 		((hooks, index) => {
-			setTimeout(() => {
+			onNextTick(() => {
 				hooks[index][2] = cb();
 			});
 		})(hooks.h, hooks.c);
@@ -58,8 +55,12 @@ export const useState = (defaultValue) => {
 			((hooks, index, vnode) => (value) => {
 				hooks[index][0] = value;
 				if (vnode) {
-					setTimeout(() => {
-						render(vnode);
+					onNextTick(() => {
+						vnode._h = hooks;
+						if (vnode._p) {
+							vnode._p._h = hooks;
+						}
+						_render(vnode, vnode._p);
 					});
 				}
 			})(hooks.h, hooks.c, hooks.v),
