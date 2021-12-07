@@ -92,7 +92,9 @@ async function buildSingleEntry(targetPath) {
 	try {
 		const output = await bundler({ ...config, watch });
 		rollupWatcher = output.watcher;
-		console.log(green('Bundle built.'));
+		if (!watch) {
+			console.log(green('Bundle built.'));
+		}
 		console.log('');
 	} catch (error) {
 		console.log(error);
