@@ -257,7 +257,6 @@ function createChildren(vnode, element, children = [], oldChildren) {
 	for (const child of oldChildrenArr) {
 		if (child?.key) oldChildrenMap.set(child.key, child);
 	}
-	console.log(children);
 	const newChildren = flatten(children).map((child, index) => {
 		let oldChild;
 		let node = child;
