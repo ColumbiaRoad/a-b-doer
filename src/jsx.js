@@ -17,10 +17,10 @@ import { Fragment } from './utils/render';
 function createElement(tag, props, ...children) {
 	props = props || {};
 
-	if (props.className) {
-		props.class = props.className;
-	} else if (props.class) {
+	if (props.class) {
 		props.className = props.class;
+	} else if (props.className) {
+		props.class = props.className;
 	}
 
 	props.children = children || [];
