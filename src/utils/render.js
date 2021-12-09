@@ -190,7 +190,7 @@ export function _render(vnode, oldVnode) {
 	else {
 		// Build element if it's not a fragment
 		if (!frag) {
-			if (isDomNode(vnode)) {
+			if (isDomNode(tag)) {
 				element = tag;
 			}
 

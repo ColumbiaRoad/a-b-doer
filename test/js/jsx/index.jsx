@@ -10,4 +10,6 @@ pollQuerySelector('html body', (body) => {
 	append(<Hooks id="tpl5" />, body);
 	append(<Hooks id="tpl6" />, body);
 	append(<Switch id="tpl7" />, body);
+	const Title = document.querySelector('h1');
+	append(<Title id="tpl8" data-o="h1" class="title" />, body);
 });

@@ -62,4 +62,10 @@ describe('JSX', () => {
 		await expect(node).toMatchElement('p');
 		await expect(node).toMatch(/First\s*ValP:1\s*Last/ms);
 	});
+
+	it('should allow HTMLElement as a VNode type', async () => {
+		const node = await page.$('#tpl8');
+		await expect(node).toMatch('Example Domain');
+		await expect(page).toMatchElement('[data-o="h1"]');
+	});
 });
