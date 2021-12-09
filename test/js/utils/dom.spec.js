@@ -21,7 +21,7 @@ describe('DOM', () => {
 		});
 		expect(content).toMatch(`id="foo123"`);
 		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="t-`);
+		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
 	});
 
 	it('should prepend div to body', async () => {
@@ -37,7 +37,7 @@ describe('DOM', () => {
 
 		expect(content).toMatch(`id="foo123"`);
 		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="t-`);
+		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
 	});
 
 	it('should create div before given element', async () => {
@@ -54,7 +54,7 @@ describe('DOM', () => {
 
 		expect(content).toMatch(`id="foo123"`);
 		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="t-`);
+		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
 	});
 
 	it('should create div after given element', async () => {
@@ -71,6 +71,6 @@ describe('DOM', () => {
 
 		expect(content).toMatch(`id="foo123"`);
 		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="t-`);
+		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
 	});
 });
