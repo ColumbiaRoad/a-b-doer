@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v2.0.0...v3.0.0) (2021-12-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* class prop should overrule className
+* Removed EJS support (less npm audit errors)
+* Logic change from DOM nodes to custom nodes that needs to be rendered to DOM Nodes.
+
+### Features
+
+* Basic attribute namespace support ([a0a0707](https://github.com/ColumbiaRoad/a-b-doer/commit/a0a070738210ae71de06586443100dd50b452821))
+* Chunks option ([7586170](https://github.com/ColumbiaRoad/a-b-doer/commit/7586170cdcc2a5779de53d58681245b249399294))
+* class prop should overrule className ([2e304f0](https://github.com/ColumbiaRoad/a-b-doer/commit/2e304f07e7cc76cf0753e5f4bddcb2c31f3b541b))
+* Custom activation event ([3472aa9](https://github.com/ColumbiaRoad/a-b-doer/commit/3472aa95746333e991b5f3d2acdafb5768ccd91d))
+* dangerouslySetInnerHTML support ([324738c](https://github.com/ColumbiaRoad/a-b-doer/commit/324738ce4789e9d8472287a5e45ec98240e722e1))
+* Logic change from DOM nodes to custom nodes that needs to be rendered to DOM Nodes. ([29fb1c8](https://github.com/ColumbiaRoad/a-b-doer/commit/29fb1c8577279ca120e6e297bdd790d07b4bf60e))
+* Module typings ([819817f](https://github.com/ColumbiaRoad/a-b-doer/commit/819817f7545b172d0b84ffa5bef5c8b4fd9ddb44))
+* Print output sizes after build ([721c63b](https://github.com/ColumbiaRoad/a-b-doer/commit/721c63b64cf5a3de98f4ca3cf77cb94e1c4df884))
+* Removed EJS support (less npm audit errors) ([24bfa1f](https://github.com/ColumbiaRoad/a-b-doer/commit/24bfa1faac3d1a4f17f9c94cbbb833b31a3bac21))
+* Typescript support ([e1e9978](https://github.com/ColumbiaRoad/a-b-doer/commit/e1e9978727fdade9abdad38d7e922c46b0bd1988))
+
+
+### Bug Fixes
+
+* Allow HTML element as VNode type ([96f6d53](https://github.com/ColumbiaRoad/a-b-doer/commit/96f6d5377402ad574948224a31e517dd95a736b1))
+* Better flatten for nested array children. ([7db36bc](https://github.com/ColumbiaRoad/a-b-doer/commit/7db36bc3937ecd2d911250bc768c6f4a9f35c201))
+* Fixed typos, forced "no comments" ([6c8f463](https://github.com/ColumbiaRoad/a-b-doer/commit/6c8f463fc3432b1e50807d4a29178e7364badd19))
+* Moved probably test related alias from main to test config ([5c7b5dd](https://github.com/ColumbiaRoad/a-b-doer/commit/5c7b5ddb81acd680ebf8dd2e5039a3cab51656aa))
+* Path for test id hash was too short and ids clashed ([31d2dfb](https://github.com/ColumbiaRoad/a-b-doer/commit/31d2dfbe7a5baaa0e0f2c63b509fdb0913e79e9e))
+* Remove class component from dom, reduced bundle size :D ([3bd0f15](https://github.com/ColumbiaRoad/a-b-doer/commit/3bd0f152031e145f32fbc9bf6c46b3661f71c443))
+* Update component props on update (duh) ([3913e73](https://github.com/ColumbiaRoad/a-b-doer/commit/3913e73a87bca74d7d8016c63b6a31c996dd38ba))
+
 ## [2.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v1.4.1...v2.0.0) (2021-10-05)
 
 
