@@ -190,7 +190,7 @@ export function _render(vnode, oldVnode) {
 	else {
 		// Build element if it's not a fragment
 		if (!frag) {
-			if (isDomNode(vnode)) {
+			if (isDomNode(tag)) {
 				element = tag;
 			}
 
@@ -232,6 +232,19 @@ export function _render(vnode, oldVnode) {
 	return vnode._n;
 }
 
+function flatten(items) {
+	const flat = [];
+
+	items.forEach((item) => {
+		if (Array.isArray(item)) {
+			flat.push(...flatten(item));
+		} else {
+			flat.push(item);
+		}
+	});
+
+	return flat;
+}
 /**
  * @param {VNode} vnode
  * @param {HTMLElement} element
@@ -244,46 +257,43 @@ function createChildren(vnode, element, children = [], oldChildren) {
 	for (const child of oldChildrenArr) {
 		if (child?.key) oldChildrenMap.set(child.key, child);
 	}
+	const newChildren = flatten(children).map((child, index) => {
+		let oldChild;
+		let node = child;
+		if (isRenderableElement(child)) {
+			if (!isVNode(child)) {
+				child = createVNode('', { text: child });
+			}
+			if (vnode.svg) {
+				child.svg = true;
+			}
+			if (!child.props.key) {
+				child.key = vnode.key + (!isFragment(vnode) ? index : '');
+			}
+			// Only root elements should have data-o attribute
+			child.props['data-o'] = null;
 
-	const newChildren = children
-		.reduce((acc, val) => acc.concat(val), [])
-		.map((child, index) => {
-			let oldChild;
-			let node = child;
-			if (isRenderableElement(child)) {
-				if (!isVNode(child)) {
-					child = createVNode('', { text: child });
-				}
-				if (vnode.svg) {
-					child.svg = true;
-				}
-				if (!child.props.key) {
-					child.key = vnode.key + (!isFragment(vnode) ? index : '');
-				}
-				// Only root elements should have data-o attribute
-				child.props['data-o'] = null;
-
-				oldChild = oldChildrenMap.get(child.key);
-				if (!isSameChild(child, oldChild)) {
-					oldChild = undefined;
-				}
-				node = _render(child, oldChild);
-				if (getVNodeDom(child) && isVNode(oldChild)) {
-					oldChildrenMap.delete(oldChild.key);
+			oldChild = oldChildrenMap.get(child.key);
+			if (!isSameChild(child, oldChild)) {
+				oldChild = undefined;
+			}
+			node = _render(child, oldChild);
+			if (getVNodeDom(child) && isVNode(oldChild)) {
+				oldChildrenMap.delete(oldChild.key);
+			}
+		}
+		if (isRenderableElement(node)) {
+			const prevNode = element.childNodes[index];
+			if (prevNode !== node) {
+				if (!index) {
+					domAppend(element, node);
+				} else {
+					domInsertBefore(element, node, prevNode);
 				}
 			}
-			if (isRenderableElement(node)) {
-				const prevNode = element.childNodes[index];
-				if (prevNode !== node) {
-					if (!index) {
-						domAppend(element, node);
-					} else {
-						domInsertBefore(element, node, prevNode);
-					}
-				}
-				return child;
-			}
-		});
+			return child;
+		}
+	});
 
 	// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
 	for (const [_, oldChild] of oldChildrenMap) {
