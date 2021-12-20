@@ -167,7 +167,7 @@ function createMutation(child) {
 	}
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
-	if (process.env.preact || !config.jsx) {
+	if (process.env.preact || !config.j) {
 		return child;
 	}
 	let node = child;

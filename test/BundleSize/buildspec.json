@@ -1,4 +1,8 @@
 {
   "url": ["https://partt.ee?perf"],
-  "preact": false
+  "preact": false,
+  "features": {
+    "classes": false,
+    "namespaces": false
+  }
 }

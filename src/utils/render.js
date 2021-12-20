@@ -69,7 +69,7 @@ function copyInternal(source, target) {
 let NAMESPACES;
 
 function initNs() {
-	if (!NAMESPACES) {
+	if (config.n && !NAMESPACES) {
 		NAMESPACES = window.__namespaces || {
 			svg: '2000/svg',
 			space: 'XML/1998/namespace',
@@ -81,7 +81,7 @@ function initNs() {
 }
 
 function getNs(key) {
-	if (!config.jsx) return null;
+	if (!config.j || !config.n) return null;
 	const ns = NAMESPACES[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
@@ -94,7 +94,7 @@ function getNs(key) {
  * @returns {HTMLElement}
  */
 export function _render(vnode, oldVnode) {
-	if (!config.jsx || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
+	if (!config.j || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
 		return vnode;
 	}
 
@@ -130,7 +130,7 @@ export function _render(vnode, oldVnode) {
 		const prevVNode = vnode._r;
 
 		// Class syntax components
-		if (tag.prototype?.render) {
+		if (config.c && tag.prototype?.render) {
 			let comp = vnode._i;
 			const cb = [];
 			// First render
@@ -212,7 +212,7 @@ export function _render(vnode, oldVnode) {
 					if (!tag) {
 						element = document.createTextNode(props.text);
 					} else {
-						element = svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
+						element = config.n && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 					}
 				}
 			}
@@ -295,9 +295,11 @@ function createChildren(vnode, element, children = [], oldChildren) {
 		}
 	});
 
-	// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
-	for (const [_, oldChild] of oldChildrenMap) {
-		runUnmountCallbacks(oldChild);
+	if (config.h || config.c) {
+		// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
+		for (const [_, oldChild] of oldChildrenMap) {
+			runUnmountCallbacks(oldChild);
+		}
 	}
 
 	return newChildren;
@@ -373,7 +375,7 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 				element.addEventListener(name.substr(2).toLowerCase(), value);
 			} else if (value !== null) {
 				value = value.toString();
-				if (name.includes(':') && element.tagName.toLowerCase() != 'svg') {
+				if (config.n && name.includes(':') && element.tagName.toLowerCase() != 'svg') {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 				} else {
@@ -389,14 +391,14 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
  */
 export function runUnmountCallbacks(vnode) {
 	if (isVNode(vnode)) {
-		if (vnode._h) {
+		if (config.h && vnode._h) {
 			vnode._h.forEach((h) => {
 				if (h.length === 3 && isFunction(h[2])) {
 					h[2]();
 				}
 			});
 			vnode._h = [];
-		} else if (vnode._i && vnode._i.componentWillUnmount) {
+		} else if (config.c && vnode._i && vnode._i.componentWillUnmount) {
 			vnode._i.componentWillUnmount();
 			delete vnode._i;
 		}

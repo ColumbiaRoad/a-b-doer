@@ -31,7 +31,7 @@ function createElement(tag, props, ...children) {
 		vnode.svg = true;
 	}
 
-	config.jsx = true; // Helps terser to detect if jsx support should be bundled
+	config.j = true; // Helps terser to detect if jsx support should be bundled
 
 	return vnode;
 }

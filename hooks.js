@@ -3,8 +3,10 @@
  * @property {*|null} current
  */
 
-import { hooks, isSame, onNextTick } from './src/utils/internal';
+import { config, hooks, isSame, onNextTick } from './src/utils/internal';
 import { _render } from './src/utils/render';
+
+config.h = true;
 
 /**
  * Initializes the reference object.
