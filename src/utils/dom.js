@@ -174,25 +174,27 @@ function createMutation(child) {
 	if (isVNode(child)) {
 		const rendered = _render(child);
 		node = getChildrenAsFragment(rendered);
-		const children = [...node.childNodes];
-		onNextTick(() => {
-			const parent = children[0]?.parentElement;
-			if (parent) {
-				// Add checker for root node's dom removal.
-				new MutationObserver((mutations, observer) => {
-					mutations.forEach((mutation) => {
-						mutation.removedNodes.forEach((el) => {
-							if (children.includes(el)) {
-								observer.disconnect();
-								runUnmountCallbacks(child);
-							}
+		if (config.h || config.c) {
+			const children = [...node.childNodes];
+			onNextTick(() => {
+				const parent = children[0]?.parentElement;
+				if (parent) {
+					// Add checker for root node's dom removal.
+					new MutationObserver((mutations, observer) => {
+						mutations.forEach((mutation) => {
+							mutation.removedNodes.forEach((el) => {
+								if (children.includes(el)) {
+									observer.disconnect();
+									runUnmountCallbacks(child);
+								}
+							});
 						});
+					}).observe(parent, {
+						childList: true,
 					});
-				}).observe(parent, {
-					childList: true,
-				});
-			}
-		});
+				}
+			});
+		}
 	}
 	return node;
 }
