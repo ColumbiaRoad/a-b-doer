@@ -174,15 +174,15 @@ function createMutation(child) {
 	if (isVNode(child)) {
 		const rendered = _render(child);
 		node = getChildrenAsFragment(rendered);
-		const children = [...node.childNodes];
 		onNextTick(() => {
-			const parent = children[0]?.parentElement;
+			const parent = rendered.parentElement;
 			if (parent) {
 				// Add checker for root node's dom removal.
 				new MutationObserver((mutations, observer) => {
 					mutations.forEach((mutation) => {
 						mutation.removedNodes.forEach((el) => {
-							if (children.includes(el)) {
+							const target = (child._r || child)._n;
+							if (el === rendered && !target?.parentElement) {
 								observer.disconnect();
 								runUnmountCallbacks(child);
 							}

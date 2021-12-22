@@ -50,22 +50,22 @@ export const useEffect = (cb, deps) => {
 
 export const useState = (defaultValue) => {
 	if (!hooks.h[hooks.c]) {
-		hooks.h[hooks.c] = [
-			defaultValue,
-			((hooks, index, vnode) => (value) => {
-				hooks[index][0] = value;
-				if (vnode) {
-					onNextTick(() => {
-						vnode._h = hooks;
-						if (vnode._p) {
-							vnode._p._h = hooks;
-						}
-						_render(vnode, vnode._p);
-					});
-				}
-			})(hooks.h, hooks.c, hooks.v),
-		];
+		hooks.h[hooks.c] = [defaultValue];
 	}
+
+	hooks.h[hooks.c][1] = ((hooks, index, vnode) => (value) => {
+		hooks[index][0] = value;
+		if (vnode) {
+			onNextTick(() => {
+				vnode._h = hooks;
+				if (vnode._p) {
+					vnode._p._h = hooks;
+				}
+				_render(vnode, vnode._p);
+			});
+		}
+	})(hooks.h, hooks.c, hooks.v);
+
 	const state = hooks.h[hooks.c];
 	hooks.c++;
 	return state;
