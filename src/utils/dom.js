@@ -138,7 +138,7 @@ function clearPrevious(child, parent) {
 		if (id) {
 			Array.from(parent.children).forEach((child) => {
 				if (child.dataset.o === id) {
-					domRemove(parent, child);
+					domRemove(child);
 				}
 			});
 		}
@@ -174,15 +174,15 @@ function createMutation(child) {
 	if (isVNode(child)) {
 		const rendered = _render(child);
 		node = getChildrenAsFragment(rendered);
-		const children = [...node.childNodes];
 		onNextTick(() => {
-			const parent = children[0]?.parentElement;
+			const parent = rendered.parentElement;
 			if (parent) {
 				// Add checker for root node's dom removal.
 				new MutationObserver((mutations, observer) => {
 					mutations.forEach((mutation) => {
 						mutation.removedNodes.forEach((el) => {
-							if (children.includes(el)) {
+							const target = (child._r || child)._n;
+							if (el === rendered && !target?.parentElement) {
 								observer.disconnect();
 								runUnmountCallbacks(child);
 							}
@@ -270,16 +270,11 @@ export function clear(target, id) {
 	if (!target) {
 		target = document;
 	}
-	prevNode = target.querySelector(`[data-o="${id}"]`);
-	if (prevNode) {
-		domRemove(prevNode.parentNode, prevNode);
-	}
+	domRemove(target.querySelector(`[data-o="${id}"]`));
 }
 
 export function clearAll() {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
-		if (node.parentElement) {
-			domRemove(node.parentElement, prevnodeNode);
-		}
+		domRemove(node);
 	});
 }

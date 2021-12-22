@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.0.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.0.0...v3.0.1) (2021-12-22)
+
+
+### Bug Fixes
+
+* Better clearing for previous nodes ([a9e10aa](https://github.com/ColumbiaRoad/a-b-doer/commit/a9e10aaae7685c8f1c84af1bdeabca2abbec2136))
+* Fixed element re-order bug. ([951238c](https://github.com/ColumbiaRoad/a-b-doer/commit/951238cddf8f390053afaceb462abc6adf43ef48))
+
 ## [3.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v2.0.0...v3.0.0) (2021-12-10)
 
 

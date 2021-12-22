@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from 'a-b-doer/hooks';
 
 export const Simple = (props) => {
-	const { id, ...rest } = props;
+	const { id, className = 'simple', ...rest } = props;
 
 	return (
-		<div id={id} data-o={'t-temp-' + id} class="simple">
+		<div id={id} data-o={'t-temp-' + id} class={className}>
 			JSX Template {JSON.stringify(rest)}
 		</div>
 	);
@@ -78,6 +78,32 @@ export const Switch = ({ id }) => {
 			<div>First</div>
 			{!val ? <div>Val:{val}</div> : <p>ValP:{val}</p>}
 			<div>Last</div>
+		</div>
+	);
+};
+
+const Loading = ({ num }) => {
+	return (
+		<div>
+			<h1>Loading... {num}</h1>
+		</div>
+	);
+};
+
+export const OrderApp = ({ id, children }) => {
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		setTimeout(() => {
+			setLoading(false);
+		}, 100);
+	}, []);
+
+	return loading ? (
+		<Loading num="1" />
+	) : (
+		<div id={id} data-o={'t-temp-' + id}>
+			{children}
 		</div>
 	);
 };

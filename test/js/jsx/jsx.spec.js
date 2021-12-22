@@ -68,4 +68,15 @@ describe('JSX', () => {
 		await expect(node).toMatch('Example Domain');
 		await expect(page).toMatchElement('[data-o="h1"]');
 	});
+
+	it('should re-render elements in correct order', async () => {
+		const node = await page.$('#tpl9');
+		const children = await node.$$('.simple-sub');
+		let i = 1;
+		for (const child of children) {
+			const id = await child.evaluate((element) => element.id);
+			expect(id).toBe('tpl9-' + i);
+			i++;
+		}
+	});
 });

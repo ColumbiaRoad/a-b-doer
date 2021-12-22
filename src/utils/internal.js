@@ -5,8 +5,10 @@ export function domAppend(parent, child) {
 export function domInsertBefore(parent, child, target) {
 	parent.insertBefore(child, target);
 }
-export function domRemove(parent, child) {
-	parent.removeChild(child);
+export function domRemove(node) {
+	if (node?.parentElement) {
+		node.parentElement.removeChild(node);
+	}
 }
 export function isFunction(fn) {
 	return typeof fn === 'function';

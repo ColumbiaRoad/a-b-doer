@@ -128,6 +128,7 @@ export function _render(vnode, oldVnode) {
 	if (isFunction(tag) && !frag) {
 		let ref = vnode;
 		const prevVNode = vnode._r;
+		let newVNode;
 
 		// Class syntax components
 		if (tag.prototype?.render) {
@@ -149,7 +150,7 @@ export function _render(vnode, oldVnode) {
 					cb.push(() => comp.componentDidUpdate(oldProps, prevState));
 				}
 			}
-			const newVNode = comp.render();
+			newVNode = comp.render();
 			if (!isVNode(newVNode)) {
 				delete vnode._n;
 				delete vnode._r;
@@ -166,16 +167,23 @@ export function _render(vnode, oldVnode) {
 			hooks.h = vnode._h;
 			hooks.c = 0;
 			hooks.v = vnode;
-			const newVNode = tag(props);
+			newVNode = tag(props);
 			if (!isVNode(newVNode)) {
 				delete vnode._n;
 				return newVNode;
 			}
 			newVNode.key = vnode.key;
-			element = _render(newVNode, vnode._r);
 			vnode._r = newVNode;
+			element = _render(newVNode, prevVNode);
 		}
 		vnode._p = { ...vnode };
+
+		// If render tree root type changes, replace the element from DOM
+		if (vnode._n && prevVNode && newVNode.type !== prevVNode.type) {
+			const parent = vnode._n.parentNode;
+			domInsertBefore(parent, element, vnode._n);
+			runUnmountCallbacks(prevVNode);
+		}
 
 		// If one of props is a ref, put the component instance or re-render function to the ref value.
 		if (props.ref) {
@@ -218,16 +226,14 @@ export function _render(vnode, oldVnode) {
 			}
 
 			setElementAttributes(element, props, oldProps);
-		}
-
-		if (frag) {
+		} else {
 			element = createDocumentFragment();
 		}
 
 		vnode.props.children = createChildren(vnode, element, children, oldProps?.children);
 	}
 
-	vnode._n = oldVnode?._n || element;
+	vnode._n = element;
 
 	return vnode._n;
 }
@@ -285,11 +291,13 @@ function createChildren(vnode, element, children = [], oldChildren) {
 		if (isRenderableElement(node)) {
 			const prevNode = element.childNodes[index];
 			if (prevNode !== node) {
-				if (!index) {
+				const nextNode = prevNode?.nextSibling;
+				if (!index || nextNode === undefined) {
 					domAppend(element, node);
 				} else {
-					domInsertBefore(element, node, prevNode);
+					domInsertBefore(element, node, nextNode);
 				}
+				domRemove(prevNode);
 			}
 			return child;
 		}
@@ -404,7 +412,7 @@ export function runUnmountCallbacks(vnode) {
 		(vnode._r || vnode).props.children.forEach((child) => {
 			if (isVNode(child) && isFunction(child.type)) runUnmountCallbacks(child);
 		});
-		if (node?.parentNode) domRemove(node.parentNode, node);
+		domRemove(node);
 		delete vnode._n;
 	}
 }
