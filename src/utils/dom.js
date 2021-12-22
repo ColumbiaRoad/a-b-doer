@@ -138,7 +138,7 @@ function clearPrevious(child, parent) {
 		if (id) {
 			Array.from(parent.children).forEach((child) => {
 				if (child.dataset.o === id) {
-					domRemove(parent, child);
+					domRemove(child);
 				}
 			});
 		}
@@ -270,16 +270,11 @@ export function clear(target, id) {
 	if (!target) {
 		target = document;
 	}
-	prevNode = target.querySelector(`[data-o="${id}"]`);
-	if (prevNode) {
-		domRemove(prevNode.parentNode, prevNode);
-	}
+	domRemove(target.querySelector(`[data-o="${id}"]`));
 }
 
 export function clearAll() {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
-		if (node.parentElement) {
-			domRemove(node.parentElement, prevnodeNode);
-		}
+		domRemove(node);
 	});
 }

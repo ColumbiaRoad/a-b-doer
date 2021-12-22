@@ -297,6 +297,7 @@ function createChildren(vnode, element, children = [], oldChildren) {
 				} else {
 					domInsertBefore(element, node, nextNode);
 				}
+				domRemove(prevNode);
 			}
 			return child;
 		}
@@ -411,7 +412,7 @@ export function runUnmountCallbacks(vnode) {
 		(vnode._r || vnode).props.children.forEach((child) => {
 			if (isVNode(child) && isFunction(child.type)) runUnmountCallbacks(child);
 		});
-		if (node?.parentNode) domRemove(node.parentNode, node);
+		domRemove(node);
 		delete vnode._n;
 	}
 }
