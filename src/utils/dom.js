@@ -198,10 +198,10 @@ function createMutation(child) {
 }
 
 /**
- * @param {HTMLElement|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement} Rendered element
  */
 export function append(vnode, parent, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -213,10 +213,10 @@ export function append(vnode, parent, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement} Rendered element
  */
 export function prepend(vnode, parent, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -232,10 +232,10 @@ export function prepend(vnode, parent, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} before
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement} Rendered element
  */
 export function insertBefore(vnode, before, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -247,10 +247,10 @@ export function insertBefore(vnode, before, clearPrev = true) {
 }
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} after
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement} Rendered element
  */
 export function insertAfter(vnode, after, clearPrev = true) {
 	const child = createMutation(vnode);

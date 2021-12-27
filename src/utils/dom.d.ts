@@ -47,52 +47,36 @@ export function waitFor<T = any>(func: () => T, wait?: number): Promise<T>;
  * @param child Created element
  * @param parent Targeted parent element
  * @param clearPrev Clear all matching same elements, default true
- * @returns Rendered VNode
+ * @returns Rendered element
  */
-export function append(
-	child: HTMLElement | HTMLElement[] | VNode | VNode[],
-	parent: HTMLElement,
-	clearPrev?: boolean
-): VNode;
+export function append(child: HTMLElement | VNode, parent: HTMLElement, clearPrev?: boolean): HTMLElement;
 
 /**
  * Adds element(s) to end of the given parent element child list
  * @param child Created element
  * @param parent Targeted parent element
  * @param clearPrev Clear all matching same elements, default true
- * @returns Rendered VNode
+ * @returns Rendered element
  */
-export function prepend(
-	child: HTMLElement | HTMLElement[] | VNode | VNode[],
-	parent: HTMLElement,
-	clearPrev?: boolean
-): VNode;
+export function prepend(child: HTMLElement | VNode, parent: HTMLElement, clearPrev?: boolean): HTMLElement;
 
 /**
  * Inserts element(s) before given element.
  * @param child Created element
  * @param before Targeted element
  * @param clearPrev Clear all matching same elements, default true
- * @returns Rendered VNode
+ * @returns Rendered element
  */
-export function insertBefore(
-	child: HTMLElement | HTMLElement[] | VNode | VNode[],
-	before: HTMLElement,
-	clearPrev?: boolean
-): VNode;
+export function insertBefore(child: HTMLElement | VNode, before: HTMLElement, clearPrev?: boolean): HTMLElement;
 
 /**
  * Inserts element(s) after given element.
  * @param child Created element
  * @param after Targeted element
  * @param clearPrev Clear all matching same elements, default true
- * @returns Rendered VNode
+ * @returns Rendered element
  */
-export function insertAfter(
-	child: HTMLElement | HTMLElement[] | VNode | VNode[],
-	after: HTMLElement,
-	clearPrev?: boolean
-): VNode;
+export function insertAfter(child: HTMLElement | VNode, after: HTMLElement, clearPrev?: boolean): HTMLElement;
 
 /**
  * Removes elements that matches given id from given root element.
