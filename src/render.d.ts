@@ -15,6 +15,8 @@ export type VNode<P = {}> = {
 
 export class Component<P = {}, S = {}> extends preact.Component<P, S> {}
 
+export type FC<P = {}> = preact.FunctionComponent<P>;
+
 type AnyObject = { [x: string]: any };
 
 /**

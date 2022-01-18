@@ -1,5 +1,5 @@
 import { append } from './utils/dom';
-import { _render, Fragment as _Fragment, getTestID as _getTestID } from './utils/render';
+import { patchVnodeDom, renderVnode, Fragment as _Fragment, getTestID as _getTestID } from './utils/render';
 
 /**
  * Super simple class abstract for class like components.
@@ -12,7 +12,9 @@ export class Component {
 	}
 	setState(newState) {
 		Object.assign(this.state, newState);
-		_render(this._v, this._v._p);
+		const old = { ...this._v };
+		this._v = renderVnode(this._v, old);
+		patchVnodeDom(this._v, old);
 	}
 }
 
@@ -20,10 +22,10 @@ export class Component {
  * Renders and re-renders given AB Doer VNode. If target node is given, rendered node will be added to it.
  * @param {VNode} vnode
  * @param {HTMLElement} [targetNode]
- * @returns {VNode}
+ * @returns {HTMLElement|VNode}
  */
 export function render(vnode, targetNode) {
-	return targetNode ? append(vnode, targetNode) : _render(vnode);
+	return targetNode ? append(vnode, targetNode) : renderVnode(vnode);
 }
 
 export const Fragment = _Fragment;

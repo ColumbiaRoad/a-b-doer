@@ -4,3 +4,4 @@ testing
 .test
 .browserslistrc
 .env
+.build

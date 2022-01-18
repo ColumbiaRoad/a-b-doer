@@ -1,18 +1,30 @@
 // Just for smaller bundles. Google Optimize has 20kb limit for JS so every character counts :D
 export function domAppend(parent, child) {
-	parent.appendChild(child);
+	parent.append(child);
 }
-export function domInsertBefore(parent, child, target) {
-	parent.insertBefore(child, target);
+export function domInsertBefore(child, target) {
+	if (target?.parentElement) {
+		target.parentElement.insertBefore(child, target);
+	}
 }
-export function domRemove(parent, child) {
-	parent.removeChild(child);
+export function domRemove(node) {
+	if (node?.parentElement) {
+		node.parentElement.removeChild(node);
+	}
+}
+export function domReplaceWith(oldNode, newNode) {
+	if (oldNode?.parentElement) {
+		oldNode.parentElement.replaceChild(newNode, oldNode);
+	}
 }
 export function isFunction(fn) {
 	return typeof fn === 'function';
 }
 export function isString(str) {
 	return typeof str === 'string';
+}
+export function isArray(arr) {
+	return Array.isArray(arr);
 }
 export function createDocumentFragment() {
 	return document.createDocumentFragment();
@@ -42,8 +54,8 @@ export const hooks = {
 export function isSame(iter, iter2) {
 	let same = true;
 	for (const key of Object.keys(iter)) {
-		if (iter[key] !== iter2[key]) {
-			same = false;
+		if (iter[key] !== iter2?.[key]) {
+			same = key === 'props' ? isSame(iter[key], iter2?.[key]) : false;
 			break;
 		}
 	}
