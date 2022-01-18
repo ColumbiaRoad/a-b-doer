@@ -1,6 +1,6 @@
-import { _render, isVNode, isDomNode, runUnmountCallbacks, getTestID } from './render';
 import { Promise } from '../polyfills';
-import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, onNextTick } from './internal';
+import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode } from './render';
+import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -112,7 +112,7 @@ export function waitFor(func, wait = 5000) {
 }
 
 function getChildrenArray(child) {
-	if (Array.isArray(child)) return child;
+	if (isArray(child)) return child;
 	if (!child) return [];
 	let children = [child];
 	// If document fragment, use its contents
@@ -132,12 +132,13 @@ function clearPrevious(child, parent) {
 		let id;
 		if (isVNode(child)) {
 			id = child.key;
+			runUnmountCallbacks(child);
 		} else {
 			id = child.dataset?.o;
 		}
 		if (id) {
 			Array.from(parent.children).forEach((child) => {
-				if (child.dataset.o === id) {
+				if (child.dataset?.o === id) {
 					domRemove(child);
 				}
 			});
@@ -145,55 +146,42 @@ function clearPrevious(child, parent) {
 	});
 }
 
-/**
- * @param {HTMLElement} child
- * @returns {HTMLElement}
- */
-function getChildrenAsFragment(child) {
-	const children = getChildrenArray(child);
-	const node = createDocumentFragment();
-	children.forEach((c) => {
-		domAppend(node, c);
-		if (!c.dataset.o) {
-			c.dataset.o = child.key || getTestID();
-		}
-	});
-	return node;
-}
-
 function createMutation(child) {
-	if (isDomNode(child)) {
-		return getChildrenAsFragment(child);
-	}
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
 	if (process.env.preact || !config.jsx) {
-		return child;
+		return;
 	}
 	let node = child;
 	if (isVNode(child)) {
-		const rendered = _render(child);
-		node = getChildrenAsFragment(rendered);
-		onNextTick(() => {
-			const parent = rendered.parentElement;
-			if (parent) {
-				// Add checker for root node's dom removal.
-				new MutationObserver((mutations, observer) => {
-					mutations.forEach((mutation) => {
-						mutation.removedNodes.forEach((el) => {
-							const target = (child._r || child)._n;
-							if (el === rendered && !target?.parentElement) {
-								observer.disconnect();
-								runUnmountCallbacks(child);
-							}
-						});
-					});
-				}).observe(parent, {
-					childList: true,
-				});
-			}
-		});
+		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
+		// onNextTick(() => {
+		// 	const parent = node?.parentElement;
+		// 	if (parent) {
+		// 		// Add checker for root node's dom removal.
+		// 		new MutationObserver((mutations, observer) => {
+		// 			mutations.forEach((mutation) => {
+		// 				mutation.removedNodes.forEach((el) => {
+		// 					const target = (child._r || child)._n;
+		// 					if (el === target && !target?.parentElement) {
+		// 						observer.disconnect();
+		// 						runUnmountCallbacks(child);
+		// 					}
+		// 				});
+		// 			});
+		// 		}).observe(parent, {
+		// 			childList: true,
+		// 		});
+		// 	}
+		// });
 	}
+
+	getChildrenArray(node).forEach((c) => {
+		if (c.dataset && !c.dataset.o) {
+			c.dataset.o = node.key || getTestID();
+		}
+	});
+
 	return node;
 }
 
@@ -224,7 +212,7 @@ export function prepend(vnode, parent, clearPrev = true) {
 		clearPrevious(child, parent);
 	}
 	if (parent.firstElementChild) {
-		domInsertBefore(parent, child, parent.firstElementChild);
+		domInsertBefore(child, parent.firstElementChild);
 	} else {
 		domAppend(parent, child);
 	}
@@ -242,7 +230,7 @@ export function insertBefore(vnode, before, clearPrev = true) {
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
 	}
-	domInsertBefore(before.parentNode, child, before);
+	domInsertBefore(child, before);
 	return vnode;
 }
 
@@ -259,7 +247,7 @@ export function insertAfter(vnode, after, clearPrev = true) {
 		clearPrevious(child, parentNode);
 	}
 	if (after.nextElementSibling) {
-		domInsertBefore(parentNode, child, after.nextElementSibling);
+		domInsertBefore(child, after.nextElementSibling);
 	} else {
 		domAppend(parentNode, child);
 	}

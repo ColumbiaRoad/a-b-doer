@@ -6,7 +6,11 @@ import { VNode } from '../render.js';
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelector(selector: string, callback: (targetNode: HTMLElement) => void, wait?: number): void;
+export function pollQuerySelector<T = HTMLElement>(
+	selector: string,
+	callback: (targetNode: T) => void,
+	wait?: number
+): void;
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -15,9 +19,9 @@ export function pollQuerySelector(selector: string, callback: (targetNode: HTMLE
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelectorAll(
+export function pollQuerySelectorAll<T = HTMLElement>(
 	selector: string,
-	callback: (targetNodes: HTMLElement[]) => void,
+	callback: (targetNodes: T[]) => void,
 	wait?: number
 ): void;
 
@@ -26,14 +30,14 @@ export function pollQuerySelectorAll(
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElement(selector: string, wait?: number): Promise<HTMLElement>;
+export function waitElement<T>(selector: string, wait?: number): Promise<T>;
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElements(selector: string, wait?: number): Promise<HTMLElement[]>;
+export function waitElements<T>(selector: string, wait?: number): Promise<T[]>;
 
 /**
  * Waits x milliseconds for given function to return true.
