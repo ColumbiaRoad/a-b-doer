@@ -100,7 +100,7 @@ function getNs(key) {
  * @returns {HTMLElement}
  */
 export function renderVnode(vnode, oldVnode) {
-	if (!config.jsx || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
+	if (!config.j || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
 		return vnode;
 	}
 
