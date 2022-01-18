@@ -14,7 +14,7 @@ describe('Configuration options', () => {
 		const content = await page.content();
 		expect(content).toMatch(/Val:[\d]/);
 		expect(content).toMatch(`<div>Bar</div>`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+		expect(content).toMatch(`data-o="t-`);
 
 		const files = fs.readdirSync(path.resolve(__dirname, '.build'));
 		expect(files.length).toBe(4);
@@ -31,7 +31,7 @@ describe('Configuration options', () => {
 		const content = await page.content();
 		expect(content).toMatch(/ValPreact:[\d]/);
 		expect(content).toMatch(`<div>BarPreact</div>`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+		expect(content).toMatch(`data-o="t-`);
 	});
 
 	it('should disable css modules', async () => {
