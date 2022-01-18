@@ -6,9 +6,19 @@ import { VNode } from '../render.js';
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelector<T = HTMLElement>(
-	selector: string,
-	callback: (targetNode: T) => void,
+export function pollQuerySelector<K extends keyof HTMLElementTagNameMap>(
+	selector: K,
+	callback: (targetNode: HTMLElementTagNameMap[K]) => void,
+	wait?: number
+): void;
+export function pollQuerySelector<K extends keyof SVGElementTagNameMap>(
+	selectors: K,
+	callback: (targetNode: SVGElementTagNameMap[K]) => void,
+	wait?: number
+): void;
+export function pollQuerySelector<E extends Element = Element>(
+	selectors: string,
+	callback: (targetNode: E) => void,
 	wait?: number
 ): void;
 
@@ -19,9 +29,19 @@ export function pollQuerySelector<T = HTMLElement>(
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelectorAll<T = HTMLElement>(
-	selector: string,
-	callback: (targetNodes: T[]) => void,
+export function pollQuerySelectorAll<K extends keyof HTMLElementTagNameMap>(
+	selector: K,
+	callback: (targetNodes: NodeListOf<HTMLElementTagNameMap[K]>) => void,
+	wait?: number
+): void;
+export function pollQuerySelectorAll<K extends keyof SVGElementTagNameMap>(
+	selectors: K,
+	callback: (targetNodes: NodeListOf<SVGElementTagNameMap[K]>) => void,
+	wait?: number
+): void;
+export function pollQuerySelectorAll<E extends Element = Element>(
+	selectors: string,
+	callback: (targetNodes: NodeListOf<E>) => void,
 	wait?: number
 ): void;
 
@@ -30,14 +50,14 @@ export function pollQuerySelectorAll<T = HTMLElement>(
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElement<T>(selector: string, wait?: number): Promise<T>;
+export function waitElement<T = HTMLElement>(selector: string, wait?: number): Promise<T>;
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElements<T>(selector: string, wait?: number): Promise<T[]>;
+export function waitElements<T = HTMLElement>(selector: string, wait?: number): Promise<T[]>;
 
 /**
  * Waits x milliseconds for given function to return true.
@@ -46,6 +66,8 @@ export function waitElements<T>(selector: string, wait?: number): Promise<T[]>;
  */
 export function waitFor<T = any>(func: () => T, wait?: number): Promise<T>;
 
+type ChildNode = HTMLElement | VNode;
+
 /**
  * Adds element(s) to beginning of the given parent element child list
  * @param child Created element
@@ -53,7 +75,11 @@ export function waitFor<T = any>(func: () => T, wait?: number): Promise<T>;
  * @param clearPrev Clear all matching same elements, default true
  * @returns Rendered element
  */
-export function append(child: HTMLElement | VNode, parent: HTMLElement, clearPrev?: boolean): HTMLElement;
+export function append<T extends ChildNode>(
+	child: T,
+	parent: HTMLElement,
+	clearPrev?: boolean
+): T extends HTMLElement ? HTMLElement : VNode;
 
 /**
  * Adds element(s) to end of the given parent element child list
@@ -62,7 +88,11 @@ export function append(child: HTMLElement | VNode, parent: HTMLElement, clearPre
  * @param clearPrev Clear all matching same elements, default true
  * @returns Rendered element
  */
-export function prepend(child: HTMLElement | VNode, parent: HTMLElement, clearPrev?: boolean): HTMLElement;
+export function prepend<T extends ChildNode>(
+	child: T,
+	parent: HTMLElement,
+	clearPrev?: boolean
+): T extends HTMLElement ? HTMLElement : VNode;
 
 /**
  * Inserts element(s) before given element.
@@ -71,7 +101,11 @@ export function prepend(child: HTMLElement | VNode, parent: HTMLElement, clearPr
  * @param clearPrev Clear all matching same elements, default true
  * @returns Rendered element
  */
-export function insertBefore(child: HTMLElement | VNode, before: HTMLElement, clearPrev?: boolean): HTMLElement;
+export function insertBefore<T extends ChildNode>(
+	child: T,
+	before: HTMLElement,
+	clearPrev?: boolean
+): T extends HTMLElement ? HTMLElement : VNode;
 
 /**
  * Inserts element(s) after given element.
@@ -80,7 +114,11 @@ export function insertBefore(child: HTMLElement | VNode, before: HTMLElement, cl
  * @param clearPrev Clear all matching same elements, default true
  * @returns Rendered element
  */
-export function insertAfter(child: HTMLElement | VNode, after: HTMLElement, clearPrev?: boolean): HTMLElement;
+export function insertAfter<T extends ChildNode>(
+	child: T,
+	after: HTMLElement,
+	clearPrev?: boolean
+): T extends HTMLElement ? HTMLElement : VNode;
 
 /**
  * Removes elements that matches given id from given root element.
