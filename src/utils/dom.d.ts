@@ -93,3 +93,9 @@ export function clear(root: HTMLElement | Document | null, id: string): void;
  * Removes all DOM nodes that shares the current test ID (@see getTestID)
  */
 export function clearAll(): void;
+
+/**
+ * Runs VNode unmount callbacks and removes the element from dom
+ * @param vnode
+ */
+export function unmount(vnode: VNode): void;

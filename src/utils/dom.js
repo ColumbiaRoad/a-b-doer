@@ -1,5 +1,5 @@
 import { Promise } from '../polyfills';
-import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode } from './render';
+import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode, getVNodeDom } from './render';
 import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
 
 /**
@@ -132,7 +132,6 @@ function clearPrevious(child, parent) {
 		let id;
 		if (isVNode(child)) {
 			id = child.key;
-			runUnmountCallbacks(child);
 		} else {
 			id = child.dataset?.o;
 		}
@@ -149,31 +148,9 @@ function clearPrevious(child, parent) {
 function createMutation(child) {
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
-	if (process.env.preact || !config.jsx) {
-		return;
-	}
 	let node = child;
-	if (isVNode(child)) {
+	if (!process.env.preact && config.jsx && isVNode(child)) {
 		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
-		// onNextTick(() => {
-		// 	const parent = node?.parentElement;
-		// 	if (parent) {
-		// 		// Add checker for root node's dom removal.
-		// 		new MutationObserver((mutations, observer) => {
-		// 			mutations.forEach((mutation) => {
-		// 				mutation.removedNodes.forEach((el) => {
-		// 					const target = (child._r || child)._n;
-		// 					if (el === target && !target?.parentElement) {
-		// 						observer.disconnect();
-		// 						runUnmountCallbacks(child);
-		// 					}
-		// 				});
-		// 			});
-		// 		}).observe(parent, {
-		// 			childList: true,
-		// 		});
-		// 	}
-		// });
 	}
 
 	getChildrenArray(node).forEach((c) => {
@@ -265,4 +242,9 @@ export function clearAll() {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
 		domRemove(node);
 	});
+}
+
+export function unmount(vnode) {
+	runUnmountCallbacks(vnode);
+	domRemove(getVNodeDom(vnode, true));
 }

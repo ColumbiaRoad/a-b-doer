@@ -260,8 +260,6 @@ function createChildren(vnode, children = [], oldChildren) {
 			if (!child.props.key) {
 				child.key = vnode.key + index;
 			}
-			// Only root elements should have data-o attribute
-			delete child.props['data-o'];
 
 			oldChild = oldChildrenMap.get(child.key);
 			if (!isSameChild(child, oldChild)) {
