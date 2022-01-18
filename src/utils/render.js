@@ -312,7 +312,12 @@ const getStyleString = (style) => {
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export function patchVnodeDom(vnode, prevVnode, targetDomNode) {
-	if (!isRenderableElement(vnode)) return vnode;
+	if (!isRenderableElement(vnode)) {
+		if (prevVnode) {
+			domRemove(getVNodeDom(prevVnode, true));
+		}
+		return vnode;
+	}
 	let returnDom = vnode._n || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
 	if (vnode._r) {
