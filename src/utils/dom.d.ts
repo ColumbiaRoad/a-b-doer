@@ -12,12 +12,12 @@ export function pollQuerySelector<K extends keyof HTMLElementTagNameMap>(
 	wait?: number
 ): void;
 export function pollQuerySelector<K extends keyof SVGElementTagNameMap>(
-	selectors: K,
+	selector: K,
 	callback: (targetNode: SVGElementTagNameMap[K]) => void,
 	wait?: number
 ): void;
 export function pollQuerySelector<E extends Element = Element>(
-	selectors: string,
+	selector: string,
 	callback: (targetNode: E) => void,
 	wait?: number
 ): void;
@@ -35,12 +35,12 @@ export function pollQuerySelectorAll<K extends keyof HTMLElementTagNameMap>(
 	wait?: number
 ): void;
 export function pollQuerySelectorAll<K extends keyof SVGElementTagNameMap>(
-	selectors: K,
+	selector: K,
 	callback: (targetNodes: NodeListOf<SVGElementTagNameMap[K]>) => void,
 	wait?: number
 ): void;
 export function pollQuerySelectorAll<E extends Element = Element>(
-	selectors: string,
+	selector: string,
 	callback: (targetNodes: NodeListOf<E>) => void,
 	wait?: number
 ): void;
