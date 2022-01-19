@@ -11,6 +11,7 @@ import {
 	domAppend,
 	createDocumentFragment,
 	isSame,
+	domInsertBefore,
 } from './internal';
 
 /**
@@ -311,10 +312,16 @@ const getStyleString = (style) => {
  * @param {VNode} vnode
  * @param {VNode} [prevVnode]
  * @param {HTMLElement} [targetDomNode]
+ * @param {HTMLElement} [after]
  * @returns {HTMLElement|null} Rendered DOM tree
  */
-export function patchVnodeDom(vnode, prevVnode, targetDomNode) {
-	if (!isRenderableElement(vnode)) return vnode;
+export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
+	if (!isRenderableElement(vnode)) {
+		if (prevVnode) {
+			domRemove(getVNodeDom(prevVnode, true));
+		}
+		return vnode;
+	}
 	let returnDom = vnode._n || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
 	if (vnode._r) {
@@ -337,13 +344,10 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode) {
 			targetParent = getVNodeDom(someChildWithDom, true).parentElement;
 		}
 	}
+	let siblingNode = null;
 	vnode._c?.forEach((child, index) => {
 		const oldChildVnode = oldChildren.find((old) => child && child.key === old?.key) || oldChildren[index];
-		if (child) {
-			patchVnodeDom(child, compareDeeper && oldChildVnode, targetParent);
-		} else if (oldChildVnode) {
-			domRemove(getVNodeDom(oldChildVnode, true));
-		}
+		siblingNode = patchVnodeDom(child, (!child || compareDeeper) && oldChildVnode, targetParent, siblingNode);
 	});
 	if (isRenderableElement(returnDom)) {
 		if (vnode._drt) {
@@ -353,6 +357,8 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode) {
 					domReplaceWith(oldDom, returnDom);
 				}
 				domRemove(oldDom);
+			} else if (after?.nextSibling) {
+				domInsertBefore(returnDom, after.nextSibling);
 			} else if (targetDomNode) {
 				domAppend(targetDomNode, returnDom);
 			}

@@ -114,12 +114,8 @@ export function waitFor(func, wait = 5000) {
 function getChildrenArray(child) {
 	if (isArray(child)) return child;
 	if (!child) return [];
-	let children = [child];
-	// If document fragment, use its contents
-	if (child.nodeType === 11) {
-		children = Array.from(child.children);
-	}
-	return children;
+	// If document fragment, use its contents otherwise return the child in an array
+	return child.nodeType === 11 ? Array.from(child.children) : [child];
 }
 
 /**
@@ -166,7 +162,7 @@ function createMutation(child) {
  * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} Rendered element
+ * @returns {HTMLElement|VNode} Rendered element
  */
 export function append(vnode, parent, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -181,7 +177,7 @@ export function append(vnode, parent, clearPrev = true) {
  * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} Rendered element
+ * @returns {HTMLElement|VNode} Rendered element
  */
 export function prepend(vnode, parent, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -200,7 +196,7 @@ export function prepend(vnode, parent, clearPrev = true) {
  * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} before
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} Rendered element
+ * @returns {HTMLElement|VNode} Rendered element
  */
 export function insertBefore(vnode, before, clearPrev = true) {
 	const child = createMutation(vnode);
@@ -215,7 +211,7 @@ export function insertBefore(vnode, before, clearPrev = true) {
  * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} after
  * @param {boolean} [clearPrev]
- * @returns {HTMLElement} Rendered element
+ * @returns {HTMLElement|VNode} Rendered element
  */
 export function insertAfter(vnode, after, clearPrev = true) {
 	const child = createMutation(vnode);
