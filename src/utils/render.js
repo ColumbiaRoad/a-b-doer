@@ -238,6 +238,7 @@ function flatten(items) {
 
 	return flat;
 }
+
 /**
  * @param {VNode} vnode
  * @param {Array} children
@@ -347,7 +348,8 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
 	let siblingNode = null;
 	vnode._c?.forEach((child, index) => {
 		const oldChildVnode = oldChildren.find((old) => child && child.key === old?.key) || oldChildren[index];
-		siblingNode = patchVnodeDom(child, (!child || compareDeeper) && oldChildVnode, targetParent, siblingNode);
+		siblingNode =
+			patchVnodeDom(child, (!child || compareDeeper) && oldChildVnode, targetParent, siblingNode) || siblingNode;
 	});
 	if (isRenderableElement(returnDom)) {
 		if (vnode._drt) {
@@ -414,7 +416,13 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 				}
 				continue;
 			}
-			if (value === false || value === undefined) continue;
+			if (value === undefined) continue;
+			if (typeof value === 'boolean') {
+				if (name in element) {
+					element[name] = value;
+				}
+				continue;
+			}
 			if (/^on[A-Z]/.test(name)) {
 				element.addEventListener(name.substr(2).toLowerCase(), value);
 			} else if (value !== null) {
