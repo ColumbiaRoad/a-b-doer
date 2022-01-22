@@ -96,12 +96,12 @@ function getNs(key) {
 
 /**
  * Renders given AB Doer VNode.
- * @param {VNode|HTMLElement|string|number|Component} vnode
- * @param {VNode|HTMLElement|string|number|Component} [oldVnode]
- * @returns {HTMLElement}
+ * @param {VNode} vnode
+ * @param {VNode} [oldVnode]
+ * @returns {VNode}
  */
 export function renderVnode(vnode, oldVnode) {
-	if (!config.j || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
+	if (!config.j || !vnode) {
 		return vnode;
 	}
 
@@ -239,17 +239,21 @@ function flatten(items) {
 	return flat;
 }
 
+function getChildrenList(children = []) {
+	const childrenMap = new Map();
+	children.forEach((child) => {
+		if (child?.key) childrenMap.set(child.key, child);
+	});
+	return { map: childrenMap, items: children };
+}
+
 /**
  * @param {VNode} vnode
  * @param {Array} children
  * @param {Array} [oldChildren]
  */
 function createChildren(vnode, children = [], oldChildren) {
-	const oldChildrenMap = new Map();
-	const oldChildrenArr = oldChildren || [];
-	for (const child of oldChildrenArr) {
-		if (child?.key) oldChildrenMap.set(child.key, child);
-	}
+	const oldChildrenMap = getChildrenList(oldChildren).map;
 	const newChildren = flatten(children).map((child, index) => {
 		let oldChild;
 		if (isRenderableElement(child)) {
@@ -335,7 +339,8 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
 	if (prevVnode?._r) {
 		return patchVnodeDom(vnode, prevVnode._r, targetDomNode);
 	}
-	const oldChildren = prevVnode?._c || [];
+	const oldChildrenList = getChildrenList(prevVnode?._c);
+	const oldChildren = oldChildrenList.items;
 	const compareDeeper = isSameChild(vnode, prevVnode);
 	// Loop through rendered element children
 	let targetParent = returnDom;
@@ -347,7 +352,7 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
 	}
 	let siblingNode = null;
 	vnode._c?.forEach((child, index) => {
-		const oldChildVnode = oldChildren.find((old) => child && child.key === old?.key) || oldChildren[index];
+		const oldChildVnode = (child && oldChildrenList.map.get(child.key)) || oldChildren[index];
 		siblingNode =
 			patchVnodeDom(child, (!child || compareDeeper) && oldChildVnode, targetParent, siblingNode) || siblingNode;
 	});
@@ -427,7 +432,7 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 				element.addEventListener(name.substr(2).toLowerCase(), value);
 			} else if (value !== null) {
 				value = value.toString();
-				if (config.n && name.includes(':') && element.tagName.toLowerCase() != 'svg') {
+				if (config.n && name.includes(':') && element.tagName != 'SVG') {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 				} else {
