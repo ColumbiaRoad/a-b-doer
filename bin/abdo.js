@@ -176,18 +176,24 @@ async function createScreenshots(targetPath) {
 	for (const config of buildspecs) {
 		const nth = buildspecs.indexOf(config) + 1;
 		const { entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
-		const { waitFor, waitForOptions = {} } = screenshot;
+		const {
+			waitFor,
+			waitForOptions = {},
+			onLoad: screenshotOnLoad,
+			onBefore: screenshotOnBefore,
+			...pptrScreenshotOptions
+		} = screenshot;
 		const entryName = path.basename(entryFile, '.' + entryFileExt);
 
 		// Bundle main events and screenshot events
 		const singleOnLoad = async (page) => {
 			if (onLoad) await onLoad(page);
-			if (screenshot.onLoad) await screenshot.onLoad(page);
+			if (screenshotOnLoad) await screenshotOnLoad(page);
 		};
 
 		const singleOBefore = async (page) => {
 			if (onBefore) await onBefore(page);
-			if (screenshot.onBefore) await screenshot.onBefore(page);
+			if (screenshotOnBefore) await screenshotOnBefore(page);
 		};
 
 		const output = await bundler({ ...config, onLoad: singleOnLoad, onBefore: singleOBefore, preview: true });
@@ -217,8 +223,9 @@ async function createScreenshots(targetPath) {
 
 		// Take screenshot from variant
 		await page.screenshot({
-			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 			fullPage: true,
+			...pptrScreenshotOptions,
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 		});
 
 		console.log(cyan(`Screenshot ready`), `${entryFile}, variant ${nth}`);
@@ -236,8 +243,9 @@ async function createScreenshots(targetPath) {
 		await waitForAll(origPage);
 
 		await origPage.screenshot({
-			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 			fullPage: true,
+			...pptrScreenshotOptions,
+			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 		});
 
 		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);

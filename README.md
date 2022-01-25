@@ -796,6 +796,57 @@ Type `Object` (optional)
 
 Puppeteer waitFor<Function|Timeout|Selector> function options, see https://pptr.dev/#?product=Puppeteer&version=v11.0.0&show=api-pagewaitforselectororfunctionortimeout-options-args
 
+### type
+
+Type `string` (optional)
+
+Specify screenshot type, can be either jpeg, png or webp. Defaults to 'png'.
+
+### quality
+
+Type `number` (optional)
+
+The quality of the image, between 0-100. Not applicable to png images.
+
+### fullPage
+
+Type `boolean` (optional)
+
+Default `true`
+
+When true, takes a screenshot of the full scrollable page.
+
+### clip
+
+Type `Object` (optional)
+
+An object which specifies clipping region of the page. Should have the following fields:
+
+- x `number` x-coordinate of top-left corner of clip area
+- y `number` y-coordinate of top-left corner of clip area
+- width `number` width of clipping area
+- height `number` height of clipping area
+
+### omitBackground
+
+Type `boolean` (optional)
+
+Hides default white background and allows capturing screenshots with transparency. Defaults to false.
+
+### encoding
+
+Type `string` (optional)
+
+The encoding of the image, can be either base64 or binary. Defaults to binary.
+
+### captureBeyondViewport
+
+Type `boolean` (optional)
+
+When true, captures screenshot beyond the viewport. Whe false, falls back to old behaviour, and cuts the screenshot by the viewport size. Defaults to true.
+
+## Screenshot events
+
 ### onBefore
 
 See events.onBefore
@@ -816,10 +867,14 @@ const gobalConfig = require('../config.js');
 module.exports = {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
+  onLoad: async (page) => {
+    console.log('Do something on preview and on screenshot');
+  },
   screenshot: {
     ...gobalConfig.screenshot,
     waitFor: 1000,
     onLoad: async (page) => {
+      console.log('Do this only on screenshot');
       gobalConfig.screenshot.onLoad(page);
       await page.evaluate(() => {
         document.querySelectorAll('.something').forEach((node) => node.remove());
