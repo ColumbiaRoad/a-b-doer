@@ -170,37 +170,76 @@ async function createScreenshots(targetPath) {
 
 	let origPage;
 
+	console.log(cyan(`Taking screenshots`));
+	console.log();
+
 	for (const config of buildspecs) {
 		const nth = buildspecs.indexOf(config) + 1;
-		const { entryFile, entryFileExt } = config;
+		const { entryFile, entryFileExt, screenshot = {} } = config;
+		const { waitFor, waitForOptions = {}, evaluate } = screenshot;
 		const entryName = path.basename(entryFile, '.' + entryFileExt);
 		const output = await bundler({ ...config, preview: true });
+
+		console.log(cyan(`Creating a bundle for screenshot`), entryFile);
+		console.log();
+
 		const page = await openPage({ ...output, headless: true, devtools: false });
 		const url = Array.isArray(config.url) ? config.url[0] : config.url;
+
+		const waitForAll = async (page) => {
+			if (typeof waitFor === 'string') {
+				console.log(cyan(`Waiting for selector ${waitFor}...`));
+				await page.waitForSelector(waitFor, waitForOptions);
+			}
+			if (typeof waitFor === 'number') {
+				console.log(cyan(`Waiting for timeout ${waitFor} ms...`));
+				await page.waitForTimeout(waitFor, waitForOptions);
+			}
+			if (typeof waitFor === 'function') {
+				console.log(cyan(`Waiting for function...`));
+				await page.waitForFunction(waitFor, waitForOptions);
+			}
+			if (typeof evaluate === 'function') {
+				console.log(cyan(`Evaluating a function...`));
+				await page.evaluate(evaluate);
+			}
+		};
+
+		await waitForAll(page);
+
 		// Take screenshot from variant
 		await page.screenshot({
 			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 			fullPage: true,
 		});
+
+		console.log(cyan(`Screenshot ready`), `${entryFile}, variant ${nth}`);
+
 		// Get new page for the original (without listeners etc)
 		if (!origPage) {
 			origPage = await page.browser().newPage();
 		}
 		// Go to the same url and take the screenshot from the original as well.
 		await origPage.goto(url, { waitUntil: 'networkidle0' });
+
+		await waitForAll(origPage);
+
 		await origPage.screenshot({
 			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 			fullPage: true,
 		});
+
+		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);
+		console.log();
+
 		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
 	}
 
+	console.log(green('Done.'));
 	if (origPage) {
 		await origPage.browser().close();
 	}
-
-	console.log(green('Done.'));
 }
 
 /**

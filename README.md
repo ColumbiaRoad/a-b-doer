@@ -745,3 +745,44 @@ template.ejs content:
 ```
 
 The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
+# Screenshots
+
+## config.screenshot
+
+Type `Object` (optional)
+
+Following options to control Puppeteer before taking the screenshots.
+
+### waitFor
+
+Type `number | string | function` (optional)
+
+Tell Puppeteer to wait something before taking the screenshot.
+
+### waitForOptions
+
+Type `Object` (optional)
+
+Puppeteer waitFor<Function|Timeout|Selector> function options, see https://pptr.dev/#?product=Puppeteer&version=v11.0.0&show=api-pagewaitforselectororfunctionortimeout-options-args
+
+### evaluate
+
+Type `function` (optional)
+
+Tell Puppeteer to evaluate a function on window scope before taking the screenshot.
+
+### Example config.js with screenshot options
+
+```js
+module.exports = {
+  browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  userDataDir: './puppeteer',
+  screenshot: {
+    waitFor: 1000,
+    evaluate: () => {
+      document.querySelectorAll('.something').forEach((node) => node.remove());
+    },
+  },
+};
+```
