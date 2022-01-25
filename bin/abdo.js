@@ -219,11 +219,17 @@ async function createScreenshots(targetPath) {
 			}
 		};
 
+		if (pptrScreenshotOptions.fullPage === undefined) {
+			pptrScreenshotOptions.fullPage = true;
+		}
+		if (pptrScreenshotOptions.clip) {
+			pptrScreenshotOptions.fullPage = false;
+		}
+
 		await waitForAll(page);
 
 		// Take screenshot from variant
 		await page.screenshot({
-			fullPage: true,
 			...pptrScreenshotOptions,
 			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
 		});
@@ -243,7 +249,6 @@ async function createScreenshots(targetPath) {
 		await waitForAll(origPage);
 
 		await origPage.screenshot({
-			fullPage: true,
 			...pptrScreenshotOptions,
 			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
 		});
