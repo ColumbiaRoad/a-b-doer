@@ -1,12 +1,12 @@
-const glob = require('glob');
-const path = require('path');
-const rimraf = require('rimraf');
-const os = require('os');
+import glob from 'glob';
+import { join } from 'path';
+import rimraf from 'rimraf';
+import { tmpdir } from 'os';
 
-const DIR = path.join(os.tmpdir(), 'jest_puppeteer_global_setup');
+const DIR = join(tmpdir(), 'jest_puppeteer_global_setup');
 
-module.exports = async () => {
-	glob(path.join(__dirname, './**/.build'), (er, dirs) => {
+export default async () => {
+	glob('./**/.build', (er, dirs) => {
 		dirs.forEach((dir) => rimraf.sync(dir));
 		console.log('Cleared all test build folders...');
 	});

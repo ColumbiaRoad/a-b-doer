@@ -1,12 +1,14 @@
-require('dotenv').config();
-const path = require('path');
+import { config } from 'dotenv';
+import { join } from 'path';
+
+config();
 
 if (!process.env.BROWSER_PATH) {
 	console.log('You must define a BROWSER_PATH environment variable');
 	process.exit();
 }
 
-module.exports = {
+export default {
 	browser: process.env.BROWSER_PATH,
 	bundler: {
 		plugins: [
@@ -17,8 +19,8 @@ module.exports = {
 					...options,
 					entries: [
 						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
-						{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
+						{ find: 'a-b-doer/hooks', replacement: join('.', 'hooks') },
+						{ find: 'a-b-doer', replacement: join('.', 'main') },
 					],
 				}),
 			],

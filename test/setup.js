@@ -1,7 +1,7 @@
-require('expect-puppeteer');
-const failOnConsole = require('jest-fail-on-console');
-const { config } = require('../lib/buildspec');
-const path = require('path');
+import 'expect-puppeteer';
+import failOnConsole from 'jest-fail-on-console';
+import { config } from '../lib/buildspec';
+import { join } from 'path';
 
 global.configDefaults = {
 	...config,
@@ -17,8 +17,8 @@ global.configDefaults = {
 					...options,
 					entries: [
 						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, '..', 'hooks') },
-						{ find: 'a-b-doer', replacement: path.join(__dirname, '..', 'main') },
+						{ find: 'a-b-doer/hooks', replacement: join('..', 'hooks') },
+						{ find: 'a-b-doer', replacement: join('..', 'main') },
 					],
 				}),
 			],

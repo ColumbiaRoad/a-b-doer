@@ -659,7 +659,7 @@ Inlines source maps to the bundle with local file urls. This works only in watch
 ### Advanced example config.js with custom bundler options
 
 ```js
-const fooPlugin = require('rollup-foo-plugin');
+import fooPlugin from 'rollup-foo-plugin';
 
 /*
 Supported plugins for array format are currently.
@@ -677,7 +677,7 @@ svg-hyperscript,
 preact-debug
 */
 
-module.exports = {
+export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   exclude: ['**/components/**/*', '**/src/**/*'],
@@ -725,7 +725,7 @@ Update config.js:
 ```js
 import ejs from 'rollup-plugin-ejs';
 
-module.exports = {
+export default {
   // ...
   bundler: {
     plugins: [

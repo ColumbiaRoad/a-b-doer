@@ -1,12 +1,13 @@
-#!/usr/bin/env node
 import { readdirSync, lstatSync } from 'fs';
 import path from 'path';
 import { createFilter } from '@rollup/pluginutils';
 import buildspec from '../lib/buildspec';
 import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
-import { cyan, yellow, green, red } from 'chalk';
+import chalk from 'chalk';
 import chokidar from 'chokidar';
+
+const { cyan, yellow, green, red } = chalk;
 
 const cmd = process.argv[2];
 
@@ -53,7 +54,7 @@ switch (cmd) {
  * @param {string} targetPath
  */
 async function buildSingleEntry(targetPath) {
-	const [config] = getMatchingBuildspec(targetPath);
+	const [config] = await getMatchingBuildspec(targetPath);
 
 	if (!config) {
 		console.log(red("Couldn't find buildspec.json for the variant", targetPath));
@@ -107,7 +108,7 @@ async function buildSingleEntry(targetPath) {
  */
 async function buildMultiEntry(targetPath) {
 	const buildOnly = cmd === 'build-all';
-	const buildspecs = getMatchingBuildspec(targetPath);
+	const buildspecs = await getMatchingBuildspec(targetPath);
 	const [testConfig] = buildspecs;
 
 	if (!testConfig) {
@@ -160,7 +161,7 @@ async function buildMultiEntry(targetPath) {
  * @param {string} targetPath
  */
 async function createScreenshots(targetPath) {
-	const buildspecs = getMatchingBuildspec(targetPath);
+	const buildspecs = await getMatchingBuildspec(targetPath);
 
 	if (!buildspecs.length) {
 		console.log(red('0 test variants found with path:'));
@@ -208,7 +209,7 @@ async function createScreenshots(targetPath) {
  * @param {string} targetPath
  * @return {Object[]}
  */
-function getMatchingBuildspec(targetPath) {
+async function getMatchingBuildspec(targetPath) {
 	let indexFiles = [];
 
 	targetPath = path.resolve(process.env.INIT_CWD, targetPath);
@@ -225,8 +226,8 @@ function getMatchingBuildspec(targetPath) {
 		);
 	}
 
-	return indexFiles
-		.map((entryFile) => {
+	const entries = await Promise.all(
+		indexFiles.map(async (entryFile) => {
 			const filter = createFilter([/\.(jsx?|tsx?|(le|sa|sc|c)ss)$/]);
 			if (entryFile.includes('.build')) {
 				return null;
@@ -234,11 +235,13 @@ function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			const spec = buildspec(entryFile);
+			const spec = await buildspec(entryFile);
 			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
 			return spec;
 		})
-		.filter(Boolean);
+	);
+
+	return entries.filter(Boolean);
 }
