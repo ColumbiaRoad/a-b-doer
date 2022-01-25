@@ -175,10 +175,22 @@ async function createScreenshots(targetPath) {
 
 	for (const config of buildspecs) {
 		const nth = buildspecs.indexOf(config) + 1;
-		const { entryFile, entryFileExt, screenshot = {} } = config;
-		const { waitFor, waitForOptions = {}, evaluate } = screenshot;
+		const { entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
+		const { waitFor, waitForOptions = {} } = screenshot;
 		const entryName = path.basename(entryFile, '.' + entryFileExt);
-		const output = await bundler({ ...config, preview: true });
+
+		// Bundle main events and screenshot events
+		const singleOnLoad = async (page) => {
+			if (onLoad) await onLoad(page);
+			if (screenshot.onLoad) await screenshot.onLoad(page);
+		};
+
+		const singleOBefore = async (page) => {
+			if (onBefore) await onBefore(page);
+			if (screenshot.onBefore) await screenshot.onBefore(page);
+		};
+
+		const output = await bundler({ ...config, onLoad: singleOnLoad, onBefore: singleOBefore, preview: true });
 
 		console.log(cyan(`Creating a bundle for screenshot`), entryFile);
 		console.log();
@@ -199,10 +211,6 @@ async function createScreenshots(targetPath) {
 				console.log(cyan(`Waiting for function...`));
 				await page.waitForFunction(waitFor, waitForOptions);
 			}
-			if (typeof evaluate === 'function') {
-				console.log(cyan(`Evaluating a function...`));
-				await page.evaluate(evaluate);
-			}
 		};
 
 		await waitForAll(page);
@@ -216,11 +224,14 @@ async function createScreenshots(targetPath) {
 		console.log(cyan(`Screenshot ready`), `${entryFile}, variant ${nth}`);
 
 		// Get new page for the original (without listeners etc)
-		if (!origPage) {
-			origPage = await page.browser().newPage();
-		}
+		origPage = await page.browser().newPage();
+
+		await singleOBefore(origPage);
+
 		// Go to the same url and take the screenshot from the original as well.
 		await origPage.goto(url, { waitUntil: 'networkidle0' });
+
+		await singleOnLoad(origPage);
 
 		await waitForAll(origPage);
 

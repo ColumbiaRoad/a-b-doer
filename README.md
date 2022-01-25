@@ -746,6 +746,36 @@ template.ejs content:
 
 The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
+## Events
+
+### onBefore
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page is created and before any variant codes or events has been created. This is the correct place to attach own listeners to the page.
+
+### onLoad
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page has loaded with the variant asset code. This will be run after `page.goto` has finished loading and just before taking the screenshot.
+
+### Example
+
+```js
+module.exports = {
+  url: 'https://example.com',
+  // Assign custom page events before navigation.
+  onBefore: async (page) => {
+    page.on('domcontentloaded', () => console.log('domcontentloaded was loaded'));
+  },
+  // Check element count after the page has finished loading with the variant asset code.
+  onLoad: async (page) => {
+    const foo = await page.evaluate(() => document.querySelectorAll('.foo').length);
+  },
+};
+```
+
 # Screenshots
 
 ## config.screenshot
@@ -766,22 +796,34 @@ Type `Object` (optional)
 
 Puppeteer waitFor<Function|Timeout|Selector> function options, see https://pptr.dev/#?product=Puppeteer&version=v11.0.0&show=api-pagewaitforselectororfunctionortimeout-options-args
 
-### evaluate
+### onBefore
 
-Type `function` (optional)
+See events.onBefore
 
-Tell Puppeteer to evaluate a function on window scope before taking the screenshot.
+Extra onBefore event for screenshots. Will be runned after the main onBefore
 
-### Example config.js with screenshot options
+### onLoad
+
+See events.onLoad
+
+Extra onLoad event for screenshots. Will be runned after the main onLoad
+
+### Example buildspec.js with screenshot options
 
 ```js
+const gobalConfig = require('../config.js');
+
 module.exports = {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   screenshot: {
+    ...gobalConfig.screenshot,
     waitFor: 1000,
-    evaluate: () => {
-      document.querySelectorAll('.something').forEach((node) => node.remove());
+    onLoad: async (page) => {
+      gobalConfig.screenshot.onLoad(page);
+      await page.evaluate(() => {
+        document.querySelectorAll('.something').forEach((node) => node.remove());
+      });
     },
   },
 };

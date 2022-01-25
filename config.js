@@ -24,4 +24,11 @@ module.exports = {
 			],
 		],
 	},
+	screenshot: {
+		onBefore: (page) => {
+			page.on('domcontentloaded', () =>
+				page.evaluate(() => document.querySelectorAll('.sub').forEach((node) => node.remove()))
+			);
+		},
+	},
 };
