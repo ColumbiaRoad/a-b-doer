@@ -883,3 +883,10 @@ module.exports = {
   },
 };
 ```
+
+## Screenshot cli commands
+
+- `--build` Force rebuild, otherwise already built bundle will be used (if there is one).
+- `--url="https://example.com"` or `--url=1` Force specific url. If the value is a number, puppeteer will use url found from that index in buildspec url array.
+- `--name=someName` Name for the screenshot. It will be part of the screenshot image name. Default value is the entry file name with an extension.
+- Any option from screenshot config can be overridden by cli command argument, e.g. `--waitFor=1000`

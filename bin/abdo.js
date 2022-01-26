@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readdirSync, lstatSync } from 'fs';
+import { readdirSync, lstatSync, readFileSync } from 'fs';
 import path from 'path';
 import { createFilter } from '@rollup/pluginutils';
 import buildspec from '../lib/buildspec';
@@ -7,6 +7,7 @@ import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
 import { cyan, yellow, green, red } from 'chalk';
 import chokidar from 'chokidar';
+import minimist from 'minimist';
 
 const cmd = process.argv[2];
 
@@ -24,7 +25,8 @@ let rollupWatcher = null;
 
 const targetPath = process.argv[3] || '.';
 
-console.log('');
+const cmdArgs = minimist(process.argv.slice(3));
+console.log(cmdArgs);
 
 // More graceful exit
 process.on('SIGINT', () => {
@@ -162,6 +164,13 @@ async function buildMultiEntry(targetPath) {
 async function createScreenshots(targetPath) {
 	const buildspecs = getMatchingBuildspec(targetPath);
 
+	const { url: cmdArgUrl, name, ...screenshotArgs } = cmdArgs;
+	let cmdArgBuild = false;
+	if ('build' in screenshotArgs) {
+		cmdArgBuild = true;
+		delete screenshotArgs.build;
+	}
+
 	if (!buildspecs.length) {
 		console.log(red('0 test variants found with path:'));
 		console.log(targetPath);
@@ -175,8 +184,31 @@ async function createScreenshots(targetPath) {
 
 	for (const config of buildspecs) {
 		const nth = buildspecs.indexOf(config) + 1;
-		const { entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
-		const {
+		if (cmdArgUrl) {
+			if (isNaN(cmdArgUrl)) {
+				config.url = [cmdArgUrl];
+			} else {
+				if (Array.isArray(config.url)) {
+					const urlIndex = +cmdArgUrl;
+					if (urlIndex < config.url.length) {
+						config.url = [config.url[urlIndex]];
+					} else {
+						console.log(yellow(`Undefined index for test config url. Argument was`), '--url=' + cmdArgUrl);
+						console.log(yellow(`Current config`), config.url);
+					}
+				} else {
+					console.log(
+						yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
+						'--url=' + cmdArgUrl
+					);
+				}
+			}
+		}
+		const { testPath, buildDir, entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
+
+		Object.assign(screenshot, screenshotArgs);
+
+		let {
 			waitFor,
 			waitForOptions = {},
 			onLoad: screenshotOnLoad,
@@ -196,7 +228,18 @@ async function createScreenshots(targetPath) {
 			if (screenshotOnBefore) await screenshotOnBefore(page);
 		};
 
-		const output = await bundler({ ...config, onLoad: singleOnLoad, onBefore: singleOBefore, preview: true });
+		const bundleConfig = { ...config, onLoad: singleOnLoad, onBefore: singleOBefore, preview: true };
+
+		if (!cmdArgBuild) {
+			const bundlePath = path.join(testPath, buildDir, `${entryName}.bundle.js`);
+			if (lstatSync(bundlePath).isFile()) {
+				bundleConfig.assetBundle = {
+					bundle: readFileSync(bundlePath).toString(),
+				};
+			}
+		}
+
+		const output = bundleConfig.assetBundle ? bundleConfig : await bundler(bundleConfig);
 
 		console.log(cyan(`Creating a bundle for screenshot`), entryFile);
 		console.log();
@@ -231,7 +274,7 @@ async function createScreenshots(targetPath) {
 		// Take screenshot from variant
 		await page.screenshot({
 			...pptrScreenshotOptions,
-			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-v${nth}.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${path.basename(name || entryName)}-v${nth}.png`),
 		});
 
 		console.log(cyan(`Screenshot ready`), `${entryFile}, variant ${nth}`);
@@ -250,7 +293,7 @@ async function createScreenshots(targetPath) {
 
 		await origPage.screenshot({
 			...pptrScreenshotOptions,
-			path: path.join(config.testPath, config.buildDir, `screenshot-${entryName}-orig.png`),
+			path: path.join(config.testPath, config.buildDir, `screenshot-${path.basename(name || entryName)}-orig.png`),
 		});
 
 		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);
