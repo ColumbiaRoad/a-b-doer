@@ -25,8 +25,14 @@ let rollupWatcher = null;
 
 const targetPath = process.argv[3] || '.';
 
-const cmdArgs = minimist(process.argv.slice(3));
-console.log(cmdArgs);
+const cmdArgs = minimist(process.argv.slice(3), {
+	boolean: ['build'],
+	alias: {
+		b: 'build',
+		u: 'url',
+		n: 'name',
+	},
+});
 
 // More graceful exit
 process.on('SIGINT', () => {
