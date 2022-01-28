@@ -753,3 +753,148 @@ template.ejs content:
 ```
 
 The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
+## Events
+
+### onBefore
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page is created and before any variant codes or events has been created. This is the correct place to attach own listeners to the page.
+
+### onLoad
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page has loaded with the variant asset code. This will be run after `page.goto` has finished loading and just before taking the screenshot.
+
+### Example
+
+```js
+module.exports = {
+  url: 'https://example.com',
+  // Assign custom page events before navigation.
+  onBefore: async (page) => {
+    page.on('domcontentloaded', () => console.log('domcontentloaded was loaded'));
+  },
+  // Check element count after the page has finished loading with the variant asset code.
+  onLoad: async (page) => {
+    const foo = await page.evaluate(() => document.querySelectorAll('.foo').length);
+  },
+};
+```
+
+# Screenshots
+
+## config.screenshot
+
+Type `Object` (optional)
+
+Following options to control Puppeteer before taking the screenshots.
+
+### waitFor
+
+Type `number | string | function` (optional)
+
+Tell Puppeteer to wait something before taking the screenshot.
+
+### waitForOptions
+
+Type `Object` (optional)
+
+Puppeteer waitFor<Function|Timeout|Selector> function options, see https://pptr.dev/#?product=Puppeteer&version=v11.0.0&show=api-pagewaitforselectororfunctionortimeout-options-args
+
+### type
+
+Type `string` (optional)
+
+Specify screenshot type, can be either jpeg, png or webp. Defaults to 'png'.
+
+### quality
+
+Type `number` (optional)
+
+The quality of the image, between 0-100. Not applicable to png images.
+
+### fullPage
+
+Type `boolean` (optional)
+
+Default `true`
+
+When true, takes a screenshot of the full scrollable page.
+
+### clip
+
+Type `Object` (optional)
+
+An object which specifies clipping region of the page. Should have the following fields:
+
+- x `number` x-coordinate of top-left corner of clip area
+- y `number` y-coordinate of top-left corner of clip area
+- width `number` width of clipping area
+- height `number` height of clipping area
+
+### omitBackground
+
+Type `boolean` (optional)
+
+Hides default white background and allows capturing screenshots with transparency. Defaults to false.
+
+### encoding
+
+Type `string` (optional)
+
+The encoding of the image, can be either base64 or binary. Defaults to binary.
+
+### captureBeyondViewport
+
+Type `boolean` (optional)
+
+When true, captures screenshot beyond the viewport. Whe false, falls back to old behaviour, and cuts the screenshot by the viewport size. Defaults to true.
+
+## Screenshot events
+
+### onBefore
+
+See events.onBefore
+
+Extra onBefore event for screenshots. Will be runned after the main onBefore
+
+### onLoad
+
+See events.onLoad
+
+Extra onLoad event for screenshots. Will be runned after the main onLoad
+
+### Example buildspec.js with screenshot options
+
+```js
+const gobalConfig = require('../config.js');
+
+module.exports = {
+  browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  userDataDir: './puppeteer',
+  onLoad: async (page) => {
+    console.log('Do something on preview and on screenshot');
+  },
+  screenshot: {
+    ...gobalConfig.screenshot,
+    waitFor: 1000,
+    onLoad: async (page) => {
+      console.log('Do this only on screenshot');
+      gobalConfig.screenshot.onLoad(page);
+      await page.evaluate(() => {
+        document.querySelectorAll('.something').forEach((node) => node.remove());
+      });
+    },
+  },
+};
+```
+
+## Screenshot cli commands
+
+- `--build or -b` Force rebuild, otherwise already built bundle will be used (if there is one).
+- `--url="https://example.com"` or `--url=1` or `-u "https://example.com"` Force specific url. If the value is a number, puppeteer will use url found from that index in buildspec url array.
+- `--name=someName` or `-n someName` Name for the screenshot. It will be part of the screenshot image name. Default value is the entry file name with an extension.
+- Any option from screenshot config can be overridden by cli command argument, e.g. `--waitFor=1000`

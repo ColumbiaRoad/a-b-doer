@@ -26,4 +26,11 @@ export default {
 			],
 		],
 	},
+	screenshot: {
+		onBefore: (page) => {
+			page.on('domcontentloaded', () =>
+				page.evaluate(() => document.querySelectorAll('.sub').forEach((node) => node.remove()))
+			);
+		},
+	},
 };
