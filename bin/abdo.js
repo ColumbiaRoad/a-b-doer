@@ -1,12 +1,12 @@
-import { readdirSync, lstatSync, readFileSync } from 'fs';
-import path from 'path';
-import { createFilter } from '@rollup/pluginutils';
-import buildspec from '../lib/buildspec';
-import { bundler, openPage } from '../lib/bundler';
-import { getBrowser } from '../lib/puppeteer';
 import chalk from 'chalk';
 import chokidar from 'chokidar';
 import minimist from 'minimist';
+import path from 'path';
+import { createFilter } from '@rollup/pluginutils';
+import { readdirSync, lstatSync, readFileSync } from 'fs';
+import buildspec from '../lib/buildspec';
+import { bundler, openPage } from '../lib/bundler';
+import { getBrowser } from '../lib/puppeteer';
 
 const { cyan, yellow, green, red } = chalk;
 

@@ -25,7 +25,7 @@
   ],
   "dependencies": {
     "@babel/cli": "^7.16.8",
-    "@babel/core": "^7.16.10",
+    "@babel/core": "^7.16.12",
     "@babel/plugin-proposal-class-properties": "^7.16.7",
     "@babel/plugin-proposal-nullish-coalescing-operator": "^7.16.7",
     "@babel/plugin-proposal-optional-chaining": "^7.16.7",
@@ -46,16 +46,16 @@
     "chalk": "^5.0.0",
     "chokidar": "^3.5.3",
     "core-js": "^3.20.3",
-    "dotenv": "^14.2.0",
+    "dotenv": "^14.3.2",
     "less": "^4.1.2",
     "lodash.merge": "^4.6.2",
     "minimist": "^1.2.5",
     "node-sass": "^7.0.1",
     "postcss": "^8.4.5",
     "postcss-modules": "^4.3.0",
-    "preact": "^10.6.4",
+    "preact": "^10.6.5",
     "puppeteer-core": "^13.1.2",
-    "rollup": "^2.66.0",
+    "rollup": "^2.66.1",
     "rollup-plugin-iife": "^0.5.0",
     "rollup-plugin-inline-svg": "^2.0.0",
     "rollup-plugin-node-externals": "^3.1.2",
@@ -69,12 +69,13 @@
     "typescript": "^4.5.5"
   },
   "devDependencies": {
+    "babel-jest": "^27.4.6",
     "expect-puppeteer": "^6.0.2",
     "glob": "^7.2.0",
     "husky": "^7.0.4",
     "jest": "^27.4.7",
     "jest-fail-on-console": "^2.1.1",
-    "puppeteer": "^13.1.1",
+    "puppeteer": "^13.1.2",
     "rimraf": "^3.0.2",
     "standard-version": "^9.3.2"
   },
@@ -91,15 +92,20 @@
     "modulePathIgnorePatterns": [
       ".build"
     ],
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(chalk|ansi-styles)/)"
+    ],
+    "moduleNameMapper": {
+      "#(.*)": "<rootDir>/node_modules/$1"
+    },
     "transform": {
-      "\\.js$": [
+      "\\.jsx?$": [
         "babel-jest",
         {
           "presets": [
             "@babel/preset-env"
           ],
           "plugins": [
-            "@babel/transform-runtime",
             "babel-plugin-transform-import-meta"
           ]
         }

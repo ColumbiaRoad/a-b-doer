@@ -1,36 +1,36 @@
 #!/usr/bin/env node
-import fs, { readFileSync, lstatSync, readdirSync } from 'fs';
-import path from 'path';
-import pluginutils, { createFilter } from '@rollup/pluginutils';
-import merge from 'lodash.merge';
-import { createRequire } from 'module';
-import { rollup, watch as watch$1 } from 'rollup';
-import nodeResolve from '@rollup/plugin-node-resolve';
-import babelPlugin from '@rollup/plugin-babel';
-import { terser } from 'rollup-plugin-terser';
-import styles from 'rollup-plugin-styles';
-import stringHash from 'string-hash';
-import autoprefixer from 'autoprefixer';
-import alias from '@rollup/plugin-alias';
-import replace from '@rollup/plugin-replace';
-import commonjs from '@rollup/plugin-commonjs';
 import chalk from 'chalk';
-import puppeteerCore from 'puppeteer-core';
-import inlineSvg from 'rollup-plugin-inline-svg';
-import svgImport from 'rollup-plugin-svg-hyperscript';
-import image from '@rollup/plugin-image';
-import browserslist from 'browserslist';
-import rimraf from 'rimraf';
-import glob from 'glob';
-import typescript from 'rollup-plugin-typescript2';
-import iife from 'rollup-plugin-iife';
-import { minify } from 'terser';
-import { fileURLToPath } from 'url';
 import chokidar from 'chokidar';
 import minimist from 'minimist';
+import path from 'path';
+import pluginutils, { createFilter } from '@rollup/pluginutils';
+import fs, { readFileSync, lstatSync, readdirSync } from 'fs';
+import merge from 'lodash.merge';
+import { createRequire } from 'module';
+import puppeteerCore from 'puppeteer-core';
+import alias from '@rollup/plugin-alias';
+import autoprefixer from 'autoprefixer';
+import commonjs from '@rollup/plugin-commonjs';
+import glob from 'glob';
+import iife from 'rollup-plugin-iife';
+import image from '@rollup/plugin-image';
+import inlineSvg from 'rollup-plugin-inline-svg';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import replace from '@rollup/plugin-replace';
+import rimraf from 'rimraf';
+import stringHash from 'string-hash';
+import styles from 'rollup-plugin-styles';
+import svgImport from 'rollup-plugin-svg-hyperscript';
+import typescript from 'rollup-plugin-typescript2';
+import { babel } from '@rollup/plugin-babel';
+import { fileURLToPath } from 'url';
+import { minify } from 'terser';
+import { rollup, watch as watch$1 } from 'rollup';
+import { terser } from 'rollup-plugin-terser';
+import browserslist from 'browserslist';
 
 // Require is not defined in ES module scope
-const require = createRequire(import.meta.url);
+const specRequire = createRequire(import.meta.url);
 
 /**
  * Config defaults
@@ -61,8 +61,8 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	const configPathJs = path.resolve(fileDir, fileWithoutExt + '.js');
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
-		delete require.cache[configPath];
-		return require(configPath);
+		delete specRequire.cache[configPath];
+		return specRequire(configPath);
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
 		const { default: configMod } = await import(configPathJs + '?cb=' + Math.random().toString(36).substring(3));
@@ -598,8 +598,6 @@ function preactDebug() {
 	};
 }
 
-const { babel } = babelPlugin;
-
 // __dirname is not defined in ES module scope
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -607,7 +605,7 @@ const browsers = browserslist();
 
 const supportIE = !!browsers.find((b) => b.startsWith('ie'));
 
-const rootDir = path.join(__dirname, '..', '..');
+const rootDir = __dirname.replace(/(\/dist)?\/bin.*/, '');
 
 async function bundler(testConfig) {
 	let { entryFile, testPath, entry, entryPart, preview = false } = testConfig;

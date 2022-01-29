@@ -1,7 +1,10 @@
 import 'expect-puppeteer';
 import failOnConsole from 'jest-fail-on-console';
 import { config } from '../lib/buildspec';
-import { join } from 'path';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 global.configDefaults = {
 	...config,
@@ -17,8 +20,8 @@ global.configDefaults = {
 					...options,
 					entries: [
 						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: join('..', 'hooks') },
-						{ find: 'a-b-doer', replacement: join('..', 'main') },
+						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, '..', 'hooks') },
+						{ find: 'a-b-doer', replacement: path.join(__dirname, '..', 'main') },
 					],
 				}),
 			],

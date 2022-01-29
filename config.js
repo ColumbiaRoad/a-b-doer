@@ -1,7 +1,10 @@
 import { config } from 'dotenv';
-import { join } from 'path';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (!process.env.BROWSER_PATH) {
 	console.log('You must define a BROWSER_PATH environment variable');
@@ -19,8 +22,8 @@ export default {
 					...options,
 					entries: [
 						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: join('.', 'hooks') },
-						{ find: 'a-b-doer', replacement: join('.', 'main') },
+						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
+						{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
 					],
 				}),
 			],
