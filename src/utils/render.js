@@ -77,7 +77,7 @@ function copyInternal(source, target) {
 let NAMESPACES;
 
 function initNs() {
-	if (!NAMESPACES) {
+	if (config.n && !NAMESPACES) {
 		NAMESPACES = window.__namespaces || {
 			svg: '2000/svg',
 			xlink: '1999/xlink',
@@ -88,7 +88,7 @@ function initNs() {
 }
 
 function getNs(key) {
-	if (!config.jsx) return null;
+	if (!config.j || !config.n) return null;
 	const ns = NAMESPACES[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
@@ -96,12 +96,12 @@ function getNs(key) {
 
 /**
  * Renders given AB Doer VNode.
- * @param {VNode|HTMLElement|string|number|Component} vnode
- * @param {VNode|HTMLElement|string|number|Component} [oldVnode]
- * @returns {HTMLElement}
+ * @param {VNode} vnode
+ * @param {VNode} [oldVnode]
+ * @returns {VNode}
  */
 export function renderVnode(vnode, oldVnode) {
-	if (!config.jsx || isDomNode(vnode) || isString(vnode) || typeof vnode === 'number' || vnode === undefined) {
+	if (!config.j || !vnode) {
 		return vnode;
 	}
 
@@ -126,7 +126,7 @@ export function renderVnode(vnode, oldVnode) {
 		let newVNode;
 
 		// Class syntax components
-		if (tag.prototype?.render) {
+		if (config.c && tag.prototype?.render) {
 			let comp = vnode._i;
 			const cb = [];
 			// First render
@@ -205,7 +205,7 @@ export function renderVnode(vnode, oldVnode) {
 					if (!tag) {
 						element = document.createTextNode(props.text);
 					} else {
-						element = svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
+						element = config.n && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 					}
 				}
 			}
@@ -239,17 +239,21 @@ function flatten(items) {
 	return flat;
 }
 
+function getChildrenList(children = []) {
+	const childrenMap = new Map();
+	children.forEach((child) => {
+		if (child?.key) childrenMap.set(child.key, child);
+	});
+	return { map: childrenMap, items: children };
+}
+
 /**
  * @param {VNode} vnode
  * @param {Array} children
  * @param {Array} [oldChildren]
  */
 function createChildren(vnode, children = [], oldChildren) {
-	const oldChildrenMap = new Map();
-	const oldChildrenArr = oldChildren || [];
-	for (const child of oldChildrenArr) {
-		if (child?.key) oldChildrenMap.set(child.key, child);
-	}
+	const oldChildrenMap = getChildrenList(oldChildren).map;
 	const newChildren = flatten(children).map((child, index) => {
 		let oldChild;
 		if (isRenderableElement(child)) {
@@ -278,9 +282,11 @@ function createChildren(vnode, children = [], oldChildren) {
 		return child;
 	});
 
-	// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
-	for (const [_, oldChild] of oldChildrenMap) {
-		runUnmountCallbacks(oldChild);
+	if (config.h || config.c) {
+		// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
+		for (const [_, oldChild] of oldChildrenMap) {
+			runUnmountCallbacks(oldChild);
+		}
 	}
 
 	return newChildren;
@@ -333,7 +339,8 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
 	if (prevVnode?._r) {
 		return patchVnodeDom(vnode, prevVnode._r, targetDomNode);
 	}
-	const oldChildren = prevVnode?._c || [];
+	const oldChildrenList = getChildrenList(prevVnode?._c);
+	const oldChildren = oldChildrenList.items;
 	const compareDeeper = isSameChild(vnode, prevVnode);
 	// Loop through rendered element children
 	let targetParent = returnDom;
@@ -345,7 +352,7 @@ export function patchVnodeDom(vnode, prevVnode, targetDomNode, after) {
 	}
 	let siblingNode = null;
 	vnode._c?.forEach((child, index) => {
-		const oldChildVnode = oldChildren.find((old) => child && child.key === old?.key) || oldChildren[index];
+		const oldChildVnode = (child && oldChildrenList.map.get(child.key)) || oldChildren[index];
 		siblingNode =
 			patchVnodeDom(child, (!child || compareDeeper) && oldChildVnode, targetParent, siblingNode) || siblingNode;
 	});
@@ -425,7 +432,7 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
 				element.addEventListener(name.substr(2).toLowerCase(), value);
 			} else if (value !== null) {
 				value = value.toString();
-				if (name.includes(':') && element.tagName.toLowerCase() != 'svg') {
+				if (config.n && name.includes(':') && element.tagName != 'SVG') {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 				} else {
@@ -441,14 +448,14 @@ function setElementAttributes(element, props = {}, oldProps = {}) {
  */
 export function runUnmountCallbacks(vnode) {
 	if (isVNode(vnode)) {
-		if (vnode._h) {
+		if (config.h && vnode._h) {
 			vnode._h.forEach((h) => {
 				if (h.length === 3 && isFunction(h[2])) {
 					h[2]();
 				}
 			});
 			vnode._h = [];
-		} else if (vnode._i && vnode._i.componentWillUnmount) {
+		} else if (config.c && vnode._i && vnode._i.componentWillUnmount) {
 			vnode._i.componentWillUnmount();
 			delete vnode._i;
 		}

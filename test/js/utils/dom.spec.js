@@ -1,5 +1,9 @@
-const { bundler, openPage } = require('../../../dist/lib/bundler');
+import { bundler, openPage } from '../../../lib/bundler';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+jest.setTimeout(20000);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = { ...global.configDefaults, testPath: __dirname };
 
 describe('DOM', () => {

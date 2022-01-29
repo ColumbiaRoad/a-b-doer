@@ -31,8 +31,17 @@ export function createDocumentFragment() {
 }
 
 // Internal object for storing details of current output/etc
+/**
+ * @prop {boolean} j Internal jsx support flag
+ * @prop {boolean} c Internal class component support flag
+ * @prop {boolean} h Internal hooks support flag
+ * @prop {boolean} n Internal namespace tag/attribute support flag
+ */
 export const config = {
-	jsx: false, // Helps terser to detect if jsx support should be bundled
+	c: true, // Classes. Helps terser to detect if class component support should be bundled
+	h: false, // Hooks. Helps terser to detect if hook related code should be bundled
+	j: false, // JSX. Helps terser to detect if jsx support should be bundled
+	n: true, // Namespaces. Helps terser to detect if namespace tag/attribute support should be bundled.
 };
 
 // Internal object for storing details of currently rendered component's hooks

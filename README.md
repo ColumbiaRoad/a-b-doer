@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.2kb when minified:
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.2kb when minified, and 4.6kb without class component and namespace support (see option `features`):
 
 ```js
 import { append } from 'a-b-doer';
@@ -12,7 +12,7 @@ const Foo = () => {
 append(<Foo />, document.body);
 ```
 
-You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb) and it could be an issue (at least in Optimize).
+You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb, the example above is 10.2kb with preact when `append` is replaced with `render`) and it could be an issue (at least in Optimize).
 
 ---
 
@@ -582,6 +582,14 @@ Default `true`
 
 Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
 
+### features
+
+Type `Object` (optional)
+
+Default `{ classes: true, namespaces: true, jsx: 'auto', hooks: 'auto' }`
+
+You can manually control which parts of the code should be left out by terser on minification. Supported options are listed above, but only `jsx` and `hooks` supports also `auto` mode which means that their values are determined by the usage. Setting some feature to `false` will tell to terser that those code blocks are dead and can be dropped. Setting some feature to `true` will always include those codes to the bundle.
+
 ---
 
 ### Example buildspec.json
@@ -651,7 +659,7 @@ Inlines source maps to the bundle with local file urls. This works only in watch
 ### Advanced example config.js with custom bundler options
 
 ```js
-const fooPlugin = require('rollup-foo-plugin');
+import fooPlugin from 'rollup-foo-plugin';
 
 /*
 Supported plugins for array format are currently.
@@ -669,7 +677,7 @@ svg-hyperscript,
 preact-debug
 */
 
-module.exports = {
+export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   exclude: ['**/components/**/*', '**/src/**/*'],
@@ -717,7 +725,7 @@ Update config.js:
 ```js
 import ejs from 'rollup-plugin-ejs';
 
-module.exports = {
+export default {
   // ...
   bundler: {
     plugins: [

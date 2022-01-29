@@ -19,7 +19,7 @@ export class Component {
 }
 
 /**
- * Renders and re-renders given AB Doer VNode. If target node is given, rendered node will be added to it.
+ * Renders given AB Doer VNode. If target node is given, rendered node will be added to it.
  * @param {VNode} vnode
  * @param {HTMLElement} [targetNode]
  * @returns {HTMLElement|VNode}

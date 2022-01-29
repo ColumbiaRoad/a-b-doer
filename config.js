@@ -1,12 +1,17 @@
-require('dotenv').config();
-const path = require('path');
+import { config } from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (!process.env.BROWSER_PATH) {
 	console.log('You must define a BROWSER_PATH environment variable');
 	process.exit();
 }
 
-module.exports = {
+export default {
 	browser: process.env.BROWSER_PATH,
 	bundler: {
 		plugins: [

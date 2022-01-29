@@ -1,11 +1,11 @@
 // puppeteer_environment.js
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const puppeteer = require('puppeteer');
-const NodeEnvironment = require('jest-environment-node');
+import { readFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import puppeteer from 'puppeteer';
+import NodeEnvironment from 'jest-environment-node';
 
-const DIR = path.join(os.tmpdir(), 'jest_puppeteer_global_setup');
+const DIR = join(tmpdir(), 'jest_puppeteer_global_setup');
 
 class PuppeteerEnvironment extends NodeEnvironment {
 	constructor(config) {
@@ -15,7 +15,7 @@ class PuppeteerEnvironment extends NodeEnvironment {
 	async setup() {
 		await super.setup();
 		// get the wsEndpoint
-		const wsEndpoint = fs.readFileSync(path.join(DIR, 'wsEndpoint'), 'utf8');
+		const wsEndpoint = readFileSync(join(DIR, 'wsEndpoint'), 'utf8');
 		if (!wsEndpoint) {
 			throw new Error('wsEndpoint not found');
 		}
@@ -37,4 +37,4 @@ class PuppeteerEnvironment extends NodeEnvironment {
 	}
 }
 
-module.exports = PuppeteerEnvironment;
+export default PuppeteerEnvironment;
