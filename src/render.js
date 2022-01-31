@@ -24,9 +24,7 @@ export class Component {
  * @param {HTMLElement} [targetNode]
  * @returns {HTMLElement|VNode}
  */
-export function render(vnode, targetNode) {
-	return targetNode ? append(vnode, targetNode) : renderVnode(vnode);
-}
+export const render = (vnode, targetNode) => (targetNode ? append(vnode, targetNode) : renderVnode(vnode));
 
 export const Fragment = _Fragment;
 

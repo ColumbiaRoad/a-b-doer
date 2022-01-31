@@ -51,6 +51,7 @@ const config = {
 		hooks: 'auto',
 		jsx: 'auto',
 		classes: true,
+		className: true,
 		namespaces: true,
 	},
 };
@@ -157,7 +158,15 @@ async function buildspec (testPath) {
 		testConfig.url = [testConfig.url];
 	}
 
-	return { ...config, ...testConfig, testPath, entryFile, entryPart, entryFileExt: entryFile.split('.').pop() };
+	return {
+		...config,
+		...testConfig,
+		features: { ...config.features, ...(testConfig.features || {}) },
+		testPath,
+		entryFile,
+		entryPart,
+		entryFileExt: entryFile.split('.').pop(),
+	};
 }
 
 function getFlagEnv(name) {
@@ -717,7 +726,8 @@ async function bundler(testConfig) {
 	const featuresReplaces = {};
 	Object.entries(features).forEach(([key, value]) => {
 		if (value !== 'auto') {
-			featuresReplaces[`config.${key[0]}`] = value;
+			const letter = key === 'className' ? 'x' : key[0];
+			featuresReplaces[`config.${letter}`] = value.toString();
 		}
 	});
 

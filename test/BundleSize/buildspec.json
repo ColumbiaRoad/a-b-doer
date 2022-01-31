@@ -3,6 +3,7 @@
   "preact": false,
   "features": {
     "classes": false,
+    "className": false,
     "namespaces": false
   }
 }

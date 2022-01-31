@@ -1,34 +1,32 @@
 // Just for smaller bundles. Google Optimize has 20kb limit for JS so every character counts :D
-export function domAppend(parent, child) {
+export const domAppend = (parent, child) => {
 	parent.append(child);
-}
-export function domInsertBefore(child, target) {
-	if (target?.parentElement) {
-		target.parentElement.insertBefore(child, target);
-	}
-}
-export function domRemove(node) {
-	if (node?.parentElement) {
-		node.parentElement.removeChild(node);
-	}
-}
-export function domReplaceWith(oldNode, newNode) {
-	if (oldNode?.parentElement) {
-		oldNode.parentElement.replaceChild(newNode, oldNode);
-	}
-}
-export function isFunction(fn) {
-	return typeof fn === 'function';
-}
-export function isString(str) {
-	return typeof str === 'string';
-}
-export function isArray(arr) {
-	return Array.isArray(arr);
-}
-export function createDocumentFragment() {
-	return document.createDocumentFragment();
-}
+};
+
+const getParent = (node) => node?.parentElement;
+
+export const domInsertBefore = (child, target) => {
+	const parent = getParent(target);
+	parent && parent.insertBefore(child, target);
+};
+
+export const domRemove = (node) => {
+	const parent = getParent(node);
+	parent && parent.removeChild(node);
+};
+
+export const domReplaceWith = (oldNode, newNode) => {
+	const parent = getParent(oldNode);
+	parent && parent.replaceChild(newNode, oldNode);
+};
+
+export const isFunction = (fn) => typeof fn === 'function';
+
+export const isString = (str) => typeof str === 'string';
+
+export const isArray = (arr) => Array.isArray(arr);
+
+export const createDocumentFragment = () => document.createDocumentFragment();
 
 // Internal object for storing details of current output/etc
 /**
@@ -36,6 +34,7 @@ export function createDocumentFragment() {
  * @prop {boolean} c Internal class component support flag
  * @prop {boolean} h Internal hooks support flag
  * @prop {boolean} n Internal namespace tag/attribute support flag
+ * @prop {boolean} x Internal class as className props support flag
  */
 export const config = {
 	c: true, // Classes. Helps terser to detect if class component support should be bundled
@@ -51,25 +50,30 @@ export const hooks = {
 	v: null,
 };
 
-export function isSame(iter, iter2) {
-	let same = true;
-	for (const key of Object.keys(iter)) {
-		if (iter[key] !== iter2?.[key]) {
-			same = key === 'props' ? isSame(iter[key], iter2?.[key]) : false;
-			break;
+export const isSame = (iter, iter2) => {
+	if (iter === iter2) return true;
+	if (iter && typeof iter === 'object') {
+		let same = true;
+		for (const key of Object.keys(iter)) {
+			if (iter[key] !== iter2?.[key]) {
+				same = key === 'props' ? isSame(iter[key], iter2?.[key]) : false;
+				break;
+			}
 		}
+		return same;
+	} else {
+		return false;
 	}
-	return same;
-}
+};
 
-export function onNextTick(callback) {
+export const onNextTick = (callback) => {
 	setTimeout(callback, 0);
-}
+};
 
-export function createVNode(tag = '', props) {
+export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
 		props,
 		key: props.key || props['data-o'] || process.env.TEST_ID,
 	};
-}
+};

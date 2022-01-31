@@ -5,7 +5,7 @@
  * @param {Function} func
  * @param {Number} timeFrame
  */
-export function throttle(func, timeFrame) {
+export const throttle = (func, timeFrame) => {
 	let lastTime = 0;
 	return function () {
 		const now = Date.now();
@@ -14,7 +14,7 @@ export function throttle(func, timeFrame) {
 			lastTime = now;
 		}
 	};
-}
+};
 
 /**
  * Returns a function, that, as long as it continues to be invoked, will not
@@ -26,7 +26,7 @@ export function throttle(func, timeFrame) {
  * @param {Number} wait
  * @param {Boolean} [immediate]
  */
-export function debounce(func, wait, immediate) {
+export const debounce = (func, wait, immediate) => {
 	let timeout;
 	return function () {
 		const context = this;
@@ -40,4 +40,4 @@ export function debounce(func, wait, immediate) {
 		timeout = setTimeout(later, wait);
 		if (callNow) func.apply(context, args);
 	};
-}
+};

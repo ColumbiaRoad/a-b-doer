@@ -9,7 +9,7 @@ import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, 
  * @param {(targetNode: HTMLElement) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelector(selector, callback, wait = 1000) {
+export const pollQuerySelector = (selector, callback, wait = 1000) => {
 	var el = document.querySelector(selector);
 	if (el) {
 		callback(el);
@@ -18,7 +18,7 @@ export function pollQuerySelector(selector, callback, wait = 1000) {
 			pollQuerySelector(selector, callback, wait - 100);
 		}, 100);
 	}
-}
+};
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -28,7 +28,7 @@ export function pollQuerySelector(selector, callback, wait = 1000) {
  * @param {(targetNodes: HTMLElement[]) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelectorAll(selector, callback, wait = 1000) {
+export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
 	var el = document.querySelectorAll(selector);
 	if (el.length) {
 		callback(Array.from(el));
@@ -37,7 +37,7 @@ export function pollQuerySelectorAll(selector, callback, wait = 1000) {
 			pollQuerySelectorAll(selector, callback, wait - 100);
 		}, 100);
 	}
-}
+};
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
@@ -46,7 +46,7 @@ export function pollQuerySelectorAll(selector, callback, wait = 1000) {
  * @param {Number} [wait] default 5 seconds
  * @returns {Promise<HTMLElement>}
  */
-export function waitElement(selector, wait = 5000) {
+export const waitElement = (selector, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 		pollQuerySelector(
@@ -58,7 +58,7 @@ export function waitElement(selector, wait = 5000) {
 			wait
 		);
 	});
-}
+};
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
@@ -67,7 +67,7 @@ export function waitElement(selector, wait = 5000) {
  * @param {Number} [wait] default 5 seconds
  * @returns {Promise<HTMLElement[]>}
  */
-export function waitElements(selector, wait = 5000) {
+export const waitElements = (selector, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 		pollQuerySelectorAll(
@@ -79,7 +79,7 @@ export function waitElements(selector, wait = 5000) {
 			wait
 		);
 	});
-}
+};
 
 /**
  * @typedef {any} WaitedValue
@@ -91,7 +91,7 @@ export function waitElements(selector, wait = 5000) {
  * @param {Number} [wait]
  * @returns {Promise<WaitedValue>}
  */
-export function waitFor(func, wait = 5000) {
+export const waitFor = (func, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 
@@ -109,20 +109,20 @@ export function waitFor(func, wait = 5000) {
 
 		_func(wait / 100);
 	});
-}
+};
 
-function getChildrenArray(child) {
+const getChildrenArray = (child) => {
 	if (isArray(child)) return child;
 	if (!child) return [];
 	// If document fragment, use its contents otherwise return the child in an array
 	return child.nodeType === 11 ? Array.from(child.children) : [child];
-}
+};
 
 /**
  * @param {HTMLElement|DocumentFragment|VNode} child
  * @param {HTMLElement} parent
  */
-function clearPrevious(child, parent) {
+const clearPrevious = (child, parent) => {
 	const children = getChildrenArray(child);
 	children.forEach((child) => {
 		let id;
@@ -139,9 +139,9 @@ function clearPrevious(child, parent) {
 			});
 		}
 	});
-}
+};
 
-function createMutation(child) {
+const createMutation = (child) => {
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
 	let node = child;
@@ -156,7 +156,7 @@ function createMutation(child) {
 	});
 
 	return node;
-}
+};
 
 /**
  * @param {HTMLElement|VNode} vnode
@@ -164,14 +164,14 @@ function createMutation(child) {
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement|VNode} Rendered element
  */
-export function append(vnode, parent, clearPrev = true) {
+export const append = (vnode, parent, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
 	domAppend(parent, child);
 	return vnode;
-}
+};
 
 /**
  * @param {HTMLElement|VNode} vnode
@@ -179,7 +179,7 @@ export function append(vnode, parent, clearPrev = true) {
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement|VNode} Rendered element
  */
-export function prepend(vnode, parent, clearPrev = true) {
+export const prepend = (vnode, parent, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
@@ -190,7 +190,7 @@ export function prepend(vnode, parent, clearPrev = true) {
 		domAppend(parent, child);
 	}
 	return vnode;
-}
+};
 
 /**
  * @param {HTMLElement|VNode} vnode
@@ -198,14 +198,14 @@ export function prepend(vnode, parent, clearPrev = true) {
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement|VNode} Rendered element
  */
-export function insertBefore(vnode, before, clearPrev = true) {
+export const insertBefore = (vnode, before, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
 	}
 	domInsertBefore(child, before);
 	return vnode;
-}
+};
 
 /**
  * @param {HTMLElement|VNode} vnode
@@ -213,7 +213,7 @@ export function insertBefore(vnode, before, clearPrev = true) {
  * @param {boolean} [clearPrev]
  * @returns {HTMLElement|VNode} Rendered element
  */
-export function insertAfter(vnode, after, clearPrev = true) {
+export const insertAfter = (vnode, after, clearPrev = true) => {
 	const child = createMutation(vnode);
 	const parentNode = after.parentNode;
 	if (clearPrev) {
@@ -225,22 +225,22 @@ export function insertAfter(vnode, after, clearPrev = true) {
 		domAppend(parentNode, child);
 	}
 	return vnode;
-}
+};
 
-export function clear(target, id) {
+export const clear = (target, id) => {
 	if (!target) {
 		target = document;
 	}
 	domRemove(target.querySelector(`[data-o="${id}"]`));
-}
+};
 
-export function clearAll() {
+export const clearAll = () => {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
 		domRemove(node);
 	});
-}
+};
 
-export function unmount(vnode) {
+export const unmount = (vnode) => {
 	runUnmountCallbacks(vnode);
 	domRemove(getVNodeDom(vnode, true));
-}
+};
