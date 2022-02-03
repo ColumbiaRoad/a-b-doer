@@ -44,7 +44,7 @@ export const isVNode = (vnode) => !!vnode && (!!vnode._n || !!vnode.props);
 /**
  * @param {VNode} vnode
  * @param {boolean} recursive
- * @returns {Element|Element[]}
+ * @returns {Element|null}
  */
 export const getVNodeDom = (vnode, recursive) =>
 	vnode ? vnode._n || (recursive ? getVNodeDom(vnode._r) : vnode._r?._n) : null;

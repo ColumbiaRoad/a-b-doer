@@ -740,7 +740,13 @@ async function bundler(testConfig) {
 
 	const inputOptions = {
 		input: [entryFile],
-		treeshake: 'smallest',
+		treeshake: {
+			propertyReadSideEffects: false,
+			moduleSideEffects: true,
+			tryCatchDeoptimization: false,
+			unknownGlobalSideEffects: false,
+			correctVarValueBeforeDeclaration: false,
+		},
 		plugins: getPluginsConfig(
 			[
 				['preact-debug'],
