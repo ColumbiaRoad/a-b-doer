@@ -1,5 +1,9 @@
 import { VNode } from '../render.js';
 
+type Selector = [HTMLElement, string];
+
+export function createSelector(element: HTMLElement, selector: string): Selector;
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
