@@ -264,7 +264,7 @@ async function openPage(config, singlePage) {
 	}
 
 	if (aboutpage) {
-		aboutpage.close();
+		await aboutpage.close();
 		aboutpage = null;
 	}
 
@@ -511,6 +511,8 @@ async function getPage(config, singlePage) {
 		console.log('\n\x1b[31m%s\x1b[0m', 'Page error!');
 		console.error(pageerr);
 	});
+
+	await newPage.setDefaultNavigationTimeout(0);
 
 	return newPage;
 }
@@ -1155,7 +1157,11 @@ async function bundler(testConfig) {
 				}
 				bundleOutput = await event.result.generate(outputOptions);
 				assetBundle = await createAssetBundle();
-				page = await openPage({ ...testConfig, assetBundle }, true);
+				try {
+					page = await openPage({ ...testConfig, assetBundle }, true);
+				} catch (error) {
+					console.log('Error while opening page', error);
+				}
 				hasError = false;
 				await event.result.close();
 			}
