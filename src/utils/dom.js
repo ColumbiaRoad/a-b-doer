@@ -2,15 +2,20 @@ import { Promise } from '../polyfills';
 import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode, getVNodeDom } from './render';
 import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
 
+export const createSelector = (node, selector) => [node, selector];
+
+const getSelectorParent = (selector) => (isArray(selector) ? selector[0] : document);
+const getSelectorQuery = (selector) => (isArray(selector) ? selector[1] : selector);
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {(targetNode: HTMLElement) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
 export const pollQuerySelector = (selector, callback, wait = 1000) => {
-	var el = document.querySelector(selector);
+	var el = getSelectorParent(selector).querySelector(getSelectorQuery(selector));
 	if (el) {
 		callback(el);
 	} else if (wait > 0) {
@@ -24,12 +29,12 @@ export const pollQuerySelector = (selector, callback, wait = 1000) => {
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * This returns all elements that matches the selector.
  *
- * @param {String} selector Element selector string
- * @param {(targetNodes: HTMLElement[]) => void} callback
+ * @param {String|Array} selector Element selector string or array
+ * @param {(targetNodes: NodeListOf<HTMLElement>) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
 export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
-	var el = document.querySelectorAll(selector);
+	var el = getSelectorParent(selector).querySelectorAll(getSelectorQuery(selector));
 	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
@@ -42,7 +47,7 @@ export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
  * @returns {Promise<HTMLElement>}
  */
@@ -63,9 +68,9 @@ export const waitElement = (selector, wait = 5000) => {
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
- * @returns {Promise<HTMLElement[]>}
+ * @returns {Promise<NodeListOf<HTMLElement>>}
  */
 export const waitElements = (selector, wait = 5000) => {
 	return new Promise((resolve, reject) => {

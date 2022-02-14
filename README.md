@@ -223,19 +223,39 @@ This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils
 
 ### pollQuerySelector
 
-Type `(selector: string, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
 ### pollQuerySelectorAll
 
-Type `(selector: string, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
+### createSelector
+
+Type `(domNode: HTMLElement, selector: string) => Selector`
+
+Creates a selector that can be used e.g. inside of another pollQuerySelector. This is useful if you don't want to use document as a selector scope.
+
+```js
+import { createSelector, pollQuerySelector } from 'a-b-doer';
+
+// Poll .selector class in document scope
+pollQuerySelector('.selector', (target) => {
+  // Do something
+  // ...
+  // Poll img element in .selector class scope
+  pollQuerySelector(createSelector(target, 'img'), (img) => {
+    // Do something with the img
+  });
+});
+```
+
 ### waitElement
 
-Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement>`
+Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElement>`
 
 Returns a promise which will be resolved if given selector is found. It runs the dom query every 100ms until the timeout (ms) has passed.
 
@@ -266,7 +286,7 @@ waitElement('.foo')
 
 ### waitElements
 
-Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement[]>`
+Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElement[]>`
 
 Same as waitElement, but resolved value is always an array.
 

@@ -1,22 +1,34 @@
 import { VNode } from '../render.js';
 
+type AnyElementTagNameMap = HTMLElementTagNameMap & SVGElementTagNameMap;
+
+type Selector<E extends Element, S extends string> = [E, S];
+
+type ReturnElementType<T> = T extends keyof AnyElementTagNameMap ? AnyElementTagNameMap[T] : HTMLElement;
+
+export function createSelector<E extends Element = HTMLElement, K extends keyof AnyElementTagNameMap>(
+	element: E,
+	selector: K
+): Selector<E, K>;
+export function createSelector<E extends Element = HTMLElement>(element: E, selector: string): Selector<E, string>;
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelector<K extends keyof HTMLElementTagNameMap>(
-	selector: K,
-	callback: (targetNode: HTMLElementTagNameMap[K]) => void,
+export function pollQuerySelector<E extends Element, S extends Selector<E, string>>(
+	selector: S,
+	callback: (targetNode: ReturnElementType<S[1]>) => void,
 	wait?: number
 ): void;
-export function pollQuerySelector<K extends keyof SVGElementTagNameMap>(
+export function pollQuerySelector<K extends keyof AnyElementTagNameMap>(
 	selector: K,
-	callback: (targetNode: SVGElementTagNameMap[K]) => void,
+	callback: (targetNode: AnyElementTagNameMap[K]) => void,
 	wait?: number
 ): void;
-export function pollQuerySelector<E extends Element = Element>(
+export function pollQuerySelector<E extends Element = HTMLElement>(
 	selector: string,
 	callback: (targetNode: E) => void,
 	wait?: number
@@ -29,17 +41,17 @@ export function pollQuerySelector<E extends Element = Element>(
  * @param callback
  * @param wait how many milliseconds to poll, default 1000 ms
  */
-export function pollQuerySelectorAll<K extends keyof HTMLElementTagNameMap>(
-	selector: K,
-	callback: (targetNodes: NodeListOf<HTMLElementTagNameMap[K]>) => void,
+export function pollQuerySelectorAll<E extends Element, S extends Selector<K, string>>(
+	selector: S,
+	callback: (targetNodes: ReturnElementType<S[1]>) => void,
 	wait?: number
 ): void;
-export function pollQuerySelectorAll<K extends keyof SVGElementTagNameMap>(
+export function pollQuerySelectorAll<K extends keyof AnyElementTagNameMap>(
 	selector: K,
-	callback: (targetNodes: NodeListOf<SVGElementTagNameMap[K]>) => void,
+	callback: (targetNodes: NodeListOf<AnyElementTagNameMap[K]>) => void,
 	wait?: number
 ): void;
-export function pollQuerySelectorAll<E extends Element = Element>(
+export function pollQuerySelectorAll<E extends Element = HTMLElement>(
 	selector: string,
 	callback: (targetNodes: NodeListOf<E>) => void,
 	wait?: number
@@ -50,14 +62,30 @@ export function pollQuerySelectorAll<E extends Element = Element>(
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElement<T = HTMLElement>(selector: string, wait?: number): Promise<T>;
+export function waitElement<E extends Element, S extends Selector<K, string>>(
+	selector: S,
+	wait?: number
+): Promise<ReturnElementType<S[1]>>;
+export function waitElement<K extends keyof AnyElementTagNameMap>(
+	selector: K,
+	wait?: number
+): Promise<AnyElementTagNameMap[K]>;
+export function waitElement<E extends Element = HTMLElement>(selector: string, wait?: number): Promise<E>;
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  * @param selector Element selector string
  * @param wait default 5000 ms
  */
-export function waitElements<T = HTMLElement>(selector: string, wait?: number): Promise<T[]>;
+export function waitElements<E extends Element, S extends Selector<K, string>>(
+	selector: S,
+	wait?: number
+): Promise<NodeListOf<ReturnElementType<S[1]>>>;
+export function waitElements<K extends keyof AnyElementTagNameMap>(
+	selector: string,
+	wait?: number
+): Promise<NodeListOf<AnyElementTagNameMap[K]>>;
+export function waitElements<E extends Element = HTMLElement>(selector: string, wait?: number): Promise<NodeListOf<E>>;
 
 /**
  * Waits x milliseconds for given function to return true.

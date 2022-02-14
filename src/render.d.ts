@@ -2,9 +2,9 @@
  * Renders given AB Doer VNode. If target node is given, it will be replaced with the rendered vnode.
  * @param {VNode} vnode
  * @param {HTMLElement} [targetNode]
- * @returns {HTMLElement}
+ * @returns {VNode}
  */
-export function render(vnode: VNode, targetNode?: HTMLElement): HTMLElement;
+export function render(vnode: VNode, targetNode?: HTMLElement): VNode;
 
 export type VNode<P = {}> = {
 	type: string | any;
