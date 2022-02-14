@@ -29,8 +29,47 @@ import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
 import browserslist from 'browserslist';
 
+function getFlagEnv(name) {
+	const val = process.env[name];
+	if (val === true || val === 'true') return true;
+	if (val === 'false' || val === 'false') return false;
+	return undefined;
+}
+
+function hashf(s) {
+	let hash = 0;
+	let strlen = s.length;
+
+	if (strlen === 0) {
+		return hash;
+	}
+	for (let i = 0; i < strlen; i++) {
+		let c = s.charCodeAt(i);
+		hash = (hash << 5) - hash + c;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return hash;
+}
+
+function unifyPath(path) {
+	return path.replace(process.cwd(), '').replace(/\\/g, '/');
+}
+
+/**
+ * Converts given file path to format that is supported by different environments (Win uses file urls).
+ * @param {String} path
+ * @returns {String}
+ */
+function convertToEsmPath(path) {
+	/* need to prepend configPath with file:// if function receives a Windows path */
+	if (process.platform == 'win32' && !path.startsWith('file://')) {
+		return specRequire('url').pathToFileURL(path).href;
+	}
+	return path;
+}
+
 // Require is not defined in ES module scope
-const specRequire = createRequire(import.meta.url);
+const specRequire$1 = createRequire(import.meta.url);
 
 /**
  * Config defaults
@@ -62,11 +101,13 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	const configPathJs = path.resolve(fileDir, fileWithoutExt + '.js');
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
-		delete specRequire.cache[configPath];
-		return specRequire(configPath);
+		delete specRequire$1.cache[configPath];
+		return specRequire$1(configPath);
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
-		const { default: configMod } = await import(configPathJs + '?cb=' + Math.random().toString(36).substring(3));
+		const { default: configMod } = await import(
+			convertToEsmPath(configPathJs) + '?cb=' + Math.random().toString(36).substring(3)
+		);
 		return configMod;
 	}
 	return {};
@@ -167,32 +208,6 @@ async function buildspec (testPath) {
 		entryPart,
 		entryFileExt: entryFile.split('.').pop(),
 	};
-}
-
-function getFlagEnv(name) {
-	const val = process.env[name];
-	if (val === true || val === 'true') return true;
-	if (val === 'false' || val === 'false') return false;
-	return undefined;
-}
-
-function hashf(s) {
-	let hash = 0;
-	let strlen = s.length;
-
-	if (strlen === 0) {
-		return hash;
-	}
-	for (let i = 0; i < strlen; i++) {
-		let c = s.charCodeAt(i);
-		hash = (hash << 5) - hash + c;
-		hash = hash & hash; // Convert to 32bit integer
-	}
-	return hash;
-}
-
-function unifyPath(path) {
-	return path.replace(process.cwd(), '').replace(/\\/g, '/');
 }
 
 const { yellow: yellow$1, green: green$1 } = chalk;
@@ -614,7 +629,7 @@ const browsers = browserslist();
 
 const supportIE = !!browsers.find((b) => b.startsWith('ie'));
 
-const rootDir = __dirname.replace(/\/(dist|bin|lib).*/, '');
+const rootDir = __dirname.replace(/(\/|\\)(dist|bin|lib).*/, '');
 
 async function bundler(testConfig) {
 	let { entryFile, testPath, entry, entryPart, preview = false } = testConfig;
