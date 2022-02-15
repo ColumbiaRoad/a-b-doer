@@ -1,7 +1,10 @@
-require('expect-puppeteer');
-const failOnConsole = require('jest-fail-on-console');
-const { config } = require('../lib/buildspec');
-const path = require('path');
+import 'expect-puppeteer';
+import failOnConsole from 'jest-fail-on-console';
+import { config } from '../lib/buildspec';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 global.configDefaults = {
 	...config,

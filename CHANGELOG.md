@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.0.1...v3.1.0) (2022-02-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* Use ES modules everywhere
+
+### Features
+
+* Added some useful events ([1b7cea8](https://github.com/ColumbiaRoad/a-b-doer/commit/1b7cea83148af4165000ef9284e540084ab88173))
+* Allow features to be left out ([6b3244e](https://github.com/ColumbiaRoad/a-b-doer/commit/6b3244e30dd3085fe12d1797ed861e84b28b6efe))
+* Even smaller bundles with arrow functions. Added possibility to drop className support ([6bd0d55](https://github.com/ColumbiaRoad/a-b-doer/commit/6bd0d550d09de6d2ae581728435498bbbadf7672))
+* Extra options for waiting and evaluating functions before screenshots ([0c62421](https://github.com/ColumbiaRoad/a-b-doer/commit/0c62421496d778b500c10d40c3eebfbaf8f913d8))
+* Use ES modules everywhere ([8028275](https://github.com/ColumbiaRoad/a-b-doer/commit/8028275b57a30fea66b98d53fe21c3f20fbbdec3))
+
+
+### Bug Fixes
+
+* boolean values for form elements, fixed patching ([c344dc8](https://github.com/ColumbiaRoad/a-b-doer/commit/c344dc89078ebace625d9b498a5231766eb256dd))
+* Clear all previous listeners when opening the page again, stay on current page on reload if the url is one of the test urls ([461bce6](https://github.com/ColumbiaRoad/a-b-doer/commit/461bce67854eccf21e22d338589e1d1e7b99e2d1))
+* Do not treeshake module side effects because it breaks polyfills, return the dom node from render call ([1e6d2bd](https://github.com/ColumbiaRoad/a-b-doer/commit/1e6d2bd5a7ec0f7682ffff52eee6114871b597dc))
+* Fixed major flaws from rendering/dom logic. ([6f5d950](https://github.com/ColumbiaRoad/a-b-doer/commit/6f5d950b26b9dc271d8970bb52babe3a6f9cc825))
+* Fixed typings to match actual return values ([f2b1755](https://github.com/ColumbiaRoad/a-b-doer/commit/f2b17550d96c58a29fb72f5a4a067b54fe9248c4))
+* Possible fix for navigation timeout error ([56af062](https://github.com/ColumbiaRoad/a-b-doer/commit/56af062f06aa72d46ecdbdcaedfd7f01d0bb5d2f))
+* Windows file path support ([c492277](https://github.com/ColumbiaRoad/a-b-doer/commit/c4922770cb01328128232133383bbf1673a4abc5))
+
 ### [3.0.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.0.0...v3.0.1) (2021-12-22)
 
 

@@ -1,10 +1,10 @@
 /**
- * Renders and re-renders given AB Doer VNode. If target node is given, it will be replaced with the rendered vnode.
- * @param {VNode|HTMLElement|string|number} vnode
+ * Renders given AB Doer VNode. If target node is given, it will be replaced with the rendered vnode.
+ * @param {VNode} vnode
  * @param {HTMLElement} [targetNode]
- * @returns {HTMLElement}
+ * @returns {VNode}
  */
-export function render(vnode: VNode | HTMLElement | string | number | Component, targetNode?: HTMLElement): HTMLElement;
+export function render(vnode: VNode, targetNode?: HTMLElement): VNode;
 
 export type VNode<P = {}> = {
 	type: string | any;
@@ -14,6 +14,8 @@ export type VNode<P = {}> = {
 };
 
 export class Component<P = {}, S = {}> extends preact.Component<P, S> {}
+
+export type FC<P = {}> = preact.FunctionComponent<P>;
 
 type AnyObject = { [x: string]: any };
 

@@ -1,5 +1,9 @@
-const { bundler, openPage } = require('../../../dist/lib/bundler');
+import { bundler, openPage } from '../../../lib/bundler';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
+jest.setTimeout(20000);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const config = { ...global.configDefaults, testPath: __dirname };
 
 describe('JSX', () => {
@@ -40,7 +44,7 @@ describe('JSX', () => {
 		await expect(node).toMatch('Bar');
 	});
 
-	it('should call state hook', async () => {
+	it('should call state hook and unmount', async () => {
 		await page.evaluate(() => {
 			window.effectCb = false;
 		});
@@ -49,9 +53,7 @@ describe('JSX', () => {
 		await page.click('#tpl6click');
 		await expect(node).toMatch(/Val:3/);
 		await page.evaluate(() => {
-			document.querySelectorAll('#tpl6').forEach((node) => {
-				node.remove();
-			});
+			window.unmount(window.hookVnode);
 		});
 		const cbCalled = await page.evaluate(() => window.effectCb);
 		expect(cbCalled).toBe(true);

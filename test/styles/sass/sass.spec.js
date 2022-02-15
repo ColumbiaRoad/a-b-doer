@@ -1,5 +1,10 @@
-const fs = require('fs');
-const { bundler } = require('../../../dist/lib/bundler');
+import { bundler } from '../../../lib/bundler';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+jest.setTimeout(20000);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config = { ...global.configDefaults, testPath: __dirname };
 

@@ -14,15 +14,16 @@ import { Fragment } from './utils/render';
  * @param  {...any} children
  * @returns {HTMLElement}
  */
-function createElement(tag, props, ...children) {
+const createElement = (tag, props, ...children) => {
 	props = props || {};
 
-	if (props.class) {
-		props.className = props.class;
-	} else if (props.className) {
-		props.class = props.className;
+	if (config.x) {
+		if (props.class) {
+			props.className = props.class;
+		} else if (props.className) {
+			props.class = props.className;
+		}
 	}
-
 	props.children = children || [];
 
 	const vnode = createVNode(tag, props);
@@ -31,10 +32,10 @@ function createElement(tag, props, ...children) {
 		vnode.svg = true;
 	}
 
-	config.jsx = true; // Helps terser to detect if jsx support should be bundled
+	config.j = true; // Helps terser to detect if jsx support should be bundled
 
 	return vnode;
-}
+};
 
 export const h = createElement;
 

@@ -1,16 +1,21 @@
-import { _render, isVNode, isDomNode, runUnmountCallbacks, getTestID } from './render';
 import { Promise } from '../polyfills';
-import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, onNextTick } from './internal';
+import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode, getVNodeDom } from './render';
+import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
+
+export const createSelector = (node, selector) => [node, selector];
+
+const getSelectorParent = (selector) => (isArray(selector) ? selector[0] : document);
+const getSelectorQuery = (selector) => (isArray(selector) ? selector[1] : selector);
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {(targetNode: HTMLElement) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelector(selector, callback, wait = 1000) {
-	var el = document.querySelector(selector);
+export const pollQuerySelector = (selector, callback, wait = 1000) => {
+	var el = getSelectorParent(selector).querySelector(getSelectorQuery(selector));
 	if (el) {
 		callback(el);
 	} else if (wait > 0) {
@@ -18,18 +23,18 @@ export function pollQuerySelector(selector, callback, wait = 1000) {
 			pollQuerySelector(selector, callback, wait - 100);
 		}, 100);
 	}
-}
+};
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * This returns all elements that matches the selector.
  *
- * @param {String} selector Element selector string
- * @param {(targetNodes: HTMLElement[]) => void} callback
+ * @param {String|Array} selector Element selector string or array
+ * @param {(targetNodes: NodeListOf<HTMLElement>) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export function pollQuerySelectorAll(selector, callback, wait = 1000) {
-	var el = document.querySelectorAll(selector);
+export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
+	var el = getSelectorParent(selector).querySelectorAll(getSelectorQuery(selector));
 	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
@@ -37,16 +42,16 @@ export function pollQuerySelectorAll(selector, callback, wait = 1000) {
 			pollQuerySelectorAll(selector, callback, wait - 100);
 		}, 100);
 	}
-}
+};
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
  * @returns {Promise<HTMLElement>}
  */
-export function waitElement(selector, wait = 5000) {
+export const waitElement = (selector, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 		pollQuerySelector(
@@ -58,16 +63,16 @@ export function waitElement(selector, wait = 5000) {
 			wait
 		);
 	});
-}
+};
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
  *
- * @param {String} selector Element selector string
+ * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
- * @returns {Promise<HTMLElement[]>}
+ * @returns {Promise<NodeListOf<HTMLElement>>}
  */
-export function waitElements(selector, wait = 5000) {
+export const waitElements = (selector, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 		pollQuerySelectorAll(
@@ -79,7 +84,7 @@ export function waitElements(selector, wait = 5000) {
 			wait
 		);
 	});
-}
+};
 
 /**
  * @typedef {any} WaitedValue
@@ -91,7 +96,7 @@ export function waitElements(selector, wait = 5000) {
  * @param {Number} [wait]
  * @returns {Promise<WaitedValue>}
  */
-export function waitFor(func, wait = 5000) {
+export const waitFor = (func, wait = 5000) => {
 	return new Promise((resolve, reject) => {
 		const t = setTimeout(reject, wait + 10);
 
@@ -109,24 +114,20 @@ export function waitFor(func, wait = 5000) {
 
 		_func(wait / 100);
 	});
-}
+};
 
-function getChildrenArray(child) {
-	if (Array.isArray(child)) return child;
+const getChildrenArray = (child) => {
+	if (isArray(child)) return child;
 	if (!child) return [];
-	let children = [child];
-	// If document fragment, use its contents
-	if (child.nodeType === 11) {
-		children = Array.from(child.children);
-	}
-	return children;
-}
+	// If document fragment, use its contents otherwise return the child in an array
+	return child.nodeType === 11 ? Array.from(child.children) : [child];
+};
 
 /**
  * @param {HTMLElement|DocumentFragment|VNode} child
  * @param {HTMLElement} parent
  */
-function clearPrevious(child, parent) {
+const clearPrevious = (child, parent) => {
 	const children = getChildrenArray(child);
 	children.forEach((child) => {
 		let id;
@@ -137,144 +138,114 @@ function clearPrevious(child, parent) {
 		}
 		if (id) {
 			Array.from(parent.children).forEach((child) => {
-				if (child.dataset.o === id) {
+				if (child.dataset?.o === id) {
 					domRemove(child);
 				}
 			});
 		}
 	});
-}
+};
 
-/**
- * @param {HTMLElement} child
- * @returns {HTMLElement}
- */
-function getChildrenAsFragment(child) {
-	const children = getChildrenArray(child);
-	const node = createDocumentFragment();
-	children.forEach((c) => {
-		domAppend(node, c);
-		if (!c.dataset.o) {
-			c.dataset.o = child.key || getTestID();
-		}
-	});
-	return node;
-}
-
-function createMutation(child) {
-	if (isDomNode(child)) {
-		return getChildrenAsFragment(child);
-	}
+const createMutation = (child) => {
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
-	if (process.env.preact || !config.jsx) {
-		return child;
-	}
 	let node = child;
-	if (isVNode(child)) {
-		const rendered = _render(child);
-		node = getChildrenAsFragment(rendered);
-		onNextTick(() => {
-			const parent = rendered.parentElement;
-			if (parent) {
-				// Add checker for root node's dom removal.
-				new MutationObserver((mutations, observer) => {
-					mutations.forEach((mutation) => {
-						mutation.removedNodes.forEach((el) => {
-							const target = (child._r || child)._n;
-							if (el === rendered && !target?.parentElement) {
-								observer.disconnect();
-								runUnmountCallbacks(child);
-							}
-						});
-					});
-				}).observe(parent, {
-					childList: true,
-				});
-			}
-		});
+	if (!process.env.preact && config.j && isVNode(child)) {
+		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
 	}
+
+	getChildrenArray(node).forEach((c) => {
+		if (c.dataset && !c.dataset.o) {
+			c.dataset.o = node.key || getTestID();
+		}
+	});
+
 	return node;
-}
+};
 
 /**
- * @param {HTMLElement|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement|VNode} Rendered element
  */
-export function append(vnode, parent, clearPrev = true) {
+export const append = (vnode, parent, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
 	domAppend(parent, child);
 	return vnode;
-}
+};
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} parent
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement|VNode} Rendered element
  */
-export function prepend(vnode, parent, clearPrev = true) {
+export const prepend = (vnode, parent, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
 	}
 	if (parent.firstElementChild) {
-		domInsertBefore(parent, child, parent.firstElementChild);
+		domInsertBefore(child, parent.firstElementChild);
 	} else {
 		domAppend(parent, child);
 	}
 	return vnode;
-}
+};
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} before
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement|VNode} Rendered element
  */
-export function insertBefore(vnode, before, clearPrev = true) {
+export const insertBefore = (vnode, before, clearPrev = true) => {
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
 	}
-	domInsertBefore(before.parentNode, child, before);
+	domInsertBefore(child, before);
 	return vnode;
-}
+};
 
 /**
- * @param {HTMLElement|HTMLElement[]|VNode|VNode[]} vnode
+ * @param {HTMLElement|VNode} vnode
  * @param {HTMLElement} after
  * @param {boolean} [clearPrev]
- * @returns {VNode} Rendered VNode
+ * @returns {HTMLElement|VNode} Rendered element
  */
-export function insertAfter(vnode, after, clearPrev = true) {
+export const insertAfter = (vnode, after, clearPrev = true) => {
 	const child = createMutation(vnode);
 	const parentNode = after.parentNode;
 	if (clearPrev) {
 		clearPrevious(child, parentNode);
 	}
 	if (after.nextElementSibling) {
-		domInsertBefore(parentNode, child, after.nextElementSibling);
+		domInsertBefore(child, after.nextElementSibling);
 	} else {
 		domAppend(parentNode, child);
 	}
 	return vnode;
-}
+};
 
-export function clear(target, id) {
+export const clear = (target, id) => {
 	if (!target) {
 		target = document;
 	}
 	domRemove(target.querySelector(`[data-o="${id}"]`));
-}
+};
 
-export function clearAll() {
+export const clearAll = () => {
 	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
 		domRemove(node);
 	});
-}
+};
+
+export const unmount = (vnode) => {
+	runUnmountCallbacks(vnode);
+	domRemove(getVNodeDom(vnode, true));
+};

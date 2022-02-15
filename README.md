@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 4.9kb when minified:
+Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.3kb without class component and namespace support (see option `features`):
 
 ```js
 import { append } from 'a-b-doer';
@@ -208,7 +208,6 @@ Supported attribute namespaces by default are these:
 ```js
 {
   svg: '2000/svg',
-	space: 'XML/1998/namespace',
 	xlink: '1999/xlink',
 	xmlns: '2000/xmlns/',
 }
@@ -224,19 +223,39 @@ This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils
 
 ### pollQuerySelector
 
-Type `(selector: string, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
 ### pollQuerySelectorAll
 
-Type `(selector: string, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
+### createSelector
+
+Type `(domNode: HTMLElement, selector: string) => Selector`
+
+Creates a selector that can be used e.g. inside of another pollQuerySelector. This is useful if you don't want to use document as a selector scope.
+
+```js
+import { createSelector, pollQuerySelector } from 'a-b-doer';
+
+// Poll .selector class in document scope
+pollQuerySelector('.selector', (target) => {
+  // Do something
+  // ...
+  // Poll img element in .selector class scope
+  pollQuerySelector(createSelector(target, 'img'), (img) => {
+    // Do something with the img
+  });
+});
+```
+
 ### waitElement
 
-Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement>`
+Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElement>`
 
 Returns a promise which will be resolved if given selector is found. It runs the dom query every 100ms until the timeout (ms) has passed.
 
@@ -267,7 +286,7 @@ waitElement('.foo')
 
 ### waitElements
 
-Type `(selector: string, timeout?: number = 5000) => Promise<HTMLElement[]>`
+Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElement[]>`
 
 Same as waitElement, but resolved value is always an array.
 
@@ -583,6 +602,20 @@ Default `true`
 
 Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
 
+### features
+
+Type `Object` (optional)
+
+Default `{ classes: true, className: true, namespaces: true, jsx: 'auto', hooks: 'auto' }`
+
+- classes: Support class component syntax
+- className: Populate className with class prop and class prop with className
+- namespaces: Support namespace attributes and elements. Some namespaces are defined by default
+- jsx: Support jsx syntax
+- hooks: Support functional component hooks, e.g. useState
+
+You can manually control which parts of the code should be left out by terser on minification. Supported options are listed above, but only `jsx` and `hooks` supports also `auto` mode which means that their values are determined by the usage. Setting some feature to `false` will tell to terser that those code blocks are dead and can be dropped. Setting some feature to `true` will always include those codes to the bundle.
+
 ---
 
 ### Example buildspec.json
@@ -652,7 +685,7 @@ Inlines source maps to the bundle with local file urls. This works only in watch
 ### Advanced example config.js with custom bundler options
 
 ```js
-const fooPlugin = require('rollup-foo-plugin');
+import fooPlugin from 'rollup-foo-plugin';
 
 /*
 Supported plugins for array format are currently.
@@ -670,7 +703,7 @@ svg-hyperscript,
 preact-debug
 */
 
-module.exports = {
+export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   exclude: ['**/components/**/*', '**/src/**/*'],
@@ -718,7 +751,7 @@ Update config.js:
 ```js
 import ejs from 'rollup-plugin-ejs';
 
-module.exports = {
+export default {
   // ...
   bundler: {
     plugins: [
@@ -746,3 +779,148 @@ template.ejs content:
 ```
 
 The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
+## Events
+
+### onBefore
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page is created and before any variant codes or events has been created. This is the correct place to attach own listeners to the page.
+
+### onLoad
+
+Type `(page: Page) => void` (optional)
+
+Run an async function after the page has loaded with the variant asset code. This will be run after `page.goto` has finished loading and just before taking the screenshot.
+
+### Example
+
+```js
+module.exports = {
+  url: 'https://example.com',
+  // Assign custom page events before navigation.
+  onBefore: async (page) => {
+    page.on('domcontentloaded', () => console.log('domcontentloaded was loaded'));
+  },
+  // Check element count after the page has finished loading with the variant asset code.
+  onLoad: async (page) => {
+    const foo = await page.evaluate(() => document.querySelectorAll('.foo').length);
+  },
+};
+```
+
+# Screenshots
+
+## config.screenshot
+
+Type `Object` (optional)
+
+Following options to control Puppeteer before taking the screenshots.
+
+### waitFor
+
+Type `number | string | function` (optional)
+
+Tell Puppeteer to wait something before taking the screenshot.
+
+### waitForOptions
+
+Type `Object` (optional)
+
+Puppeteer waitFor<Function|Timeout|Selector> function options, see https://pptr.dev/#?product=Puppeteer&version=v11.0.0&show=api-pagewaitforselectororfunctionortimeout-options-args
+
+### type
+
+Type `string` (optional)
+
+Specify screenshot type, can be either jpeg, png or webp. Defaults to 'png'.
+
+### quality
+
+Type `number` (optional)
+
+The quality of the image, between 0-100. Not applicable to png images.
+
+### fullPage
+
+Type `boolean` (optional)
+
+Default `true`
+
+When true, takes a screenshot of the full scrollable page.
+
+### clip
+
+Type `Object` (optional)
+
+An object which specifies clipping region of the page. Should have the following fields:
+
+- x `number` x-coordinate of top-left corner of clip area
+- y `number` y-coordinate of top-left corner of clip area
+- width `number` width of clipping area
+- height `number` height of clipping area
+
+### omitBackground
+
+Type `boolean` (optional)
+
+Hides default white background and allows capturing screenshots with transparency. Defaults to false.
+
+### encoding
+
+Type `string` (optional)
+
+The encoding of the image, can be either base64 or binary. Defaults to binary.
+
+### captureBeyondViewport
+
+Type `boolean` (optional)
+
+When true, captures screenshot beyond the viewport. Whe false, falls back to old behaviour, and cuts the screenshot by the viewport size. Defaults to true.
+
+## Screenshot events
+
+### onBefore
+
+See events.onBefore
+
+Extra onBefore event for screenshots. Will be runned after the main onBefore
+
+### onLoad
+
+See events.onLoad
+
+Extra onLoad event for screenshots. Will be runned after the main onLoad
+
+### Example buildspec.js with screenshot options
+
+```js
+const gobalConfig = require('../config.js');
+
+module.exports = {
+  browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  userDataDir: './puppeteer',
+  onLoad: async (page) => {
+    console.log('Do something on preview and on screenshot');
+  },
+  screenshot: {
+    ...gobalConfig.screenshot,
+    waitFor: 1000,
+    onLoad: async (page) => {
+      console.log('Do this only on screenshot');
+      gobalConfig.screenshot.onLoad(page);
+      await page.evaluate(() => {
+        document.querySelectorAll('.something').forEach((node) => node.remove());
+      });
+    },
+  },
+};
+```
+
+## Screenshot cli commands
+
+- `--build or -b` Force rebuild, otherwise already built bundle will be used (if there is one).
+- `--url="https://example.com"` or `--url=1` or `-u "https://example.com"` Force specific url. If the value is a number, puppeteer will use url found from that index in buildspec url array.
+- `--name=someName` or `-n someName` Name for the screenshot. It will be part of the screenshot image name. Default value is the entry file name with an extension.
+- Any option from screenshot config can be overridden by cli command argument, e.g. `--waitFor=1000`
