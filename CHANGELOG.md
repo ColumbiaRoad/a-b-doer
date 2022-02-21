@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.0...v3.1.1) (2022-02-21)
+
+
+### Bug Fixes
+
+* Added missing import ([5eb0f34](https://github.com/ColumbiaRoad/a-b-doer/commit/5eb0f3448befe5f1b24eaf406c6b284dccf5b8dc))
+
 ## [3.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.0.1...v3.1.0) (2022-02-15)
 
 
