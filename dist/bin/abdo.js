@@ -619,7 +619,7 @@ function preactDebug() {
 			// Prepend preact debug module to the imported code
 			if (!getFlagEnv('TEST_ENV') && this.getModuleInfo(id).isEntry && getFlagEnv('PREACT') && getFlagEnv('PREVIEW')) {
 				const contents = readFileSync(id).toString();
-				return `import "preact/debug";\n${contents};`;
+				return `import "preact/devtools";\n${contents};`;
 			}
 			return null;
 		},
