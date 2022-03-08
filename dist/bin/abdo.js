@@ -268,15 +268,14 @@ async function openPage(config, singlePage) {
 		aboutpage = null;
 	}
 
-	// TODO: Change to something less error prone if possible. Fixes the "already exposed function" error
-	page._pageBindings.set('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
+	if (page._pageBindings.has('isOneOfBuildspecUrls')) {
+		page._pageBindings.delete('isOneOfBuildspecUrls');
+	}
+	await page.exposeFunction('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
 		try {
-			// TODO: same as above
-			page._pageBindings.set('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
-
 			// Always listen the history state api
 			if (!isTest && config.historyChanges) {
 				await page.evaluate((bundle) => {
@@ -291,18 +290,27 @@ async function openPage(config, singlePage) {
 						}, 10);
 					}
 
-					window.onpopstate = function () {
-						_appendVariantScripts();
-					};
+					function newHistoryChange(type) {
+						var orig = history[type];
+						return function () {
+							var rv = orig.apply(this, arguments);
+							var e = new Event('changestate');
+							e.arguments = arguments;
+							e.eventName = type;
+							window.dispatchEvent(e);
+							return rv;
+						};
+					}
 
-					var pushState = history.pushState;
-					history.pushState = function (state) {
-						if (typeof history.onpushstate == 'function') {
-							history.onpushstate({ state: state });
-						}
+					history.pushState = newHistoryChange('pushState');
+					history.replaceState = newHistoryChange('replaceState');
+
+					window.addEventListener('popstate', function (e) {
 						_appendVariantScripts();
-						return pushState.apply(history, arguments);
-					};
+					});
+					window.addEventListener('changestate', function (e) {
+						_appendVariantScripts();
+					});
 				}, assetBundle.bundle);
 			}
 
@@ -364,9 +372,7 @@ async function openPage(config, singlePage) {
 				loadListener = null;
 			}
 		} catch (error) {
-			if (config.debug) {
-				console.log(error.message);
-			}
+			console.log(error.message);
 		}
 	};
 
@@ -385,6 +391,9 @@ async function openPage(config, singlePage) {
 	// Push the changed url to the list of watched urls.
 	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
 		urls.push(urlAfterLoad);
+		// Replace the exposed function
+		page._pageBindings.delete('isOneOfBuildspecUrls');
+		await page.exposeFunction('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
 	}
 
 	return page;
