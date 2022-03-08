@@ -268,21 +268,27 @@ async function openPage(config, singlePage) {
 		aboutpage = null;
 	}
 
-	if (page._pageBindings.has('isOneOfBuildspecUrls')) {
-		page._pageBindings.delete('isOneOfBuildspecUrls');
+	if (initial) {
+		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
 	}
-	await page.exposeFunction('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
 		try {
+			await page.evaluate((urls) => {
+				window.__testUrls = urls;
+			}, urls);
+
 			// Always listen the history state api
 			if (!isTest && config.historyChanges) {
 				await page.evaluate(
 					(bundle, TEST_ID) => {
 						function _appendVariantScripts() {
 							setTimeout(() => {
-								if (typeof window.isOneOfBuildspecUrls !== 'function' || !window.isOneOfBuildspecUrls(location.href)) {
+								if (
+									typeof window.isOneOfBuildspecUrls !== 'function' ||
+									!window.isOneOfBuildspecUrls(location.href, window.__testUrls)
+								) {
 									return;
 								}
 								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
@@ -362,7 +368,14 @@ async function openPage(config, singlePage) {
 				);
 			} else {
 				try {
-					await page.addScriptTag({ content: assetBundle.bundle });
+					const scriptTag = await page.addScriptTag({ content: assetBundle.bundle });
+					await page.evaluate(
+						(script, TEST_ID) => {
+							script.dataset.id = TEST_ID;
+						},
+						scriptTag,
+						process.env.TEST_ID
+					);
 				} catch (error) {
 					console.log(error.message);
 				}
@@ -397,9 +410,10 @@ async function openPage(config, singlePage) {
 	// Push the changed url to the list of watched urls.
 	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
 		urls.push(urlAfterLoad);
-		// Replace the exposed function
-		page._pageBindings.delete('isOneOfBuildspecUrls');
-		await page.exposeFunction('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
+		// Update the test urls array in window for history statechange event.
+		await page.evaluate((urls) => {
+			window.__testUrls = urls;
+		}, urls);
 	}
 
 	return page;
