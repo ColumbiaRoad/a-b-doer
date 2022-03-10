@@ -86,11 +86,11 @@ describe('DOM', () => {
 			const ret = [];
 
 			let t = Date.now();
-			await waitFor(() => false);
+			await waitFor(() => undefined);
 			ret.push(Date.now() - t);
 
 			t = Date.now();
-			await waitFor(() => false);
+			await waitFor(() => undefined);
 			ret.push(Date.now() - t);
 
 			return ret;
