@@ -270,42 +270,62 @@ async function openPage(config, singlePage) {
 		aboutpage = null;
 	}
 
-	// TODO: Change to something less error prone if possible. Fixes the "already exposed function" error
-	page._pageBindings.set('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
+	if (initial) {
+		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
+	}
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
 		try {
-			// TODO: same as above
-			page._pageBindings.set('isOneOfBuildspecUrls', (url) => isOneOfBuildspecUrls(url, urls));
+			await page.evaluate((urls) => {
+				window.__testUrls = urls;
+			}, urls);
 
 			// Always listen the history state api
 			if (!isTest && config.historyChanges) {
-				await page.evaluate((bundle) => {
-					function _appendVariantScripts() {
-						setTimeout(() => {
-							if (typeof window.isOneOfBuildspecUrls !== 'function' || !window.isOneOfBuildspecUrls(location.href)) {
-								return;
-							}
-							const node = document.createElement('script');
-							node.innerHTML = bundle;
-							document.head.appendChild(node);
-						}, 10);
-					}
-
-					window.onpopstate = function () {
-						_appendVariantScripts();
-					};
-
-					var pushState = history.pushState;
-					history.pushState = function (state) {
-						if (typeof history.onpushstate == 'function') {
-							history.onpushstate({ state: state });
+				await page.evaluate(
+					(bundle, TEST_ID) => {
+						function _appendVariantScripts() {
+							setTimeout(() => {
+								if (
+									typeof window.isOneOfBuildspecUrls !== 'function' ||
+									!window.isOneOfBuildspecUrls(location.href, window.__testUrls)
+								) {
+									return;
+								}
+								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
+								const node = document.createElement('script');
+								node.dataset.id = TEST_ID;
+								node.innerHTML = bundle;
+								document.head.appendChild(node);
+							}, 10);
 						}
-						_appendVariantScripts();
-						return pushState.apply(history, arguments);
-					};
-				}, assetBundle.bundle);
+
+						function newHistoryChange(type) {
+							var orig = history[type];
+							return function () {
+								var rv = orig.apply(this, arguments);
+								var e = new Event('changestate');
+								e.arguments = arguments;
+								e.eventName = type;
+								window.dispatchEvent(e);
+								return rv;
+							};
+						}
+
+						history.pushState = newHistoryChange('pushState');
+						history.replaceState = newHistoryChange('replaceState');
+
+						window.addEventListener('popstate', function (e) {
+							_appendVariantScripts();
+						});
+						window.addEventListener('changestate', function (e) {
+							_appendVariantScripts();
+						});
+					},
+					assetBundle.bundle,
+					process.env.TEST_ID
+				);
 			}
 
 			// Check if the current url matches watched test urls.
@@ -350,7 +370,14 @@ async function openPage(config, singlePage) {
 				);
 			} else {
 				try {
-					await page.addScriptTag({ content: assetBundle.bundle });
+					const scriptTag = await page.addScriptTag({ content: assetBundle.bundle });
+					await page.evaluate(
+						(script, TEST_ID) => {
+							script.dataset.id = TEST_ID;
+						},
+						scriptTag,
+						process.env.TEST_ID
+					);
 				} catch (error) {
 					console.log(error.message);
 				}
@@ -366,9 +393,7 @@ async function openPage(config, singlePage) {
 				loadListener = null;
 			}
 		} catch (error) {
-			if (config.debug) {
-				console.log(error.message);
-			}
+			console.log(error.message);
 		}
 	};
 
@@ -387,6 +412,10 @@ async function openPage(config, singlePage) {
 	// Push the changed url to the list of watched urls.
 	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
 		urls.push(urlAfterLoad);
+		// Update the test urls array in window for history statechange event.
+		await page.evaluate((urls) => {
+			window.__testUrls = urls;
+		}, urls);
 	}
 
 	return page;
