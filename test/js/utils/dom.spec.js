@@ -81,16 +81,20 @@ describe('DOM', () => {
 	it('should change polling timeout', async () => {
 		const times = await page.evaluate(async () => {
 			const { setDefaultTimeout, waitFor } = utilFns;
-			setDefaultTimeout(500);
+			setDefaultTimeout(200);
 
 			const ret = [];
 
 			let t = Date.now();
-			await waitFor(() => undefined);
+			await waitFor(() => {
+				return undefined;
+			});
 			ret.push(Date.now() - t);
 
 			t = Date.now();
-			await waitFor(() => undefined);
+			await waitFor(() => {
+				return undefined;
+			});
 			ret.push(Date.now() - t);
 
 			return ret;
@@ -98,12 +102,12 @@ describe('DOM', () => {
 
 		const [first, second] = times;
 
-		expect(first).toBeGreaterThan(500);
+		expect(first).toBeGreaterThan(200);
 		// Allow some milliseconds for value fetching
-		expect(first).toBeLessThan(600);
+		expect(first).toBeLessThan(300);
 
-		expect(second).toBeGreaterThan(500);
+		expect(second).toBeGreaterThan(200);
 		// Allow some milliseconds for value fetching
-		expect(second).toBeLessThan(600);
+		expect(second).toBeLessThan(300);
 	});
 });
