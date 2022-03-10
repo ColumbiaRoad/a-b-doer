@@ -29,6 +29,8 @@ import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
 import browserslist from 'browserslist';
 
+const specRequire$1 = createRequire(import.meta.url);
+
 function getFlagEnv(name) {
 	const val = process.env[name];
 	if (val === true || val === 'true') return true;
@@ -63,13 +65,13 @@ function unifyPath(path) {
 function convertToEsmPath(path) {
 	/* need to prepend configPath with file:// if function receives a Windows path */
 	if (process.platform == 'win32' && !path.startsWith('file://')) {
-		return specRequire('url').pathToFileURL(path).href;
+		return specRequire$1('url').pathToFileURL(path).href;
 	}
 	return path;
 }
 
 // Require is not defined in ES module scope
-const specRequire$1 = createRequire(import.meta.url);
+const specRequire = createRequire(import.meta.url);
 
 /**
  * Config defaults
@@ -101,8 +103,8 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	const configPathJs = path.resolve(fileDir, fileWithoutExt + '.js');
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
-		delete specRequire$1.cache[configPath];
-		return specRequire$1(configPath);
+		delete specRequire.cache[configPath];
+		return specRequire(configPath);
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
 		const { default: configMod } = await import(
@@ -646,7 +648,7 @@ function preactDebug() {
 			// Prepend preact debug module to the imported code
 			if (!getFlagEnv('TEST_ENV') && this.getModuleInfo(id).isEntry && getFlagEnv('PREACT') && getFlagEnv('PREVIEW')) {
 				const contents = readFileSync(id).toString();
-				return `import "preact/debug";\n${contents};`;
+				return `import "preact/devtools";\n${contents};`;
 			}
 			return null;
 		},
