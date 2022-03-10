@@ -77,4 +77,33 @@ describe('DOM', () => {
 		expect(content).toMatch(`bar123`);
 		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
 	});
+
+	it('should change polling timeout', async () => {
+		const times = await page.evaluate(async () => {
+			const { setDefaultTimeout, waitFor } = utilFns;
+			setDefaultTimeout(500);
+
+			const ret = [];
+
+			let t = Date.now();
+			await waitFor(() => false);
+			ret.push(Date.now() - t);
+
+			t = Date.now();
+			await waitFor(() => false);
+			ret.push(Date.now() - t);
+
+			return ret;
+		});
+
+		const [first, second] = times;
+
+		expect(first).toBeGreaterThan(500);
+		// Allow some milliseconds for value fetching
+		expect(first).toBeLessThan(600);
+
+		expect(second).toBeGreaterThan(500);
+		// Allow some milliseconds for value fetching
+		expect(second).toBeLessThan(600);
+	});
 });

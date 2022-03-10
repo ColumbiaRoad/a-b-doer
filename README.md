@@ -223,13 +223,13 @@ This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils
 
 ### pollQuerySelector
 
-Type `(selector: string | Selector, callback: (node: HTMLElement) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (node: HTMLElement) => void, wait?: number = 5000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
 ### pollQuerySelectorAll
 
-Type `(selector: string | Selector, callback: (nodes: HTMLElement[]) => void, wait?: number = 1000) => void`
+Type `(selector: string | Selector, callback: (nodes: HTMLElement[]) => void, wait?: number = 5000) => void`
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
@@ -265,28 +265,22 @@ Note: polyfills Promise automatically
 import { waitElement } from 'a-b-doer';
 
 (async () => {
-  // Wait 10 seconds for window variable to be set.
-  try {
-    const node = await waitElement('.foo');
+  // Wait 5 seconds for element to be visible in the DOM
+  const node = await waitElement('.foo');
+  if (node) {
     console.log(node.attributes, node.parentElement);
-  } catch (e) {
-    // Do nothing.
   }
 })();
 
 // or without async/await
-waitElement('.foo')
-  .then(function (node) {
-    console.log(node.attributes, node.parentElement);
-  })
-  .catch(function () {
-    // Do nothing.
-  });
+waitElement('.foo').then(function (node) {
+  console.log(node.attributes, node.parentElement);
+});
 ```
 
 ### waitElements
 
-Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElement[]>`
+Type `(selector: string | Selector, timeout?: number = 5000) => Promise<NodeListOf<HTMLElement> | []>`
 
 Same as waitElement, but resolved value is always an array.
 
@@ -296,33 +290,24 @@ Note: polyfills Promise automatically
 import { waitElements } from 'a-b-doer';
 
 (async () => {
-  // Wait 10 seconds for window variable to be set.
-  try {
-    // Always an array
-    const nodes = await waitElements('.foo');
-    nodes.forEach((node) => {
-      console.log(node.attributes, node.parentElement);
-    });
-  } catch (e) {
-    // Do nothing.
-  }
+  // Always an array
+  const nodes = await waitElements('.foo');
+  nodes.forEach((node) => {
+    console.log(node.attributes, node.parentElement);
+  });
 })();
 
 // or without async/await
-waitElements('.foo')
-  .then(function (nodes) {
-    nodes.forEach((node) => {
-      console.log(node.attributes, node.parentElement);
-    });
-  })
-  .catch(function () {
-    // Do nothing.
+waitElements('.foo').then(function (nodes) {
+  nodes.forEach((node) => {
+    console.log(node.attributes, node.parentElement);
   });
+});
 ```
 
 ### waitFor
 
-Type `(() => any, timeout?: number = 5000) => Promise<any>`
+Type `(() => any, timeout?: number = 5000) => Promise<any | undefined>`
 
 Returns a promise which will be resolved if given function returns truthy value. It calls the function every 100ms until the timeout (ms) has passed.
 
@@ -333,24 +318,22 @@ import { waitFor } from 'a-b-doer';
 
 (async () => {
   // Wait 10 seconds for window variable to be set.
-  try {
-    const someLazyVar = await waitFor(() => window.someLazyVar, 10000);
-    // Do something with the lazy variable
-    console.log(someLazyVar);
-  } catch (e) {
-    console.log('No var');
-  }
+  const someLazyVar = await waitFor(() => window.someLazyVar, 10000);
+  // Do something with the lazy variable. Return value is undefined if the window variable is not found in given time frame.
+  console.log(someLazyVar);
 })();
 
 // or without async/await
-waitFor(() => window.someLazyVar, 10000)
-  .then(function (someLazyVar) {
-    console.log(someLazyVar);
-  })
-  .catch(function () {
-    console.log('No var');
-  });
+waitFor(() => window.someLazyVar, 10000).then(function (someLazyVar) {
+  console.log(someLazyVar);
+});
 ```
+
+### setDefaultTimeout
+
+Type `(timeout: number) => void`
+
+Sets the default timeout for all poll/wait dom utilities (default timeout is 5000 ms)
 
 ### useRef
 

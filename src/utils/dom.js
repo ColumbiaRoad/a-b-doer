@@ -7,6 +7,8 @@ export const createSelector = (node, selector) => [node, selector];
 const getSelectorParent = (selector) => (isArray(selector) ? selector[0] : document);
 const getSelectorQuery = (selector) => (isArray(selector) ? selector[1] : selector);
 
+let defaultTimeout = 5000;
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  *
@@ -14,8 +16,8 @@ const getSelectorQuery = (selector) => (isArray(selector) ? selector[1] : select
  * @param {(targetNode: HTMLElement) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export const pollQuerySelector = (selector, callback, wait = 1000) => {
-	var el = getSelectorParent(selector).querySelector(getSelectorQuery(selector));
+export const pollQuerySelector = (selector, callback, wait = defaultTimeout) => {
+	let el = getSelectorParent(selector).querySelector(getSelectorQuery(selector));
 	if (el) {
 		callback(el);
 	} else if (wait > 0) {
@@ -33,8 +35,8 @@ export const pollQuerySelector = (selector, callback, wait = 1000) => {
  * @param {(targetNodes: NodeListOf<HTMLElement>) => void} callback
  * @param {Number} [wait] how many milliseconds to poll, default 1000
  */
-export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
-	var el = getSelectorParent(selector).querySelectorAll(getSelectorQuery(selector));
+export const pollQuerySelectorAll = (selector, callback, wait = defaultTimeout) => {
+	let el = getSelectorParent(selector).querySelectorAll(getSelectorQuery(selector));
 	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
@@ -49,11 +51,11 @@ export const pollQuerySelectorAll = (selector, callback, wait = 1000) => {
  *
  * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
- * @returns {Promise<HTMLElement>}
+ * @returns {Promise<HTMLElement | undefined>}
  */
-export const waitElement = (selector, wait = 5000) => {
-	return new Promise((resolve, reject) => {
-		const t = setTimeout(reject, wait + 10);
+export const waitElement = (selector, wait = defaultTimeout) => {
+	return new Promise((resolve) => {
+		const t = setTimeout(resolve, wait + 10);
 		pollQuerySelector(
 			selector,
 			(element) => {
@@ -70,16 +72,16 @@ export const waitElement = (selector, wait = 5000) => {
  *
  * @param {String|Array} selector Element selector string or array
  * @param {Number} [wait] default 5 seconds
- * @returns {Promise<NodeListOf<HTMLElement>>}
+ * @returns {Promise<NodeListOf<HTMLElement> | []>}
  */
-export const waitElements = (selector, wait = 5000) => {
-	return new Promise((resolve, reject) => {
-		const t = setTimeout(reject, wait + 10);
+export const waitElements = (selector, wait = defaultTimeout) => {
+	return new Promise((resolve) => {
+		const t = setTimeout(() => resolve([]), wait + 10);
 		pollQuerySelectorAll(
 			selector,
-			(element) => {
+			(elements) => {
 				clearTimeout(t);
-				resolve(element);
+				resolve(elements);
 			},
 			wait
 		);
@@ -94,15 +96,15 @@ export const waitElements = (selector, wait = 5000) => {
  *
  * @param {() => WaitedValue} func
  * @param {Number} [wait]
- * @returns {Promise<WaitedValue>}
+ * @returns {Promise<WaitedValue | undefined>}
  */
-export const waitFor = (func, wait = 5000) => {
-	return new Promise((resolve, reject) => {
-		const t = setTimeout(reject, wait + 10);
+export const waitFor = (func, wait = defaultTimeout) => {
+	return new Promise((resolve) => {
+		const t = setTimeout(resolve, wait + 10);
 
 		const _func = (count) => {
 			const res = func();
-			if (res) {
+			if (res !== undefined) {
 				clearTimeout(t);
 				resolve(res);
 			} else if (count > 0) {
@@ -248,4 +250,8 @@ export const clearAll = () => {
 export const unmount = (vnode) => {
 	runUnmountCallbacks(vnode);
 	domRemove(getVNodeDom(vnode, true));
+};
+
+export const setDefaultTimeout = (timeout) => {
+	defaultTimeout = timeout;
 };

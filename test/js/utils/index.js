@@ -9,6 +9,7 @@ import {
 	waitFor,
 	waitElement,
 	waitElements,
+	setDefaultTimeout,
 } from 'a-b-doer';
 
 window.utilFns = {
@@ -22,4 +23,5 @@ window.utilFns = {
 	waitFor,
 	waitElement,
 	waitElements,
+	setDefaultTimeout,
 };
