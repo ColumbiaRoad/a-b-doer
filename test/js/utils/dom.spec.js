@@ -79,28 +79,31 @@ describe('DOM', () => {
 	});
 
 	it('should change polling timeout', async () => {
-		const times = await page.evaluate(async () => {
+		await page.evaluate(() => {
 			const { setDefaultTimeout, waitFor } = utilFns;
 			setDefaultTimeout(200);
 
-			const ret = [];
+			window.__timeoutRes = [];
 
 			let t = Date.now();
-			await waitFor(() => {
+			waitFor(() => {
 				return undefined;
+			}).then(() => {
+				window.__timeoutRes.push(Date.now() - t);
 			});
-			ret.push(Date.now() - t);
 
 			t = Date.now();
-			await waitFor(() => {
+			waitFor(() => {
 				return undefined;
+			}).then(() => {
+				window.__timeoutRes.push(Date.now() - t);
 			});
-			ret.push(Date.now() - t);
-
-			return ret;
 		});
 
-		const [first, second] = times;
+		await page.waitForTimeout(500);
+
+		const res = await page.evaluate(() => window.__timeoutRes);
+		const [first, second] = res;
 
 		expect(first).toBeGreaterThan(200);
 		// Allow some milliseconds for value fetching
