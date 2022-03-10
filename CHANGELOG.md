@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.1.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.0...v3.1.1) (2022-03-10)
+
+
+### Bug Fixes
+
+* Clean previous assets from dom on history changestate event ([ecd263a](https://github.com/ColumbiaRoad/a-b-doer/commit/ecd263a512ea49fc17ed31916c3386f938edd070))
+* History change events were broken and replace state wasn't implemented ([c332b00](https://github.com/ColumbiaRoad/a-b-doer/commit/c332b00b40d3d10a1e6c791c47f5fba7f49e0516))
+* Less error prone checker for test urls ([8616cf7](https://github.com/ColumbiaRoad/a-b-doer/commit/8616cf7468a119c2de5fc3ad1d8ad1080ea89cfc))
+
 ## [3.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.0.1...v3.1.0) (2022-02-15)
 
 
