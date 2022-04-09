@@ -1,7 +1,6 @@
 import externals from 'rollup-plugin-node-externals';
 
 export default {
-	input: 'test.js',
 	output: {
 		format: 'es',
 		file: 'dist/bin/abdo.js',

@@ -4,7 +4,7 @@
   "description": "Utility library which makes developing of A/B test variants easier (maybe)",
   "main": "./main.js",
   "scripts": {
-    "build": "rollup ./bin/abdo.js -c",
+    "build": "rollup ./bin/abdo.js -c && rollup ./lib/amd.js -o ./dist/bin/amd.js",
     "clean": "rimraf ./dist",
     "try:build": "node ./dist/bin/abdo.js build",
     "try:build-all": "node ./dist/bin/abdo.js build-all",
