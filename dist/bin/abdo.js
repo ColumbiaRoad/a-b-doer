@@ -231,6 +231,11 @@ async function openPage(config, singlePage) {
 	let url = getDefaultUrl(urls);
 	let urlAfterLoad = url;
 
+	const wasInitial = initial;
+	if (initial) {
+		initial = false;
+	}
+
 	const page = await getPage(config, singlePage);
 	if (isOneOfBuildspecUrls(page.url(), urls)) {
 		url = page.url();
@@ -248,7 +253,7 @@ async function openPage(config, singlePage) {
 	if (assetBundle.js) pageTags.push('js');
 	if (assetBundle.styles) pageTags.push('css');
 
-	let text = initial ? 'Opening' : 'Reloading';
+	let text = wasInitial ? 'Opening' : 'Reloading';
 
 	if (!singlePage) {
 		text = 'Opening';
@@ -270,7 +275,7 @@ async function openPage(config, singlePage) {
 		aboutpage = null;
 	}
 
-	if (initial) {
+	if (wasInitial) {
 		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
 	}
 
@@ -329,7 +334,7 @@ async function openPage(config, singlePage) {
 			}
 
 			// Check if the current url matches watched test urls.
-			if (!initial && !isOneOfBuildspecUrls(page.url(), urls)) {
+			if (!wasInitial && !isOneOfBuildspecUrls(page.url(), urls)) {
 				return;
 			}
 
@@ -399,13 +404,12 @@ async function openPage(config, singlePage) {
 
 	page.on('domcontentloaded', loadListener);
 
-	await page.goto(url, { waitUntil: 'networkidle0' });
+	await page.goto(url, { waitUntil: 'networkidle2' });
 
 	if (onLoad) {
 		await onLoad(page);
 	}
 
-	initial = false;
 	// There might be some redirect/hash/etc
 	urlAfterLoad = page.url();
 
@@ -765,7 +769,6 @@ async function bundler(testConfig) {
 	const TEST_ID = id || 't' + (hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default');
 	// Assign some common process.env variables for bundler/etc and custom rollup plugins
 	process.env.PREACT = process.env.preact = PREACT;
-	process.env.NODE_ENV = NODE_ENV;
 	process.env.IE = IE;
 	process.env.PREVIEW = PREVIEW;
 	process.env.TEST_ENV = TEST_ENV;
@@ -804,7 +807,9 @@ async function bundler(testConfig) {
 						entries: [
 							{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
 							{ find: 'react', replacement: 'preact/compat' },
+							{ find: 'react-dom/test-utils', replacement: 'preact/test-utils' },
 							{ find: 'react-dom', replacement: 'preact/compat' },
+							{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
 						],
 					},
 				],
@@ -824,6 +829,8 @@ async function bundler(testConfig) {
 				[
 					'node-resolve',
 					{
+						browser: true,
+						preferBuiltins: false,
 						extensions: babelConfig.extensions,
 						moduleDirectories: ['node_modules', path.join(rootDir, 'node_modules')],
 					},
