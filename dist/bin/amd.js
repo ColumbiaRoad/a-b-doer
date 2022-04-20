@@ -12,9 +12,7 @@
 	window.abdo = window.abdo || {};
 	if (!window.abdo.loadScript) {
 		// Overridable resolve script that can be used to load the dependency script
-		window.abdo.loadScript = () => {
-			return new Promise((resolve) => resolve());
-		};
+		window.abdo.loadScript = (dep) => Promise.resolve(dep);
 	}
 
 	/**
@@ -58,8 +56,8 @@
 			if (dep === 'require') {
 				return resolve(require);
 			}
-			// Special case : exports statement
-			else if (dep === 'exports') {
+			// Special case : exports statement and module (latter is a workaround)
+			else if (dep === 'exports' || dep === 'module') {
 				return resolve({});
 			}
 
@@ -69,7 +67,8 @@
 			}
 
 			if (!loaded[dep]) {
-				window.abdo.resolveScript(dep).then(() => {
+				window.abdo.loadScript(dep).then(() => {
+					loaded[dep] = true;
 					resolveDep(dep).then(resolve);
 				});
 			} else {
