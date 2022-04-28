@@ -21,13 +21,13 @@ import rimraf from 'rimraf';
 import stringHash from 'string-hash';
 import styles from 'rollup-plugin-styles';
 import svgImport from 'rollup-plugin-svg-hyperscript';
-import typescript from 'rollup-plugin-typescript2';
 import { babel } from '@rollup/plugin-babel';
 import { fileURLToPath } from 'url';
 import { minify } from 'terser';
 import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
 import browserslist from 'browserslist';
+import esbuild from 'rollup-plugin-esbuild';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -814,17 +814,13 @@ async function bundler(testConfig) {
 					},
 				],
 				[
-					'typescript',
-					useSourcemaps
-						? {
-								tsconfigOverride: {
-									compilerOptions: {
-										sourceMap: true,
-										inlineSourceMap: true,
-									},
-								},
-						  }
-						: {},
+					'esbuild',
+					{
+						include: /\.[t]sx?$/,
+						minify: minify$1,
+						target: 'esnext',
+						jsx: 'preserve',
+					},
 				],
 				[
 					'node-resolve',
@@ -1005,7 +1001,8 @@ async function bundler(testConfig) {
 				{ sourceMap: useSourcemaps && { includeSources: true, asObject: true } }
 			);
 
-			const { code, fileName, facadeModuleId, modules } = mainChunk;
+			const { code, fileName, facadeModuleId: facadeModuleIdFull, modules } = mainChunk;
+			const facadeModuleId = facadeModuleIdFull.split('?')[0];
 
 			// Inject amd loader to main chunk on build process.
 			if (!watch) {
@@ -1024,7 +1021,7 @@ async function bundler(testConfig) {
 				console.warn(
 					chalk.yellow('File ', facadeModuleId, 'has no exported functions. Chunk initialization will fail.')
 				);
-				process.exit();
+				process.exit(0);
 			}
 			const exportIndex = Math.max(exps.indexOf('default'), 0);
 
@@ -1246,7 +1243,7 @@ function getPluginsConfig(defaults, override = []) {
 		'svg-hyperscript': svgImport,
 		image,
 		'preact-debug': preactDebug,
-		typescript,
+		esbuild,
 	};
 
 	return defaults
