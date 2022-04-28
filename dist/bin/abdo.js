@@ -817,7 +817,6 @@ async function bundler(testConfig) {
 					'esbuild',
 					{
 						include: /\.[t]sx?$/,
-						minify: minify$1,
 						target: 'esnext',
 						jsx: 'preserve',
 					},
