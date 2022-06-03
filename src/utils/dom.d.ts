@@ -16,7 +16,7 @@ export function createSelector<E extends Element = HTMLElement>(element: E, sele
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
  * @param callback
- * @param wait how many milliseconds to poll, default 1000 ms
+ * @param wait how many milliseconds to poll, default 5000 ms
  */
 export function pollQuerySelector<E extends Element, S extends Selector<E, string>>(
 	selector: S,
@@ -39,7 +39,7 @@ export function pollQuerySelector<E extends Element = HTMLElement>(
  * This returns all elements that matches the selector.
  * @param selector Element selector string
  * @param callback
- * @param wait how many milliseconds to poll, default 1000 ms
+ * @param wait how many milliseconds to poll, default 5000 ms
  */
 export function pollQuerySelectorAll<E extends Element, S extends Selector<K, string>>(
 	selector: S,
@@ -65,12 +65,12 @@ export function pollQuerySelectorAll<E extends Element = HTMLElement>(
 export function waitElement<E extends Element, S extends Selector<K, string>>(
 	selector: S,
 	wait?: number
-): Promise<ReturnElementType<S[1]>>;
+): Promise<ReturnElementType<S[1]> | undefined>;
 export function waitElement<K extends keyof AnyElementTagNameMap>(
 	selector: K,
 	wait?: number
-): Promise<AnyElementTagNameMap[K]>;
-export function waitElement<E extends Element = HTMLElement>(selector: string, wait?: number): Promise<E>;
+): Promise<AnyElementTagNameMap[K] | undefined>;
+export function waitElement<E extends Element = HTMLElement>(selector: string, wait?: number): Promise<E | undefined>;
 
 /**
  * Waits x milliseconds for given selector to be visible in the DOM. Checks every 100ms.
@@ -80,19 +80,22 @@ export function waitElement<E extends Element = HTMLElement>(selector: string, w
 export function waitElements<E extends Element, S extends Selector<K, string>>(
 	selector: S,
 	wait?: number
-): Promise<NodeListOf<ReturnElementType<S[1]>>>;
+): Promise<NodeListOf<ReturnElementType<S[1]>> | []>;
 export function waitElements<K extends keyof AnyElementTagNameMap>(
 	selector: string,
 	wait?: number
-): Promise<NodeListOf<AnyElementTagNameMap[K]>>;
-export function waitElements<E extends Element = HTMLElement>(selector: string, wait?: number): Promise<NodeListOf<E>>;
+): Promise<NodeListOf<AnyElementTagNameMap[K]> | []>;
+export function waitElements<E extends Element = HTMLElement>(
+	selector: string,
+	wait?: number
+): Promise<NodeListOf<E> | []>;
 
 /**
  * Waits x milliseconds for given function to return true.
  * @param func Evaluation function
  * @param wait default 5000 ms
  */
-export function waitFor<T = any>(func: () => T, wait?: number): Promise<T>;
+export function waitFor<T = any>(func: () => T, wait?: number): Promise<T | undefined>;
 
 type ChildNode = HTMLElement | VNode;
 
@@ -165,3 +168,9 @@ export function clearAll(): void;
  * @param vnode
  */
 export function unmount(vnode: VNode): void;
+
+/**
+ * Sets default timeout for all polling utilities (default is 5000 ms).
+ * @param timeout
+ */
+export function setDefaultTimeout(timeout: number): void;
