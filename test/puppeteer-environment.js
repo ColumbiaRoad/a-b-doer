@@ -7,7 +7,7 @@ import NodeEnvironment from 'jest-environment-node';
 
 const DIR = join(tmpdir(), 'jest_puppeteer_global_setup');
 
-class PuppeteerEnvironment extends NodeEnvironment {
+class PuppeteerEnvironment extends NodeEnvironment.default /* WHY?! */ {
 	constructor(config) {
 		super(config);
 	}

@@ -12,7 +12,6 @@ import alias from '@rollup/plugin-alias';
 import autoprefixer from 'autoprefixer';
 import commonjs from '@rollup/plugin-commonjs';
 import glob from 'glob';
-import iife from 'rollup-plugin-iife';
 import image from '@rollup/plugin-image';
 import inlineSvg from 'rollup-plugin-inline-svg';
 import nodeResolve from '@rollup/plugin-node-resolve';
@@ -21,13 +20,12 @@ import rimraf from 'rimraf';
 import stringHash from 'string-hash';
 import styles from 'rollup-plugin-styles';
 import svgImport from 'rollup-plugin-svg-hyperscript';
-import typescript from 'rollup-plugin-typescript2';
 import { babel } from '@rollup/plugin-babel';
 import { fileURLToPath } from 'url';
-import { minify } from 'terser';
 import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
 import browserslist from 'browserslist';
+import esbuild from 'rollup-plugin-esbuild';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -707,7 +705,7 @@ async function bundler(testConfig) {
 		features,
 		bundler: bundlerConfig = {},
 	} = testConfig;
-	const minify$1 = configMinify ?? !watch;
+	const minify = configMinify ?? !watch;
 
 	const babelConfig = {
 		babelrc: false,
@@ -814,17 +812,12 @@ async function bundler(testConfig) {
 					},
 				],
 				[
-					'typescript',
-					useSourcemaps
-						? {
-								tsconfigOverride: {
-									compilerOptions: {
-										sourceMap: true,
-										inlineSourceMap: true,
-									},
-								},
-						  }
-						: {},
+					'esbuild',
+					{
+						include: /\.[t]sx?$/,
+						target: 'esnext',
+						jsx: 'preserve',
+					},
 				],
 				[
 					'node-resolve',
@@ -841,11 +834,11 @@ async function bundler(testConfig) {
 					'styles',
 					{
 						mode: 'extract',
-						minimize: minify$1,
+						minimize: minify,
 						modules:
 							modules !== false
 								? {
-										generateScopedName: minify$1
+										generateScopedName: minify
 											? (name, file) => {
 													return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
 											  }
@@ -902,7 +895,6 @@ async function bundler(testConfig) {
 								removeSVGTagAttrs: false,
 							},
 					  ],
-				chunks && ['iife'],
 			].filter(Boolean),
 			[...plugins]
 		),
@@ -923,10 +915,8 @@ async function bundler(testConfig) {
 
 	const chunksOuputConfig = chunks
 		? {
-				format: 'amd',
-				amd: {
-					autoId: true,
-				},
+				format: 'system',
+				name: '',
 		  }
 		: {};
 
@@ -938,9 +928,9 @@ async function bundler(testConfig) {
 		exports: 'named',
 		name: path.basename(entryFile).split('.')[0],
 		// When frequently used global variables are local, they could be minified by terser.
-		intro: minify$1 ? 'const window = self; const document = window.document;' : '',
+		intro: minify ? 'const window = self; const document = window.document;' : '',
 		plugins: [
-			minify$1 &&
+			minify &&
 				terser(
 					Object.assign(
 						{
@@ -995,42 +985,6 @@ async function bundler(testConfig) {
 		}
 
 		const outputChunks = [...bundleOutput.output];
-
-		let amd;
-
-		if (chunks) {
-			const amdLoader = fs.readFileSync(path.resolve(__dirname, 'amd.js')).toString();
-			amd = await minify(
-				{ 'amd.js': amdLoader },
-				{ sourceMap: useSourcemaps && { includeSources: true, asObject: true } }
-			);
-
-			const { code, fileName, facadeModuleId, modules } = mainChunk;
-
-			// Inject amd loader to main chunk on build process.
-			if (!watch) {
-				fs.writeFile(path.resolve(buildDir, fileName), `!(function(){${amd.code}\n${code}})();`, (err) => {
-					err && console.error(err);
-				});
-			}
-
-			// amd loader should be the first chunk on the bundle
-			outputChunks.unshift(amd);
-
-			const mainModuleId = fileName.substr(0, fileName.lastIndexOf('.'));
-			// Get the written exports of the file so we could know which function to call.
-			const exps = modules[facadeModuleId]?.renderedExports || [];
-			if (!exps.length) {
-				console.warn(
-					chalk.yellow('File ', facadeModuleId, 'has no exported functions. Chunk initialization will fail.')
-				);
-				process.exit();
-			}
-			const exportIndex = Math.max(exps.indexOf('default'), 0);
-
-			// Inject the initialization snippet to the chunks array
-			outputChunks.push({ code: `require(['${mainModuleId}'],function(m){m.${exps[exportIndex]}()});` });
-		}
 
 		// Base for the bundle map that contains other maps.
 		const bundleMap = {
@@ -1103,9 +1057,6 @@ async function bundler(testConfig) {
 				console.log(chalk.cyan('-'.repeat(fullLen)));
 				bundleOutput.output.forEach((output, index) => {
 					let code = output.code || output.source || '';
-					if (!index && amd) {
-						code = `!(function(){${amd.code}\n${code}})();`;
-					}
 					const line = output.fileName.padEnd(len) + toKb(code).padStart(bundleSize.length) || '';
 					console.log(chalk.cyan(line));
 				});
@@ -1241,12 +1192,11 @@ function getPluginsConfig(defaults, override = []) {
 		styles,
 		replace,
 		commonjs,
-		iife,
 		'inline-svg': inlineSvg,
 		'svg-hyperscript': svgImport,
 		image,
 		'preact-debug': preactDebug,
-		typescript,
+		esbuild,
 	};
 
 	return defaults

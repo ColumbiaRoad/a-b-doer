@@ -675,6 +675,7 @@ Supported plugins for array format are currently.
 Note, changing the configuration for these plugins might break something.
 
 alias,
+esbuild,
 babel,
 commonjs,
 image,
