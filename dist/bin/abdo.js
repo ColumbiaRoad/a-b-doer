@@ -419,6 +419,7 @@ async function openPage(config, singlePage) {
 						.replace(/[^0-9-]/g, '')}.png`
 				),
 			});
+
 			await page.evaluate(() => {
 				const toolbar = document.getElementById('a-b-toolbar');
 				if (toolbar) {
@@ -427,7 +428,7 @@ async function openPage(config, singlePage) {
 			});
 		});
 
-		await page.exposeFunction('disableInjection', () => {
+		await page.exposeFunction('toggleInjection', () => {
 			disabled = !disabled;
 		});
 	}
@@ -689,6 +690,7 @@ async function getPage(config, singlePage) {
 
 	const browser = await getBrowser(config);
 
+	/** @type {Promise<import("puppeteer").Page>}*/
 	let newPage;
 	if (singlePage) {
 		page = newPage = (await browser.pages())[0];
@@ -696,16 +698,6 @@ async function getPage(config, singlePage) {
 	} else {
 		newPage = await context.newPage();
 	}
-
-	const targets = browser.targets();
-	console.log(targets);
-	const devtools = targets.find(({ _targetInfo }) => _targetInfo.url.indexOf('devtools://') !== -1);
-
-	const session = await devtools.createCDPSession();
-	await session.send('Overlay.disable');
-
-	// // Hide dimension info from viewport corner
-	await newPage.client().send('Overlay.disable');
 
 	if (config.debug) {
 		newPage.on('console', (msg) => {

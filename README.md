@@ -656,6 +656,22 @@ Default `true`
 
 Inlines source maps to the bundle with local file urls. This works only in watch mode.
 
+### toolbar
+
+Type `boolean | (page: puppeteer.Page, config: a-b-doer.config, initial: boolean) => string` (optional)
+
+Default `false`
+
+Shows closable toolbar on bottom of the screen. Toolbars contains useful utils like page screenshot. You can add custom html to the toolbar by defining this as a function which returns a HTML string.
+
+### sourcemap
+
+Type `boolean` (optional)
+
+Default `true`
+
+Inlines source maps to the bundle with local file urls. This works only in watch mode.
+
 ### Example config.json
 
 ```json
