@@ -18,12 +18,12 @@ import replace from '@rollup/plugin-replace';
 import { babel } from '@rollup/plugin-babel';
 import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
+import { fileURLToPath } from 'url';
 import glob from 'glob';
 import image from '@rollup/plugin-image';
 import inlineSvg from 'rollup-plugin-inline-svg';
 import rimraf from 'rimraf';
 import svgImport from 'rollup-plugin-svg-hyperscript';
-import { fileURLToPath } from 'url';
 import browserslist from 'browserslist';
 import esbuild from 'rollup-plugin-esbuild';
 
@@ -211,6 +211,8 @@ async function buildspec (testPath) {
 	};
 }
 
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+
 let cachedToolbar;
 
 /**
@@ -252,7 +254,11 @@ async function injectToolbar(page, config, initial) {
 }
 
 async function buildToolbar() {
-	const cwd = process.cwd();
+	const TEST_ID = 'tlbr01';
+
+	const modDir = import.meta.url.includes('dist/bin/abdo.js')
+		? path.join(__dirname$1, '..', '..')
+		: path.join(__dirname$1, '..', '..', '..');
 
 	const babelConfig = {
 		babelrc: false,
@@ -263,7 +269,7 @@ async function buildToolbar() {
 			[
 				'@emotion/babel-plugin-jsx-pragmatic',
 				{
-					module: path.join(cwd, 'src', 'jsx'),
+					module: path.join(modDir, 'src', 'jsx'),
 					import: 'h, hf',
 					export: 'h, hf',
 				},
@@ -273,25 +279,24 @@ async function buildToolbar() {
 	};
 
 	const bundle = await rollup({
-		input: path.join(cwd, 'lib', 'utils', 'toolbar', 'index.js'),
+		input: path.join(modDir, 'lib', 'utils', 'toolbar', 'index.js'),
 		plugins: [
 			alias({
 				entries: [
-					{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
-					{ find: 'a-b-doer/hooks', replacement: path.join(cwd, 'hooks') },
-					{ find: 'a-b-doer', replacement: path.join(cwd, 'main') },
+					{ find: /^@\/(.*)/, replacement: path.join(modDir, '$1') },
+					{ find: 'a-b-doer/hooks', replacement: path.join(modDir, 'hooks') },
+					{ find: 'a-b-doer', replacement: path.join(modDir, 'main') },
 				],
 			}),
 			nodeResolve({
 				browser: true,
 				preferBuiltins: false,
 				extensions: babelConfig.extensions,
-				moduleDirectories: ['node_modules', path.join(cwd, 'node_modules')],
 			}),
 			babel({ ...babelConfig, babelHelpers: 'bundled' }),
 			commonjs({ transformMixedEsModules: true }),
 			styles({
-				mode: ['inject', { singleTag: true, attributes: { 'data-id': process.env.TEST_ID } }],
+				mode: ['inject', { singleTag: true, attributes: { 'data-id': TEST_ID } }],
 				minimize: true,
 				modules: {
 					generateScopedName: (name, file) => {
@@ -304,13 +309,13 @@ async function buildToolbar() {
 			replace({
 				preventAssignment: true,
 				values: {
-					'process.env.PREACT': process.env.PREACT,
-					'process.env.preact': process.env.PREACT,
+					'process.env.PREACT': 'false',
+					'process.env.preact': 'false',
 					'process.env.NODE_ENV': process.env.NODE_ENV,
-					'process.env.IE': process.env.IE,
+					'process.env.IE': 'false',
 					'process.env.PREVIEW': process.env.PREVIEW,
 					'process.env.TEST_ENV': process.env.TEST_ENV,
-					'process.env.TEST_ID': JSON.stringify(process.env.TEST_ID),
+					'process.env.TEST_ID': JSON.stringify(TEST_ID),
 				},
 			}),
 		],

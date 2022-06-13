@@ -24,7 +24,13 @@
 
 	small {
 		font-size: 0.9em !important;
+
+		label {
+			display: flex !important;
+			align-items: center !important;
+		}
 	}
+
 
 	&.closed {
 		transform: translateX(-100%);
