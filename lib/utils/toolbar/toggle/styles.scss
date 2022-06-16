@@ -1,0 +1,38 @@
+.toggle {
+	display: flex;
+	align-items: center;
+
+	input {
+		display: none !important;
+
+		&:checked + .icon {
+			border-color: #288fb0;
+		}
+		&:checked + .icon span {
+			transform: translateX(16px);
+			background: #288fb0;
+		}
+	}
+
+	.icon {
+		border: 2px solid #ccc;
+		width: 40px;
+		height: 22px;
+		border-radius: 12px;
+		position: relative;
+		display: inline-block;
+		cursor: pointer;
+		transition: border 0.3s ease-in-out;
+		margin-right: 13px;
+	}
+	.icon span {
+		height: 16px;
+		width: 16px;
+		border-radius: 10px;
+		background: #ccc;
+		transition: all 0.3s ease-in-out;
+		position: absolute;
+		left: 2px;
+		top: 1px;
+	}
+}

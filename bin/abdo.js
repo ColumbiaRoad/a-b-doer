@@ -319,7 +319,7 @@ async function createScreenshots(targetPath) {
 /**
  * Returns all entry buildspecs that matches the given path.
  * @param {string} targetPath
- * @return {Object[]}
+ * @return {Promise<Object[]>}
  */
 async function getMatchingBuildspec(targetPath) {
 	let indexFiles = [];
