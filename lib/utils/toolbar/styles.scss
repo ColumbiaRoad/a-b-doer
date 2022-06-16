@@ -1,0 +1,129 @@
+.toolbar {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	padding: 15px;
+	z-index: 9999;
+	background: #fff;
+	text-align: left;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+	font-size: 14px;
+	transition: transform 0.3s ease-in-out;
+	width: 250px;
+	box-sizing: border-box;
+
+	* {
+		box-sizing: border-box;
+		font: normal 14px/14px arial, sans-serif !important;
+	}
+
+	div {
+		text-align: left;
+		word-break: break-all;
+	}
+
+	small {
+		font-size: 0.9em !important;
+
+		label {
+			display: flex !important;
+			align-items: center !important;
+		}
+	}
+
+
+	&.closed {
+		transform: translateX(-100%);
+	}
+	&.open {
+		transform: translateX(0);
+	}
+
+	hr {
+		height: 1px;
+		background: #ccc;
+		border: 0;
+		margin: 16px 0;
+	}
+
+	a {
+		cursor: pointer;
+		display: inline-block;
+		padding: 5px 10px;
+		line-height: 14px;
+		font-family: arial, sans-serif;
+		border-radius: 4px;
+		transition: all 0.3s ease-out;
+
+		&:hover {
+			background: rgba(0, 0, 0, 0.15);
+		}
+	}
+	img {
+		width: 50px;
+		margin: 0 auto 15px;
+		display: block;
+	}
+
+	.previewButton {
+		display: block;
+		width: 100%;
+		background: #767676;
+		color: #fff;
+		margin: 10px 0 !important;
+		padding: 10px 15px !important;
+		border: 0 !important;
+		border-radius: 4px;
+
+		&:hover {
+			background: #5b5b5b;
+		}
+	}
+	.toggle {
+		position: absolute;
+		right: -40px;
+		bottom: 0;
+		box-shadow: 5px 0 5px rgba(0, 0, 0, 0.5);
+		background: #fff !important;
+		border-radius: 0 5px 0px 0;
+		width: 50px;
+		height: 40px;
+		border: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		transition: all 0.3s ease-in-out;
+		transform: translate(-26px, 26px);
+		cursor: pointer;
+
+		&::before,
+		&::after {
+			content: '';
+			width: 14px;
+			height: 1px;
+			background: #000;
+			transform: rotate(45deg);
+			position: absolute;
+			top: 16px;
+			left: 23px;
+			transition: transform 0.15s ease-in-out;
+		}
+		&::after {
+			transform: rotate(-45deg);
+			top: 26px;
+		}
+	}
+
+	&.open .toggle,
+	.toggle:hover {
+		transform: translate(0, 0);
+	}
+
+	&.open .toggle {
+		&::before {
+			transform: rotate(-45deg);
+		}
+		&::after {
+			transform: rotate(45deg);
+		}
+	}
+}

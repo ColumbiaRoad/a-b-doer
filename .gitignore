@@ -5,3 +5,4 @@ testing
 .browserslistrc
 .env
 .build
+.DS_Store

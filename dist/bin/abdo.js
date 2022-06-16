@@ -11,19 +11,19 @@ import puppeteerCore from 'puppeteer-core';
 import alias from '@rollup/plugin-alias';
 import autoprefixer from 'autoprefixer';
 import commonjs from '@rollup/plugin-commonjs';
+import nodeResolve from '@rollup/plugin-node-resolve';
+import styles from 'rollup-plugin-styles';
+import stringHash from 'string-hash';
+import replace from '@rollup/plugin-replace';
+import { babel } from '@rollup/plugin-babel';
+import { rollup, watch as watch$1 } from 'rollup';
+import { terser } from 'rollup-plugin-terser';
+import { fileURLToPath } from 'url';
 import glob from 'glob';
 import image from '@rollup/plugin-image';
 import inlineSvg from 'rollup-plugin-inline-svg';
-import nodeResolve from '@rollup/plugin-node-resolve';
-import replace from '@rollup/plugin-replace';
 import rimraf from 'rimraf';
-import stringHash from 'string-hash';
-import styles from 'rollup-plugin-styles';
 import svgImport from 'rollup-plugin-svg-hyperscript';
-import { babel } from '@rollup/plugin-babel';
-import { fileURLToPath } from 'url';
-import { rollup, watch as watch$1 } from 'rollup';
-import { terser } from 'rollup-plugin-terser';
 import browserslist from 'browserslist';
 import esbuild from 'rollup-plugin-esbuild';
 
@@ -51,7 +51,7 @@ function hashf(s) {
 	return hash;
 }
 
-function unifyPath(path) {
+function unifyPath$1(path) {
 	return path.replace(process.cwd(), '').replace(/\\/g, '/');
 }
 
@@ -86,6 +86,7 @@ const config = {
 	sourcemap: true,
 	watch: false,
 	windowSize: [1920, 1080],
+	toolbar: false,
 	features: {
 		hooks: 'auto',
 		jsx: 'auto',
@@ -210,6 +211,134 @@ async function buildspec (testPath) {
 	};
 }
 
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+
+let cachedToolbar;
+
+/**
+ *
+ * @param {import('puppeteer').Page} page
+ * @param {Object} config
+ * @param {Boolean} initial
+ * @returns
+ */
+async function injectToolbar(page, config, initial) {
+	if (!process.env.PREVIEW || !config.toolbar) {
+		return;
+	}
+
+	if (!cachedToolbar) {
+		cachedToolbar = await buildToolbar();
+	}
+
+	const customToolbar = typeof config.toolbar === 'function' ? `${config.toolbar(page, config, initial)}<hr/>` : '';
+
+	await page.evaluate(
+		(TEST_ID, testPath, config, customToolbar) => {
+			window.abPreview = {
+				testId: TEST_ID,
+				config,
+				testPath,
+				customToolbar,
+			};
+		},
+		process.env.TEST_ID,
+		config.testPath.replace(process.cwd(), ''),
+		config,
+		customToolbar
+	);
+
+	if (cachedToolbar) {
+		await page.addScriptTag({ content: cachedToolbar });
+	}
+}
+
+async function buildToolbar() {
+	const TEST_ID = 'tlbr01';
+
+	const modDir = import.meta.url.includes('dist/bin/abdo.js')
+		? path.join(__dirname$1, '..', '..')
+		: path.join(__dirname$1, '..', '..', '..');
+
+	const babelConfig = {
+		babelrc: false,
+		plugins: [
+			'@babel/plugin-proposal-optional-chaining',
+			'@babel/plugin-proposal-nullish-coalescing-operator',
+			['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'hf', throwIfNamespace: false }],
+			[
+				'@emotion/babel-plugin-jsx-pragmatic',
+				{
+					module: path.join(modDir, 'src', 'jsx'),
+					import: 'h, hf',
+					export: 'h, hf',
+				},
+			],
+		],
+		extensions: ['.js', '.jsx'],
+	};
+
+	const bundle = await rollup({
+		input: path.join(modDir, 'lib', 'utils', 'toolbar', 'index.js'),
+		plugins: [
+			alias({
+				entries: [
+					{ find: /^@\/(.*)/, replacement: path.join(modDir, '$1') },
+					{ find: 'a-b-doer/hooks', replacement: path.join(modDir, 'hooks') },
+					{ find: 'a-b-doer', replacement: path.join(modDir, 'main') },
+				],
+			}),
+			nodeResolve({
+				browser: true,
+				preferBuiltins: false,
+				extensions: babelConfig.extensions,
+			}),
+			babel({ ...babelConfig, babelHelpers: 'bundled' }),
+			commonjs({ transformMixedEsModules: true }),
+			styles({
+				mode: ['inject', { singleTag: true, attributes: { 'data-id': TEST_ID } }],
+				minimize: true,
+				modules: {
+					generateScopedName: (name, file) => {
+						return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
+					},
+				},
+				plugins: [autoprefixer],
+				url: { inline: true },
+			}),
+			replace({
+				preventAssignment: true,
+				values: {
+					'process.env.PREACT': 'false',
+					'process.env.preact': 'false',
+					'process.env.NODE_ENV': process.env.NODE_ENV,
+					'process.env.IE': 'false',
+					'process.env.PREVIEW': process.env.PREVIEW,
+					'process.env.TEST_ENV': process.env.TEST_ENV,
+					'process.env.TEST_ID': JSON.stringify(TEST_ID),
+				},
+			}),
+		],
+	});
+
+	const { output } = await bundle.generate({
+		intro: 'const window = self; const document = window.document;',
+		format: 'iife',
+		plugins: [
+			terser({
+				mangle: { toplevel: true },
+				format: { comments: false },
+			}),
+		],
+	});
+
+	return output[0]?.code;
+}
+
+function unifyPath(path) {
+	return path.replace(process.cwd(), '').replace(/\\/g, '/');
+}
+
 const { yellow: yellow$1, green: green$1 } = chalk;
 
 const isTest = getFlagEnv('TEST_ENV');
@@ -218,10 +347,11 @@ let counter = 0;
 let loadListener = null;
 let browser, context;
 let aboutpage = null;
+let disabled = false;
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
- * @param {{url: string, assetBundle: Object} config
+ * @param {url: string, assetBundle: Object} config
  * @param {Boolean} [singlePage]
  */
 async function openPage(config, singlePage) {
@@ -275,6 +405,37 @@ async function openPage(config, singlePage) {
 
 	if (wasInitial) {
 		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
+
+		await page.exposeFunction('takeScreenshot', async (fullPage = true) => {
+			await page.evaluate(() => {
+				const toolbar = document.getElementById('a-b-toolbar');
+				if (toolbar) {
+					toolbar.style.display = 'none';
+				}
+			});
+
+			await page.screenshot({
+				fullPage,
+				path: path.join(
+					config.buildDir,
+					`screenshot-${new Date()
+						.toISOString()
+						.replace('T', '-')
+						.replace(/[^0-9-]/g, '')}.png`
+				),
+			});
+
+			await page.evaluate(() => {
+				const toolbar = document.getElementById('a-b-toolbar');
+				if (toolbar) {
+					toolbar.style.display = 'block';
+				}
+			});
+		});
+
+		await page.exposeFunction('toggleInjection', () => {
+			disabled = !disabled;
+		});
 	}
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
@@ -283,6 +444,14 @@ async function openPage(config, singlePage) {
 			await page.evaluate((urls) => {
 				window.__testUrls = urls;
 			}, urls);
+
+			if (!isTest) {
+				injectToolbar(page, { ...config, disabled }, wasInitial);
+			}
+
+			if (disabled) {
+				return;
+			}
 
 			// Always listen the history state api
 			if (!isTest && config.historyChanges) {
@@ -526,6 +695,7 @@ async function getPage(config, singlePage) {
 
 	const browser = await getBrowser(config);
 
+	/** @type {Promise<import("puppeteer").Page>}*/
 	let newPage;
 	if (singlePage) {
 		page = newPage = (await browser.pages())[0];
@@ -764,7 +934,7 @@ async function bundler(testConfig) {
 	const IE = getFlagEnv('IE') ?? supportIE;
 	const PREVIEW = Boolean(watch || preview);
 	const TEST_ENV = getFlagEnv('TEST_ENV') || false;
-	const TEST_ID = id || 't' + (hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default');
+	const TEST_ID = id || 't' + (hashf(path.dirname(unifyPath$1(entryFile))).toString(36) || '-default');
 	// Assign some common process.env variables for bundler/etc and custom rollup plugins
 	process.env.PREACT = process.env.preact = PREACT;
 	process.env.IE = IE;
@@ -840,7 +1010,7 @@ async function bundler(testConfig) {
 								? {
 										generateScopedName: minify
 											? (name, file) => {
-													return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
+													return 't' + stringHash(unifyPath$1(file)).toString(36).substr(0, 4) + '-' + name;
 											  }
 											: 't_[dir]_[name]_[local]__[hash:4]',
 								  }
@@ -1557,7 +1727,7 @@ async function createScreenshots(targetPath) {
 /**
  * Returns all entry buildspecs that matches the given path.
  * @param {string} targetPath
- * @return {Object[]}
+ * @return {Promise<Object[]>}
  */
 async function getMatchingBuildspec(targetPath) {
 	let indexFiles = [];
