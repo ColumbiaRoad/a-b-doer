@@ -2,11 +2,11 @@
 import chalk from 'chalk';
 import chokidar from 'chokidar';
 import minimist from 'minimist';
-import path from 'path';
+import path from 'node:path';
 import pluginutils, { createFilter } from '@rollup/pluginutils';
-import fs, { readFileSync, lstatSync, readdirSync } from 'fs';
+import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
 import merge from 'lodash.merge';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import puppeteerCore from 'puppeteer-core';
 import alias from '@rollup/plugin-alias';
 import autoprefixer from 'autoprefixer';
@@ -18,7 +18,7 @@ import replace from '@rollup/plugin-replace';
 import { babel } from '@rollup/plugin-babel';
 import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 import glob from 'glob';
 import image from '@rollup/plugin-image';
 import inlineSvg from 'rollup-plugin-inline-svg';
@@ -911,7 +911,7 @@ async function bundler(testConfig) {
 					  },
 			],
 		].filter(Boolean),
-		exclude: /core-js/,
+		exclude: [/node_modules(?!(\/|\\)(a-b-doer))/], // Put to regex group all modules that contains something that wouldn't be fixed without babel (like optional chaining)
 		extensions: ['.js', '.jsx', '.ts', '.tsx'],
 	};
 
@@ -995,7 +995,7 @@ async function bundler(testConfig) {
 						browser: true,
 						preferBuiltins: false,
 						extensions: babelConfig.extensions,
-						moduleDirectories: ['node_modules', path.join(rootDir, 'node_modules')],
+						modulePaths: ['node_modules', path.join(rootDir, 'node_modules')],
 					},
 				],
 				['babel', { ...babelConfig, babelHelpers: 'bundled' }],
