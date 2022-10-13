@@ -4,10 +4,14 @@ import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, 
 
 export const createSelector = (node, selector) => [node, selector];
 
+// Alias for createSelector
+export const cs = createSelector;
+
 const getSelectorParent = (selector) => (isArray(selector) ? selector[0] : document);
 const getSelectorQuery = (selector) => (isArray(selector) ? selector[1] : selector);
 
 let defaultTimeout = 5000;
+let defaultPollDelay = 100;
 
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
@@ -22,8 +26,8 @@ export const pollQuerySelector = (selector, callback, wait = defaultTimeout) => 
 		callback(el);
 	} else if (wait > 0) {
 		setTimeout(function () {
-			pollQuerySelector(selector, callback, wait - 100);
-		}, 100);
+			pollQuerySelector(selector, callback, wait - defaultPollDelay);
+		}, defaultPollDelay);
 	}
 };
 
@@ -41,8 +45,8 @@ export const pollQuerySelectorAll = (selector, callback, wait = defaultTimeout) 
 		callback(Array.from(el));
 	} else if (wait > 0) {
 		setTimeout(function () {
-			pollQuerySelectorAll(selector, callback, wait - 100);
-		}, 100);
+			pollQuerySelectorAll(selector, callback, wait - defaultPollDelay);
+		}, defaultPollDelay);
 	}
 };
 
@@ -110,11 +114,11 @@ export const waitFor = (func, wait = defaultTimeout) => {
 			} else if (count > 0) {
 				setTimeout(function () {
 					_func(count - 1);
-				}, 100);
+				}, defaultPollDelay);
 			}
 		};
 
-		_func(wait / 100);
+		_func(wait / defaultPollDelay);
 	});
 };
 
@@ -241,8 +245,8 @@ export const clear = (target, id) => {
 	domRemove(target.querySelector(`[data-o="${id}"]`));
 };
 
-export const clearAll = () => {
-	document.querySelectorAll(`[data-o="${getTestID()}"]`).forEach((node) => {
+export const clearAll = (id = getTestID()) => {
+	document.querySelectorAll(`[data-o="${id}"]`).forEach((node) => {
 		domRemove(node);
 	});
 };
@@ -254,4 +258,8 @@ export const unmount = (vnode) => {
 
 export const setDefaultTimeout = (timeout) => {
 	defaultTimeout = timeout;
+};
+
+export const setDefaultPollDelay = (delay) => {
+	defaultPollDelay = delay;
 };
