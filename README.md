@@ -233,7 +233,7 @@ Type `(selector: string | Selector, callback: (nodes: HTMLElement[]) => void, wa
 
 Runs given query selector for every 100ms until the wait timeout (ms) has passed and calls the callback if selector returns something.
 
-### createSelector
+### createSelector (alias cs)
 
 Type `(domNode: HTMLElement, selector: string) => Selector`
 
@@ -334,6 +334,12 @@ waitFor(() => window.someLazyVar, 10000).then(function (someLazyVar) {
 Type `(timeout: number) => void`
 
 Sets the default timeout for all poll/wait dom utilities (default timeout is 5000 ms)
+
+### setDefaultPollDelay
+
+Type `(timeout: number) => void`
+
+Sets the default delay between polls for all poll/wait dom utilities (default delay is 100 ms)
 
 ### useRef
 
