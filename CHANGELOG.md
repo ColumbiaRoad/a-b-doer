@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.2.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.0.0...v4.2.0) (2022-10-13)
+
+
+### Features
+
+* New utils and tweaks ([#32](https://github.com/ColumbiaRoad/a-b-doer/issues/32)) ([768a97b](https://github.com/ColumbiaRoad/a-b-doer/commit/768a97b8b507650e064806e62bc6ca441345aaeb))
+
+
+### Bug Fixes
+
+* Upgraded deps ([e15677a](https://github.com/ColumbiaRoad/a-b-doer/commit/e15677a277e5be9956e2af7254f22ef0d1174e49))
+
+## [4.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.0.0...v4.1.0) (2022-10-13)
+
+
+### Features
+
+* New utils and tweaks ([#32](https://github.com/ColumbiaRoad/a-b-doer/issues/32)) ([768a97b](https://github.com/ColumbiaRoad/a-b-doer/commit/768a97b8b507650e064806e62bc6ca441345aaeb))
+
+
+### Bug Fixes
+
+* Upgraded deps ([e15677a](https://github.com/ColumbiaRoad/a-b-doer/commit/e15677a277e5be9956e2af7254f22ef0d1174e49))
+
 ## [4.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.2...v4.0.0) (2022-06-16)
 
 ### ⚠ BREAKING CHANGES
