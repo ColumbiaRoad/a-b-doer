@@ -11,7 +11,46 @@ describe('Configuration options', () => {
 	let page;
 
 	it('should create chunked output', async () => {
-		const output = await bundler({ ...config, chunks: true, entry: './chunks.jsx' });
+		const output = await bundler({
+			...config,
+			chunks: true,
+			entry: './chunks.jsx',
+			// Simulate manual adding of main chunk import
+			onBefore: async (page) => {
+				page.setRequestInterception(true);
+				page.on('request', (req) => {
+					const url = req.url();
+					if (url.includes('http://localhost/')) {
+						const urlPath = url.replace('http://localhost/', '');
+						req.respond({
+							body: fs.readFileSync(path.resolve(__dirname, '.build', urlPath)),
+							// Allow cross domain requests to "localhost", current domain is data url
+							headers: {
+								'Access-Control-Allow-Origin': '*',
+							},
+							contentType: 'application/javascript',
+						});
+					} else {
+						req.continue();
+					}
+				});
+				page.on('domcontentloaded', async () => {
+					const systemJS = fs.readFileSync(path.resolve(__dirname, 's.min.js')).toString();
+					await page.addScriptTag({ content: systemJS });
+					setTimeout(async () => {
+						// Use localhost domain for chunks because current url is data url (see setup.js) and domain would be invalid for chunks
+						await page.addScriptTag({
+							content: `
+							System.constructor.prototype.resolve = function (id) {
+								return \`http://localhost/\${id.replace('./', '')}\`;
+							};
+							System.import("./chunks.js");
+							`,
+						});
+					}, 100);
+				});
+			},
+		});
 		page = await openPage(output);
 		await expect(page).toMatchElement('#chunks');
 		const content = await page.content();

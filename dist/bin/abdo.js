@@ -2,11 +2,11 @@
 import chalk from 'chalk';
 import chokidar from 'chokidar';
 import minimist from 'minimist';
-import path from 'path';
+import path from 'node:path';
 import pluginutils, { createFilter } from '@rollup/pluginutils';
-import fs, { readFileSync, lstatSync, readdirSync } from 'fs';
+import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
 import merge from 'lodash.merge';
-import { createRequire } from 'module';
+import { createRequire } from 'node:module';
 import puppeteerCore from 'puppeteer-core';
 import alias from '@rollup/plugin-alias';
 import autoprefixer from 'autoprefixer';
@@ -18,7 +18,7 @@ import replace from '@rollup/plugin-replace';
 import { babel } from '@rollup/plugin-babel';
 import { rollup, watch as watch$1 } from 'rollup';
 import { terser } from 'rollup-plugin-terser';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 import glob from 'glob';
 import image from '@rollup/plugin-image';
 import inlineSvg from 'rollup-plugin-inline-svg';
@@ -911,7 +911,7 @@ async function bundler(testConfig) {
 					  },
 			],
 		].filter(Boolean),
-		exclude: /core-js/,
+		exclude: [/node_modules(?!(\/|\\)(a-b-doer))/], // Put to regex group all modules that contains something that wouldn't be fixed without babel (like optional chaining)
 		extensions: ['.js', '.jsx', '.ts', '.tsx'],
 	};
 
@@ -995,7 +995,7 @@ async function bundler(testConfig) {
 						browser: true,
 						preferBuiltins: false,
 						extensions: babelConfig.extensions,
-						moduleDirectories: ['node_modules', path.join(rootDir, 'node_modules')],
+						modulePaths: ['node_modules', path.join(rootDir, 'node_modules')],
 					},
 				],
 				['babel', { ...babelConfig, babelHelpers: 'bundled' }],
@@ -1210,32 +1210,33 @@ async function bundler(testConfig) {
 					}
 				});
 			}
+		} else {
+			fs.writeFile(path.resolve(buildDir, getFileAs(mainChunk.fileName, 'bundle.js')), assetBundle, (err) => {
+				if (err) {
+					console.error(err);
+				} else if (!TEST_ENV) {
+					const mainChunk = bundleOutput.output[0];
+					const bundleName = getFileAs(mainChunk.fileName, 'bundle.js');
+					const bundleSize = toKb(assetBundle);
+
+					const len =
+						bundleOutput.output.reduce((acc, cur) => Math.max(acc, cur.fileName.length), bundleName.length) + 3;
+					const fullLen = len + bundleSize.length;
+
+					console.log(chalk.cyan('Output size:'));
+					console.log(chalk.cyan('-'.repeat(fullLen)));
+					bundleOutput.output.forEach((output, index) => {
+						let code = output.code || output.source || '';
+						const line = output.fileName.padEnd(len) + toKb(code).padStart(bundleSize.length) || '';
+						console.log(chalk.cyan(line));
+					});
+
+					console.log(chalk.cyan(bundleName.padEnd(len) + bundleSize));
+					console.log(chalk.cyan('-'.repeat(fullLen)));
+					console.log();
+				}
+			});
 		}
-
-		fs.writeFile(path.resolve(buildDir, getFileAs(mainChunk.fileName, 'bundle.js')), assetBundle, (err) => {
-			if (err) {
-				console.error(err);
-			} else if (!TEST_ENV && !watch) {
-				const mainChunk = bundleOutput.output[0];
-				const bundleName = getFileAs(mainChunk.fileName, 'bundle.js');
-				const bundleSize = toKb(assetBundle);
-
-				const len = bundleOutput.output.reduce((acc, cur) => Math.max(acc, cur.fileName.length), bundleName.length) + 3;
-				const fullLen = len + bundleSize.length;
-
-				console.log(chalk.cyan('Output size:'));
-				console.log(chalk.cyan('-'.repeat(fullLen)));
-				bundleOutput.output.forEach((output, index) => {
-					let code = output.code || output.source || '';
-					const line = output.fileName.padEnd(len) + toKb(code).padStart(bundleSize.length) || '';
-					console.log(chalk.cyan(line));
-				});
-
-				console.log(chalk.cyan(bundleName.padEnd(len) + bundleSize));
-				console.log(chalk.cyan('-'.repeat(fullLen)));
-				console.log();
-			}
-		});
 
 		return { bundle: assetBundle, styles: !!styles, js: !!js };
 	};
@@ -1266,7 +1267,8 @@ async function bundler(testConfig) {
 			...inputOptions,
 			output: outputOptions,
 			watch: {
-				buildDelay: 300,
+				buildDelay: 100,
+				skipWrite: true,
 				exclude: [path.join(testConfig.buildDir, '**')],
 			},
 		};
@@ -1300,7 +1302,7 @@ async function bundler(testConfig) {
 			else if (event.code === 'BUNDLE_START') {
 				if (page) {
 					console.log(chalk.cyan('Source code changed.'));
-					await page.evaluate(() => {
+					page.evaluate(() => {
 						// Chalk doesn't work in browser.
 						console.log('\x1b[92m%s\x1b[0m', 'Source code changed. Starting bundler...');
 					});

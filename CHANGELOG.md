@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.0.0...v4.1.0) (2022-10-13)
+
+
+### Features
+
+* New utils and tweaks ([#32](https://github.com/ColumbiaRoad/a-b-doer/issues/32)) ([768a97b](https://github.com/ColumbiaRoad/a-b-doer/commit/768a97b8b507650e064806e62bc6ca441345aaeb))
+
+
+### Bug Fixes
+
+* Upgraded deps ([e15677a](https://github.com/ColumbiaRoad/a-b-doer/commit/e15677a277e5be9956e2af7254f22ef0d1174e49))
+
+## [4.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.2...v4.0.0) (2022-06-16)
+
+### ⚠ BREAKING CHANGES
+
+- Poll utils have now the same timeout as wait utils, 5000ms
+  Wait utils no longer throws an error on timeout aka calls a promise reject but for now on they return a sane result that must be validated in the code
+  waitFor evaluates for any value that is not undefined. Previous check was a truthy check
+- Swithed to SystemJS because AMD output wasn't consistent with larger bundles.
+  Dropped injection of own chunk loader
+- Make watch faster by skipping bundle write and by reducing build delay
+
+### Features
+
+- Added script loading support for the amd loader ([c795f6d](https://github.com/ColumbiaRoad/a-b-doer/commit/c795f6dc6e0e19419e06c6078c165a0822e53f52))
+- Configurable timeout for dom utilities ([04d74ee](https://github.com/ColumbiaRoad/a-b-doer/commit/04d74ee51d288a17ecec48ba440f577ab01d95d8))
+- Use esbuild plugin for ts bundling instead of typescript plugin ([#29](https://github.com/ColumbiaRoad/a-b-doer/issues/29)) ([57960ab](https://github.com/ColumbiaRoad/a-b-doer/commit/57960abb61dc118bf006628e4d65d9f925718f32))
+- Toolbar for development ([72d7cba](https://github.com/ColumbiaRoad/a-b-doer/commit/72d7cbaea13c1ad05cb6a2d1d2c73f17860135ff)), closes [#30](https://github.com/ColumbiaRoad/a-b-doer/issues/30)
+
+### Bug Fixes
+
+- AMD resolve fixes ([a7e8ad6](https://github.com/ColumbiaRoad/a-b-doer/commit/a7e8ad603b0e8f2ea54a5c56f6500e3044969090))
+- preact/debug stopped working, use devtools ([4a09b37](https://github.com/ColumbiaRoad/a-b-doer/commit/4a09b37debb3305cc0a1ec4ba11da8a71fafe2ee))
+- Workaround for the cases where page.goto does not complete and reload happens ([899f665](https://github.com/ColumbiaRoad/a-b-doer/commit/899f665b353a65e42e1782161e8b4330d86f32b0))
+
 ### [3.1.2](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.0...v3.1.2) (2022-03-10)
 
 ### Bug Fixes
@@ -10,7 +46,11 @@ All notable changes to this project will be documented in this file. See [standa
 - History change events were broken and replace state wasn't implemented ([c332b00](https://github.com/ColumbiaRoad/a-b-doer/commit/c332b00b40d3d10a1e6c791c47f5fba7f49e0516))
 - Less error prone checker for test urls ([8616cf7](https://github.com/ColumbiaRoad/a-b-doer/commit/8616cf7468a119c2de5fc3ad1d8ad1080ea89cfc))
 
-### [3.1.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.0...v3.1.1) (2022-03-10)
+### [3.1.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.0...v3.1.1) (2022-02-21)
+
+### Bug Fixes
+
+- Added missing import ([5eb0f34](https://github.com/ColumbiaRoad/a-b-doer/commit/5eb0f3448befe5f1b24eaf406c6b284dccf5b8dc))
 
 ### Bug Fixes
 

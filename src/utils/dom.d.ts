@@ -12,6 +12,8 @@ export function createSelector<E extends Element = HTMLElement, K extends keyof 
 ): Selector<E, K>;
 export function createSelector<E extends Element = HTMLElement>(element: E, selector: string): Selector<E, string>;
 
+export const cs = createSelector;
+
 /**
  * Tries x many times if the given selector comes matches to element on DOM. There's a 100ms delay between each attempt.
  * @param selector Element selector string
@@ -100,7 +102,7 @@ export function waitFor<T = any>(func: () => T, wait?: number): Promise<T | unde
 type ChildNode = HTMLElement | VNode;
 
 /**
- * Adds element(s) to beginning of the given parent element child list
+ * Adds element(s) to end of the given parent element child list
  * @param child Created element
  * @param parent Targeted parent element
  * @param clearPrev Clear all matching same elements, default true
@@ -113,7 +115,7 @@ export function append<T extends ChildNode>(
 ): T extends HTMLElement ? HTMLElement : VNode;
 
 /**
- * Adds element(s) to end of the given parent element child list
+ * Adds element(s) to beginning of the given parent element child list
  * @param child Created element
  * @param parent Targeted parent element
  * @param clearPrev Clear all matching same elements, default true
@@ -159,9 +161,9 @@ export function insertAfter<T extends ChildNode>(
 export function clear(root: HTMLElement | Document | null, id: string): void;
 
 /**
- * Removes all DOM nodes that shares the current test ID (@see getTestID)
+ * Removes all DOM nodes that shares given id or the current test ID (@see getTestID)
  */
-export function clearAll(): void;
+export function clearAll(id?: string): void;
 
 /**
  * Runs VNode unmount callbacks and removes the element from dom
@@ -174,3 +176,9 @@ export function unmount(vnode: VNode): void;
  * @param timeout
  */
 export function setDefaultTimeout(timeout: number): void;
+
+/**
+ * Sets default poll delay for all polling utilities (default is 100 ms).
+ * @param timeout
+ */
+export function setDefaultPollDelay(delay: number): void;
