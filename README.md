@@ -678,6 +678,14 @@ Default `true`
 
 Inlines source maps to the bundle with local file urls. This works only in watch mode.
 
+### browserArgs
+
+Type `string[]` (optional)
+
+Default `[]`
+
+Extra browser args for Puppeteer
+
 ### Example config.json
 
 ```json

@@ -655,7 +655,9 @@ async function getBrowser(config = {}) {
 			userDataDir: config.userDataDir || undefined,
 			defaultViewport: null,
 			ignoreDefaultArgs: ['--disable-extensions'],
-			args: [`--window-size=${config.windowSize[0]},${config.windowSize[1]}`, '--incognito'],
+			args: [`--window-size=${config.windowSize[0]},${config.windowSize[1]}`, '--incognito'].concat(
+				config.browserArgs || []
+			),
 		});
 
 		aboutpage = (await browser.pages())[0];
