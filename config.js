@@ -14,20 +14,15 @@ if (!process.env.BROWSER_PATH) {
 export default {
 	browser: process.env.BROWSER_PATH,
 	bundler: {
-		plugins: [
+		resolve: (config = {}) => ({
+			...config,
 			// Add extra entry to alias plugin config
-			[
-				'alias',
-				(options) => ({
-					...options,
-					entries: [
-						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
-						{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
-					],
-				}),
+			alias: [
+				...(config.alias || []),
+				{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
+				{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
 			],
-		],
+		}),
 	},
 	screenshot: {
 		onBefore: (page) => {
