@@ -9,7 +9,9 @@ import get from 'lodash.get';
 import set from 'lodash.set';
 import merge from 'lodash.merge';
 import { createRequire } from 'node:module';
+import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
+import crypto from 'node:crypto';
 import glob from 'glob';
 import 'rollup-plugin-inline-svg';
 import replace from '@rollup/plugin-replace';
@@ -17,7 +19,6 @@ import rimraf from 'rimraf';
 import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
 import { createServer } from 'vite';
-import basicSsl from '@vitejs/plugin-basic-ssl';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -562,7 +563,18 @@ async function getBrowser(config = {}) {
 			console.log('With config:');
 			console.log(config);
 		}
-		console.log();
+
+		// Load the self-signed cert and create a SPKI fingerprint from it for Chrome so it won't nag about invalid cert
+		const cert = await getCertificate('node_modules/.vite/basic-ssl');
+		const pubKeyObject = crypto.createPublicKey(cert, {
+			type: 'pkcs1',
+			format: 'pem',
+		});
+		const publicKeyDer = pubKeyObject.export({
+			type: 'spki',
+			format: 'der',
+		});
+		const fingerprint = crypto.createHash('sha256').update(publicKeyDer).digest('base64');
 
 		browser = await puppeteerCore.launch({
 			headless: Boolean(config.headless),
@@ -571,10 +583,11 @@ async function getBrowser(config = {}) {
 			userDataDir: config.userDataDir || undefined,
 			defaultViewport: null,
 			ignoreDefaultArgs: ['--disable-extensions'],
-			ignoreHTTPSErrors: true,
-			args: [`--window-size=${config.windowSize[0]},${config.windowSize[1]}`, '--incognito'].concat(
-				config.browserArgs || []
-			),
+			args: [
+				`--window-size=${config.windowSize[0]},${config.windowSize[1]}`,
+				'--incognito',
+				`--ignore-certificate-errors-spki-list=${fingerprint}`,
+			].concat(config.browserArgs || []),
 		});
 
 		aboutpage = (await browser.pages())[0];
