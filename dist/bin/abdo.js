@@ -741,21 +741,6 @@ async function bundler(buildSpecConfig) {
 	const { minify: configMinify, preact, modules, id, chunks, chunkImages, watch, features } = testConfig;
 	const minify = configMinify ?? !watch;
 
-	// const babelConfig = {
-	// 	babelrc: false,
-	// 	presets: [
-	// 		[
-	// 			'@babel/preset-typescript',
-	// 			{
-	// 				modules: false,
-	// 			},
-	// 		],
-	// 	],
-	// 	plugins: ['transform-async-to-promises'].filter(Boolean),
-	// 	exclude: [/node_modules(?!(\/|\\)(a-b-doer))/], // Put to regex group all modules that contains something that wouldn't be fixed without babel (like optional chaining)
-	// 	extensions: ['.js', '.jsx', '.ts', '.tsx'],
-	// };
-
 	// Bundler behaves a little bit differently when there's style file as an entry.
 	let stylesOnly = /\.(le|sa|sc|c)ss$/.test(entryFile);
 
@@ -795,158 +780,14 @@ async function bundler(buildSpecConfig) {
 		  }
 		: {};
 
-	// const inputOptions = {
-	// 	input: [entryFile],
-	// 	treeshake: {
-	// 		propertyReadSideEffects: false,
-	// 		moduleSideEffects: true,
-	// 		tryCatchDeoptimization: false,
-	// 		unknownGlobalSideEffects: false,
-	// 		correctVarValueBeforeDeclaration: false,
-	// 	},
-	// 	plugins: getPluginsConfig(
-	// 		[
-	// 			['preact-debug'],
-	// 			[
-	// 				'alias',
-	// 				{
-	// 					entries: [
-	// 						{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
-	// 						{ find: 'react', replacement: 'preact/compat' },
-	// 						{ find: 'react-dom/test-utils', replacement: 'preact/test-utils' },
-	// 						{ find: 'react-dom', replacement: 'preact/compat' },
-	// 						{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
-	// 					],
-	// 				},
-	// 			],
-	// 			[
-	// 				'esbuild',
-	// 				{
-	// 					include: /\.[t]sx?$/,
-	// 					target: 'esnext',
-	// 					jsx: 'preserve',
-	// 				},
-	// 			],
-	// 			[
-	// 				'node-resolve',
-	// 				{
-	// 					browser: true,
-	// 					preferBuiltins: false,
-	// 					extensions: babelConfig.extensions,
-	// 					modulePaths: ['node_modules', path.join(rootDir, 'node_modules')],
-	// 				},
-	// 			],
-	// 			['babel', { ...babelConfig, babelHelpers: 'bundled' }],
-	// 			['commonjs', { transformMixedEsModules: true }],
-	// 			[
-	// 				'styles',
-	// 				{
-	// 					mode: 'extract',
-	// 					minimize: minify,
-	// 					modules:
-	// 						modules !== false
-	// 							? {
-	// 									generateScopedName: minify
-	// 										? (name, file) => {
-	// 												return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
-	// 										  }
-	// 										: 't_[dir]_[name]_[local]__[hash:4]',
-	// 							  }
-	// 							: undefined,
-	// 					plugins: [autoprefixer],
-	// 					url: { inline: true },
-	// 					alias: {
-	// 						scss: path.join(cwd, '/scss'),
-	// 						sass: path.join(cwd, '/sass'),
-	// 						less: path.join(cwd, '/less'),
-	// 						styles: path.join(cwd, '/styles'),
-	// 						css: path.join(cwd, 'css'),
-	// 						'@': cwd,
-	// 					},
-	// 				},
-	// 			],
-	// 			[
-	// 				'replace',
-	// 				{
-	// 					preventAssignment: true,
-	// 					values: {
-	// 						'process.env.PREACT': PREACT,
-	// 						'process.env.preact': PREACT,
-	// 						'process.env.NODE_ENV': NODE_ENV,
-	// 						'process.env.IE': IE,
-	// 						'process.env.PREVIEW': PREVIEW,
-	// 						'process.env.TEST_ENV': TEST_ENV,
-	// 						'process.env.TEST_ID': JSON.stringify(TEST_ID),
-	// 						...featuresReplaces,
-	// 					},
-	// 				},
-	// 			],
-	// 			[
-	// 				'image',
-	// 				{
-	// 					exclude: ['**/*.svg'],
-	// 				},
-	// 			],
-	// 			chunkImage(chunkImages),
-	// 			preact
-	// 				? [
-	// 						'svg-hyperscript',
-	// 						{
-	// 							importDeclaration: 'import {h} from "preact"',
-	// 							pragma: 'h',
-	// 							transformPropNames: false,
-	// 						},
-	// 				  ]
-	// 				: [
-	// 						'inline-svg',
-	// 						{
-	// 							removeSVGTagAttrs: false,
-	// 						},
-	// 				  ],
-	// 		].filter(Boolean),
-	// 		[...plugins]
-	// 	),
-	// 	watch: false,
-	// 	...chunksInputConfig,
-	// 	...restBundlerConfig,
-	// };
-
 	const chunksOuputConfig = chunks
 		? {
 				format: 'system',
 				name: '',
 		  }
 		: {};
+
 	const outputOptions = {};
-	// const outputOptions = {
-	// 	dir: buildDir,
-	// 	assetFileNames: '[name].css',
-	// 	strict: false,
-	// 	format: 'iife',
-	// 	exports: 'named',
-	// 	name: path.basename(entryFile).split('.')[0],
-	// 	// When frequently used global variables are local, they could be minified by terser.
-	// 	intro: minify ? 'const window = self; const document = window.document;' : '',
-	// 	plugins: [
-	// 		minify &&
-	// 			terser(
-	// 				Object.assign(
-	// 					{
-	// 						mangle: { toplevel: true },
-	// 						format: { comments: false },
-	// 					},
-	// 					chunkImages && {
-	// 						compress: {
-	// 							evaluate: false,
-	// 						},
-	// 					}
-	// 				)
-	// 			),
-	// 	].filter(Boolean),
-	// 	...chunksOuputConfig,
-	// 	...sourceMapOptions,
-	// 	...output,
-	// };
 
 	const jsxInject = preact
 		? 'import {h,Fragment} from "preact"'
