@@ -13,9 +13,9 @@ import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
 import crypto from 'node:crypto';
 import glob from 'glob';
-import 'rollup-plugin-inline-svg';
 import replace from '@rollup/plugin-replace';
 import rimraf from 'rimraf';
+import svgr from 'vite-plugin-svgr';
 import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
 import { createServer } from 'vite';
@@ -652,6 +652,34 @@ async function getPage(config, singlePage) {
 	return newPage;
 }
 
+/**
+ * Enables preact debug module. This plugin is required because there's another plugin that
+ * automatically imports h & Fragment and debug module must be imported before them.
+ */
+function preactDebug() {
+	let entry = '';
+	let config = {};
+
+	return {
+		name: 'preact-debug',
+		enforce: 'pre',
+		configResolved(resolvedConfig) {
+			config = resolvedConfig;
+		},
+		resolveId(id, importer) {
+			if (!importer && !entry) {
+				entry = id;
+			}
+		},
+		transform(code, id) {
+			if (entry === id && config.command === 'serve') {
+				code = `import "preact/devtools";\n${code};`;
+			}
+			return code;
+		},
+	};
+}
+
 // __dirname is not defined in ES module scope
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -671,7 +699,6 @@ const defaultConfig = {
 			alias: [
 				{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
 				{ find: 'react', replacement: 'preact/compat' },
-				{ find: 'react-dom/test-utils', replacement: 'preact/test-utils' },
 				{ find: 'react-dom', replacement: 'preact/compat' },
 				{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
 			],
@@ -714,6 +741,21 @@ async function bundler(buildSpecConfig) {
 	const { minify: configMinify, preact, modules, id, chunks, chunkImages, watch, features } = testConfig;
 	const minify = configMinify ?? !watch;
 
+	// const babelConfig = {
+	// 	babelrc: false,
+	// 	presets: [
+	// 		[
+	// 			'@babel/preset-typescript',
+	// 			{
+	// 				modules: false,
+	// 			},
+	// 		],
+	// 	],
+	// 	plugins: ['transform-async-to-promises'].filter(Boolean),
+	// 	exclude: [/node_modules(?!(\/|\\)(a-b-doer))/], // Put to regex group all modules that contains something that wouldn't be fixed without babel (like optional chaining)
+	// 	extensions: ['.js', '.jsx', '.ts', '.tsx'],
+	// };
+
 	// Bundler behaves a little bit differently when there's style file as an entry.
 	let stylesOnly = /\.(le|sa|sc|c)ss$/.test(entryFile);
 
@@ -753,6 +795,122 @@ async function bundler(buildSpecConfig) {
 		  }
 		: {};
 
+	// const inputOptions = {
+	// 	input: [entryFile],
+	// 	treeshake: {
+	// 		propertyReadSideEffects: false,
+	// 		moduleSideEffects: true,
+	// 		tryCatchDeoptimization: false,
+	// 		unknownGlobalSideEffects: false,
+	// 		correctVarValueBeforeDeclaration: false,
+	// 	},
+	// 	plugins: getPluginsConfig(
+	// 		[
+	// 			['preact-debug'],
+	// 			[
+	// 				'alias',
+	// 				{
+	// 					entries: [
+	// 						{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
+	// 						{ find: 'react', replacement: 'preact/compat' },
+	// 						{ find: 'react-dom/test-utils', replacement: 'preact/test-utils' },
+	// 						{ find: 'react-dom', replacement: 'preact/compat' },
+	// 						{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
+	// 					],
+	// 				},
+	// 			],
+	// 			[
+	// 				'esbuild',
+	// 				{
+	// 					include: /\.[t]sx?$/,
+	// 					target: 'esnext',
+	// 					jsx: 'preserve',
+	// 				},
+	// 			],
+	// 			[
+	// 				'node-resolve',
+	// 				{
+	// 					browser: true,
+	// 					preferBuiltins: false,
+	// 					extensions: babelConfig.extensions,
+	// 					modulePaths: ['node_modules', path.join(rootDir, 'node_modules')],
+	// 				},
+	// 			],
+	// 			['babel', { ...babelConfig, babelHelpers: 'bundled' }],
+	// 			['commonjs', { transformMixedEsModules: true }],
+	// 			[
+	// 				'styles',
+	// 				{
+	// 					mode: 'extract',
+	// 					minimize: minify,
+	// 					modules:
+	// 						modules !== false
+	// 							? {
+	// 									generateScopedName: minify
+	// 										? (name, file) => {
+	// 												return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
+	// 										  }
+	// 										: 't_[dir]_[name]_[local]__[hash:4]',
+	// 							  }
+	// 							: undefined,
+	// 					plugins: [autoprefixer],
+	// 					url: { inline: true },
+	// 					alias: {
+	// 						scss: path.join(cwd, '/scss'),
+	// 						sass: path.join(cwd, '/sass'),
+	// 						less: path.join(cwd, '/less'),
+	// 						styles: path.join(cwd, '/styles'),
+	// 						css: path.join(cwd, 'css'),
+	// 						'@': cwd,
+	// 					},
+	// 				},
+	// 			],
+	// 			[
+	// 				'replace',
+	// 				{
+	// 					preventAssignment: true,
+	// 					values: {
+	// 						'process.env.PREACT': PREACT,
+	// 						'process.env.preact': PREACT,
+	// 						'process.env.NODE_ENV': NODE_ENV,
+	// 						'process.env.IE': IE,
+	// 						'process.env.PREVIEW': PREVIEW,
+	// 						'process.env.TEST_ENV': TEST_ENV,
+	// 						'process.env.TEST_ID': JSON.stringify(TEST_ID),
+	// 						...featuresReplaces,
+	// 					},
+	// 				},
+	// 			],
+	// 			[
+	// 				'image',
+	// 				{
+	// 					exclude: ['**/*.svg'],
+	// 				},
+	// 			],
+	// 			chunkImage(chunkImages),
+	// 			preact
+	// 				? [
+	// 						'svg-hyperscript',
+	// 						{
+	// 							importDeclaration: 'import {h} from "preact"',
+	// 							pragma: 'h',
+	// 							transformPropNames: false,
+	// 						},
+	// 				  ]
+	// 				: [
+	// 						'inline-svg',
+	// 						{
+	// 							removeSVGTagAttrs: false,
+	// 						},
+	// 				  ],
+	// 		].filter(Boolean),
+	// 		[...plugins]
+	// 	),
+	// 	watch: false,
+	// 	...chunksInputConfig,
+	// 	...restBundlerConfig,
+	// };
+
 	const chunksOuputConfig = chunks
 		? {
 				format: 'system',
@@ -790,13 +948,22 @@ async function bundler(buildSpecConfig) {
 	// 	...output,
 	// };
 
+	const jsxInject = preact
+		? 'import {h,Fragment} from "preact"'
+		: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`;
+
 	const bundlerConfig = getBundlerConfig({
+		...(stylesOnly
+			? {
+					optimizeDeps: {
+						entries: [entryFile],
+					},
+			  }
+			: {}),
 		esbuild: {
 			jsxFactory: 'h',
 			jsxFragment: preact ? 'Fragment' : 'hf',
-			jsxInject: preact
-				? 'import {h,Fragment} from "preact"'
-				: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`,
+			jsxInject,
 		},
 		build: {
 			rollupOptions: {
@@ -814,22 +981,45 @@ async function bundler(buildSpecConfig) {
 				},
 			},
 		},
+		clearScreen: false,
 		...defaultConfig.bundler,
-		plugins: [
-			replace({
-				preventAssignment: true,
-				values: {
-					'process.env.PREACT': PREACT,
-					'process.env.preact': PREACT,
-					'process.env.NODE_ENV': NODE_ENV,
-					'process.env.IE': IE,
-					'process.env.PREVIEW': PREVIEW,
-					'process.env.TEST_ENV': TEST_ENV,
-					'process.env.TEST_ID': JSON.stringify(TEST_ID),
-					...featuresReplaces,
-				},
-			}),
-		].concat(defaultConfig.bundler.plugins),
+		plugins: getPluginsConfig(
+			[
+				['preact-debug'],
+				[
+					'replace',
+					{
+						preventAssignment: true,
+						values: {
+							'process.env.PREACT': PREACT,
+							'process.env.preact': PREACT,
+							'process.env.NODE_ENV': NODE_ENV,
+							'process.env.IE': IE,
+							'process.env.PREVIEW': PREVIEW,
+							'process.env.TEST_ENV': TEST_ENV,
+							'process.env.TEST_ID': JSON.stringify(TEST_ID),
+							...featuresReplaces,
+						},
+					},
+				],
+				[
+					'svgr',
+					{
+						exportAsDefault: true,
+						svgrOptions: {
+							jsxRuntime: 'automatic',
+						},
+						esbuildOptions: {
+							jsxFactory: 'h',
+							jsxFragment: preact ? 'Fragment' : 'hf',
+							banner: jsxInject, // Use banner because jsxInject doesn't work
+						},
+						include: '**/*.svg',
+					},
+				],
+			],
+			defaultConfig.bundler.plugins
+		),
 	});
 
 	let bundle;
@@ -908,21 +1098,7 @@ async function bundler(buildSpecConfig) {
 			assetBundle = '!' + assetBundle;
 		}
 
-		if (watch) {
-			assetBundle +=
-				'\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,' +
-				Buffer.from(JSON.stringify(bundleMap)).toString('base64');
-
-			if (testConfig.debug) {
-				fs.writeFile(path.resolve(buildDir, 'bundle.js.map'), JSON.stringify(bundleMap), (err) => {
-					if (!err) {
-						console.log('Wrote bundle.js.map to build folder.');
-					} else {
-						console.error(err);
-					}
-				});
-			}
-		} else {
+		if (!watch) {
 			fs.writeFile(path.resolve(buildDir, getFileAs(mainChunk.fileName, 'bundle.js')), assetBundle, (err) => {
 				if (err) {
 					console.error(err);
@@ -1103,6 +1279,73 @@ function toKb(str = '') {
 function getFileAs(entryPart, ext) {
 	const entryPathArrWithoutExt = entryPart.split('.').slice(0, -1);
 	return entryPathArrWithoutExt.concat(ext).join('.');
+}
+
+/**
+ * Returns an array containing plugins for the bundler input configuration.
+ * @param {Array} defaults
+ * @param {Array} [override]
+ */
+function getPluginsConfig(defaults, override = []) {
+	const fns = {
+		'preact-debug': preactDebug,
+		svgr,
+		replace,
+	};
+
+	return defaults
+		.map((plugin) => {
+			if (!Array.isArray(plugin)) return plugin;
+			const [key, options] = plugin;
+
+			const fn = fns[key];
+
+			const overridePlugin = override.find((op) => {
+				if (!Array.isArray(op)) return false;
+				return op[0] === key;
+			});
+
+			if (overridePlugin) {
+				// Remove the found override plugin.
+				override.splice(override.indexOf(overridePlugin), 1);
+				// If plugin config is a function, call it with the original plugin config.
+				if (typeof overridePlugin[1] === 'function') {
+					return fn(overridePlugin[1](options));
+				} else {
+					return fn(overridePlugin[1]);
+				}
+			}
+			return fn(options);
+		})
+		.concat(
+			override.map((plugin) => {
+				let fn = plugin;
+				if (Array.isArray(fn)) {
+					if (typeof fn[1] === 'function') {
+						return fn[1]();
+					}
+					// Allow removal
+					else if (fn[1] === null) {
+						return null;
+					} else {
+						console.error(
+							chalk.red(
+								`There's no default plugin for ${chalk.bold(fn[0])}. Can't call default plugin with given argument `,
+								fn[1]
+							)
+						);
+						console.error(
+							chalk.red(`Custom plugins should be inserted as objects or as a [string, function] tuple, got`),
+							fn
+						);
+					}
+				}
+				if (typeof fn === 'function') {
+					return fn();
+				}
+				return fn;
+			})
+		);
 }
 
 const { cyan, yellow, green, red } = chalk;
