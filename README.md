@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.3kb without class component and namespace support (see option `features`):
+Utility library which makes developing of A/B test variants easier (maybe) and you don't have to use any online editors to create those variants. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.3kb without class component and namespace support (see option `features`):
 
 ```js
 import { append } from 'a-b-doer';
@@ -94,11 +94,11 @@ tests/
 
 ## Test files
 
-In JS files ES6, imports, etc are supported and also Rollup will bundle and minify them. Styles can be created with SCSS/SASS/CSS/LESS (imports are supported as well). If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Rollup will handle it.
+In JS files ES6, imports, etc are supported and also Vite will bundle and minify them. By default styles can be created with SCSS/SASS/CSS (imports are supported as well). Vite supports other formats as well, but you must add required modules/config for them. If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Vite will handle it.
 
 By default, JS supports nullish coalescing and optional chaining.
 
-If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { SVGIcon } from '@/icons/FooIcon.svg';`.
+If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import SVGIcon from '@/icons/FooIcon.svg';`.
 
 ## Usage examples, jsx templates
 
@@ -208,8 +208,8 @@ Supported attribute namespaces by default are these:
 ```js
 {
   svg: '2000/svg',
-	xlink: '1999/xlink',
-	xmlns: '2000/xmlns/',
+  xlink: '1999/xlink',
+  xmlns: '2000/xmlns/',
 }
 ```
 
@@ -219,7 +219,7 @@ If namespace doesn't start with http, it will be prefixed with `http://www.w3.or
 
 This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
 
-## Utility functions
+## DOM Utilities for queries
 
 ### pollQuerySelector
 
@@ -341,6 +341,28 @@ Type `(timeout: number) => void`
 
 Sets the default delay between polls for all poll/wait dom utilities (default delay is 100 ms)
 
+## DOM Utilities for adding an element
+
+The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
+### append
+
+TODO
+
+### prepend
+
+TODO
+
+### insertBefore
+
+TODO
+
+### insertAfter
+
+TODO
+
+## Hooks
+
 ### useRef
 
 Type `() => { current: null }`
@@ -415,36 +437,6 @@ append(
 );
 ```
 
-### useHook (deprecated)
-
-useHook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
-
-```js
-import { append } from 'a-b-doer';
-import { useRef, useHook } from 'a-b-doer/hooks';
-
-const node = useRef();
-append(
-  <div ref={node}>
-    <Sub node={node} />
-  </div>,
-  document.body
-);
-
-const Sub = (props) => {
-  // node.current is null here
-  const { node } = props;
-
-  // Same as setTimeout without the timeout
-  useHook(() => {
-    // Do something with the node
-    console.log(node.current); // HTMLDivElement
-  });
-
-  return <span>Something</span>;
-};
-```
-
 ## buildspec.json usage
 
 These settings can also be used to override settings from global config.
@@ -459,7 +451,7 @@ Web page url(s) for the test. If this is an array, the first proper url will be 
 
 Type `string` (optional)
 
-Entry file for Rollup. Can be at least js or scss file.
+Entry file for Vite. Can be at least js or scss file.
 
 ### buildDir
 
@@ -467,13 +459,13 @@ Type `string` (optional)
 
 Default `.build`
 
-Output directory for Rollup.
+Output directory for Vite.
 
 ### entry
 
 Type `string` (optional)
 
-Entry file for Rollup. Can be at least js or scss file.
+Entry file for Vite. Can be at least js or scss file.
 
 ### minify
 
@@ -482,14 +474,6 @@ Type `boolean` (optional)
 Default `true`
 
 Should the bundle be minified.
-
-### modules
-
-Type `boolean` (optional)
-
-Default `true`
-
-CSS/SCSS module support.
 
 ### preact
 
@@ -542,14 +526,6 @@ export default async () => {
   append(<TestComponent />, target);
 };
 ```
-
-### chunkImages
-
-Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
-
-Default `false` (true=150)
-
-Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
 
 ### id
 
@@ -698,22 +674,14 @@ Extra browser args for Puppeteer
 ### Advanced example config.js with custom bundler options
 
 ```js
-import fooPlugin from 'rollup-foo-plugin';
+import fooPlugin from 'vite-foo-plugin';
 
 /*
 Supported plugins for array format are currently.
 Note, changing the configuration for these plugins might break something.
 
-alias,
-esbuild,
-babel,
-commonjs,
-image,
-inline-svg,
-node-resolve,
 replace,
-styles,
-svg-hyperscript,
+svgr,
 preact-debug
 */
 
@@ -721,24 +689,28 @@ export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   exclude: ['**/components/**/*', '**/src/**/*'],
+  // Override vite config
   bundler: {
+    // Add extra entry to alias config
+    resolve: (config = {}) => ({
+      ...config,
+      alias: [{ find: 'some-library', replacement: 'some-other-library' }, ...(config.alias || [])],
+    }),
     plugins: [
-      // Add extra entry to alias plugin configuration
+      // Add extra entries to replace plugin
       [
-        'alias',
+        'replace',
         (options) => ({
           ...options,
-          entries: [...options.entries, { find: 'something', replacement: '@/foo' }],
+          values: {
+            'process.env.SOME': 2,
+            '##OTHER##': '2',
+          },
         }),
       ],
-      // Override rollup image plugin configuration
-      [
-        'image',
-        {
-          exclude: ['**/*.svg', '**/*.png'],
-        },
-      ],
-      // Add extra input plugin to rollup configuration
+      // Remove a default plugin
+      ['preact-debug', null],
+      // Add extra input plugin to Vite configuration
       fooPlugin({ foo: 1 }),
     ],
     output: {
@@ -753,46 +725,6 @@ export default {
 You can turn on hashed file names by setting bundler option `{ output: { entryFileNames: "[name].[hash].js" } }`. `assetFileNames` option will be same as `entryFileNames` if not explicitly set to something else so both js and css file names will be in the format set by `entryFileNames`.
 
 If A/B Doer finds entryFileNames option with a hash tag, it will clear the build directory before each build.
-
-## EJS support (removed from default config)
-
-EJS is no longer supported by default because the used ejs library is not actively maintained anymore, but you can add it easily to your config if needed.
-
-run `npm install rollup-plugin-ejs --save-dev`
-
-Update config.js:
-
-```js
-import ejs from 'rollup-plugin-ejs';
-
-export default {
-  // ...
-  bundler: {
-    plugins: [
-      // ...
-      ejs({
-        include: ['**/*.ejs'],
-      }),
-    ],
-  },
-};
-```
-
-```js
-import tpl from './template.ejs'; // ./template.html is also okay
-
-const domNode = document.createElement('div');
-
-domNode.innerHTML = tpl({ text: 'Hello World' });
-```
-
-template.ejs content:
-
-```html
-<p><%= locals.text %></p>
-```
-
-The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
 ## Events
 
