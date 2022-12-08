@@ -16,9 +16,9 @@ import glob from 'glob';
 import replace from '@rollup/plugin-replace';
 import rimraf from 'rimraf';
 import svgr from 'vite-plugin-svgr';
-import { fileURLToPath } from 'node:url';
 import browserslist from 'browserslist';
-import { createServer } from 'vite';
+import { fileURLToPath } from 'node:url';
+import { build, createServer } from 'vite';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -70,7 +70,6 @@ const specRequire = createRequire(import.meta.url);
 const config = {
 	appendStyles: true,
 	buildDir: '.build',
-	chunkImages: false,
 	chunks: false,
 	devtools: true,
 	historyChanges: true,
@@ -80,6 +79,7 @@ const config = {
 	watch: false,
 	windowSize: [1920, 1080],
 	toolbar: false,
+	extractCss: false,
 	features: {
 		hooks: 'auto',
 		jsx: 'auto',
@@ -612,7 +612,7 @@ async function getBrowser(config = {}) {
 	return browser;
 }
 
-let page;
+let page$1;
 
 /**
  * Return a puppeteer page. If there's no page created then this also creates the page.
@@ -621,8 +621,8 @@ let page;
  * @returns {Promise<import("puppeteer").Page>}
  */
 async function getPage(config, singlePage) {
-	if (singlePage && page) {
-		return page;
+	if (singlePage && page$1) {
+		return page$1;
 	}
 
 	const browser = await getBrowser(config);
@@ -630,7 +630,7 @@ async function getPage(config, singlePage) {
 	/** @type {Promise<import("puppeteer").Page>}*/
 	let newPage;
 	if (singlePage) {
-		page = newPage = (await browser.pages())[0];
+		page$1 = newPage = (await browser.pages())[0];
 		aboutpage = null;
 	} else {
 		newPage = await context.newPage();
@@ -676,6 +676,79 @@ function preactDebug() {
 				code = `import "preact/devtools";\n${code};`;
 			}
 			return code;
+		},
+	};
+}
+
+function cssInjectedByJsPlugin() {
+	let cssToInject = '';
+	let config;
+
+	return {
+		apply: 'build',
+		enforce: 'post',
+		name: 'css-in-js-plugin',
+		configResolved(_config) {
+			config = _config;
+		},
+		async generateBundle(opts, bundle) {
+			const { abConfig } = config;
+
+			const bundleKeys = Object.keys(bundle);
+			const cssAssets = bundleKeys.filter((i) => bundle[i].type == 'asset' && bundle[i].fileName.endsWith('.css'));
+			const jsAssets = bundleKeys.filter(
+				(i) =>
+					bundle[i].type == 'chunk' &&
+					bundle[i].fileName.match(/.[cm]?js$/) != null &&
+					!bundle[i].fileName.includes('polyfill')
+			);
+
+			// Support style entries
+			if (!jsAssets[0] && bundleKeys[0] && abConfig.stylesOnly) {
+				// With styles only and extract css, remove the js main chunk
+				if (abConfig.extractCss) {
+					delete bundle[bundleKeys[0]];
+				}
+				// Create a proper javascript file from the css chunk
+				else {
+					const newKey = path.basename(bundleKeys[0], '.css') + '.js';
+					bundle[newKey] = bundle[bundleKeys[0]];
+					bundle[newKey].fileName = newKey;
+					delete bundle[bundleKeys[0]];
+					jsAssets[0] = newKey;
+				}
+			}
+
+			if (!abConfig.extractCss) {
+				const allCssCode = cssAssets.reduce((previousValue, cssName) => {
+					const cssAsset = bundle[cssName];
+					const result = previousValue + cssAsset.source;
+					delete bundle[cssName];
+					return result;
+				}, '');
+
+				if (allCssCode.length > 0) {
+					cssToInject = allCssCode;
+				}
+
+				const jsAsset = bundle[jsAssets[0]];
+
+				const appCode = jsAsset.code;
+				jsAsset.code =
+					/* prettier-ignore */
+					"!(function(){" +
+						"var __a,__s,__f=function(){" +
+							"if(__a){return;}" +
+							"__a=1;" +
+							"__s=document.createElement('style');__s.dataset.id='"+abConfig.TEST_ID+"',__s.innerHTML='" +
+							cssToInject.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'") +
+							"';" +
+							"document.head.appendChild(__s);" +
+						"};" +
+						(abConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
+					"})();"
+					+ appCode;
+			}
 		},
 	};
 }
@@ -738,7 +811,7 @@ async function bundler(buildSpecConfig) {
 		}
 	} catch (error) {}
 
-	const { minify: configMinify, preact, modules, id, chunks, chunkImages, watch, features } = testConfig;
+	const { minify: configMinify, preact, modules, id, chunks, extractCss, watch, features } = testConfig;
 	const minify = configMinify ?? !watch;
 
 	// Bundler behaves a little bit differently when there's style file as an entry.
@@ -747,8 +820,6 @@ async function bundler(buildSpecConfig) {
 	if (!entryFile) {
 		throw new Error("Couldn't find entry file");
 	}
-
-	watch && testConfig.sourcemap !== false;
 
 	// Get parsed boolean values from some common process.env variables
 	const PREACT = getFlagEnv('PREACT') ?? !!preact;
@@ -785,7 +856,9 @@ async function bundler(buildSpecConfig) {
 				format: 'system',
 				name: '',
 		  }
-		: {};
+		: {
+				format: 'iife',
+		  };
 
 	const outputOptions = {};
 
@@ -794,6 +867,11 @@ async function bundler(buildSpecConfig) {
 		: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`;
 
 	const bundlerConfig = getBundlerConfig({
+		abConfig: {
+			...testConfig,
+			TEST_ID,
+			stylesOnly,
+		},
 		...(stylesOnly
 			? {
 					optimizeDeps: {
@@ -807,17 +885,38 @@ async function bundler(buildSpecConfig) {
 			jsxInject,
 		},
 		build: {
+			lib: {
+				name: 'entryPart',
+				entry: [entryFile],
+				formats: [chunksOuputConfig.format],
+				fileName: () => getFileAs(path.basename(entryFile), stylesOnly ? 'css' : 'js'),
+			},
+			minify: minify ? 'terser' : false,
+			terserOptions: minify
+				? {
+						mangle: { toplevel: true },
+						format: { comments: false },
+				  }
+				: false,
+			emptyOutDir: false,
+			chunkSizeWarningLimit: 2048,
 			rollupOptions: {
 				input: [entryFile],
+				treeshake: {
+					propertyReadSideEffects: false,
+					moduleSideEffects: true,
+					tryCatchDeoptimization: false,
+					unknownGlobalSideEffects: false,
+					correctVarValueBeforeDeclaration: false,
+				},
 				...chunksInputConfig,
 				output: {
 					dir: buildDir,
 					assetFileNames: '[name].css',
 					strict: false,
-					format: 'iife',
 					exports: 'named',
 					name: path.basename(entryFile).split('.')[0],
-					intro: minify ? 'const window = self; const document = window.document;' : '',
+					intro: minify && !stylesOnly ? 'const window = self; const document = window.document;' : '',
 					...chunksOuputConfig,
 				},
 			},
@@ -827,6 +926,7 @@ async function bundler(buildSpecConfig) {
 		plugins: getPluginsConfig(
 			[
 				['preact-debug'],
+				['css-inject'],
 				[
 					'replace',
 					{
@@ -858,13 +958,10 @@ async function bundler(buildSpecConfig) {
 						include: '**/*.svg',
 					},
 				],
-			],
+			].filter(Boolean),
 			defaultConfig.bundler.plugins
 		),
 	});
-
-	let bundle;
-	let bundleOutput = { output: [] };
 
 	if (outputOptions.entryFileNames && !output.assetFileNames) {
 		outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
@@ -883,112 +980,21 @@ async function bundler(buildSpecConfig) {
 		}
 	};
 
-	const fnIifeCheck = /^(\(|function)/;
-
-	const createAssetBundle = async () => {
-		let mainChunk = bundleOutput.output[0];
-		let cssChunks = bundleOutput.output.filter((c) => c.fileName.endsWith('.css'));
-
-		let js = mainChunk?.code;
-		let styles = cssChunks.reduce((acc, cur) => acc + cur.source, '');
-
-		// Remove dummy js generated by rollup
-		if (stylesOnly) {
-			fs.unlink(path.resolve(buildDir, mainChunk.fileName), (err) => {});
-		}
-
-		const outputChunks = [...bundleOutput.output];
-
-		// Base for the bundle map that contains other maps.
-		const bundleMap = {
-			version: 3,
-			file: getFileAs(mainChunk.fileName, 'bundle.js'),
-			sections: [],
-		};
-
-		// Create javascript bundle and keep track where chunk code starts for sourcemaps
-		let assetBundle = outputChunks
-			.filter((c) => !!c.code)
-			.reduce((bundle, chunk) => {
-				if (chunk.map) {
-					bundleMap.sections.push({ offset: { line: bundle.split('\n').length - 1, column: 0 }, map: chunk.map });
-				}
-				let bundleCode = bundle.trim();
-				if (bundleCode) bundleCode += '\n';
-				return `${bundleCode}${chunk.code}`;
-			}, '')
-			.trim();
-
-		if (styles) {
-			/* prettier-ignore */
-			assetBundle +=
-				"!(function(){" +
-					"var __a,__s,__f=function(){" +
-						"if(__a){return;}" +
-						"__a=1;" +
-						"__s=document.createElement('style');__s.dataset.id='"+TEST_ID+"',__s.innerHTML='" +
-						styles.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'") +
-						"';" +
-						"document.head.appendChild(__s);" +
-					"};" +
-					(testConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
-				"})();";
-		}
-		// Make sure that the built IIFE starts with ! (e.g. Hubspot cli filemanager upload fails without this)
-		if (assetBundle && fnIifeCheck.test(assetBundle) && outputOptions.format === 'iife') {
-			assetBundle = '!' + assetBundle;
-		}
-
-		if (!watch) {
-			fs.writeFile(path.resolve(buildDir, getFileAs(mainChunk.fileName, 'bundle.js')), assetBundle, (err) => {
-				if (err) {
-					console.error(err);
-				} else if (!TEST_ENV) {
-					const mainChunk = bundleOutput.output[0];
-					const bundleName = getFileAs(mainChunk.fileName, 'bundle.js');
-					const bundleSize = toKb(assetBundle);
-
-					const len =
-						bundleOutput.output.reduce((acc, cur) => Math.max(acc, cur.fileName.length), bundleName.length) + 3;
-					const fullLen = len + bundleSize.length;
-
-					console.log(chalk.cyan('Output size:'));
-					console.log(chalk.cyan('-'.repeat(fullLen)));
-					bundleOutput.output.forEach((output, index) => {
-						let code = output.code || output.source || '';
-						const line = output.fileName.padEnd(len) + toKb(code).padStart(bundleSize.length) || '';
-						console.log(chalk.cyan(line));
-					});
-
-					console.log(chalk.cyan(bundleName.padEnd(len) + bundleSize));
-					console.log(chalk.cyan('-'.repeat(fullLen)));
-					console.log();
-				}
-			});
-		}
-
-		return { bundle: assetBundle, styles: !!styles, js: !!js };
-	};
-
 	let assetBundle;
 	let watcher;
 
-	// Close the bundle if watch option is not set
 	if (!watch) {
 		clearHashedAssets();
 
 		try {
-			bundle = await rollup(inputOptions);
-			bundleOutput = await bundle.write(outputOptions);
+			await build({
+				root: testPath,
+				...bundlerConfig,
+			});
 		} catch (error) {
 			console.log(chalk.red('\nBundle error!'));
 			throw new Error(error.message);
 		}
-
-		assetBundle = await createAssetBundle();
-
-		// closes the bundle
-		await bundle.close();
 	}
 	// Otherwise start vite dev server
 	else {
@@ -1014,8 +1020,6 @@ async function bundler(buildSpecConfig) {
 
 		await server.listen(DEV_SERVER_PORT);
 
-		let page;
-
 		const injection = `
 		!(() => {
 			document.head.appendChild(Object.assign(document.createElement('script'), {
@@ -1034,82 +1038,8 @@ async function bundler(buildSpecConfig) {
 		} catch (error) {
 			console.log('Error while opening page', error);
 		}
-		// const watcherConfig = {
-		// 	...inputOptions,
-		// 	output: outputOptions,
-		// 	watch: {
-		// 		buildDelay: 100,
-		// 		skipWrite: true,
-		// 		exclude: [path.join(testConfig.buildDir, '**')],
-		// 	},
-		// };
-
-		// if (testConfig.debug) {
-		// 	console.log('Starting watcher, with config');
-		// 	console.log(watcherConfig);
-		// }
-
-		// watcher = rollupWatch(watcherConfig);
-
-		// let page;
-		// let hasError = false;
-
-		// watcher.on('event', async (event) => {
-		// 	// Error in bundle process.
-		// 	if (event.code === 'ERROR') {
-		// 		console.log(chalk.red('\nBundle error!'));
-		// 		console.error(event.error.message, '\n');
-		// 		hasError = true;
-
-		// 		if (page) {
-		// 			await page.evaluate((msg) => {
-		// 				// Chalk doesn't work in browser.
-		// 				console.log('\n\x1b[31m%s\x1b[0m', 'Bundle error!');
-		// 				console.warn(msg, '\n');
-		// 			}, event.error.message);
-		// 		}
-		// 	}
-		// 	// Process started
-		// 	else if (event.code === 'BUNDLE_START') {
-		// 		if (page) {
-		// 			console.log(chalk.cyan('Source code changed.'));
-		// 			page.evaluate(() => {
-		// 				// Chalk doesn't work in browser.
-		// 				console.log('\x1b[92m%s\x1b[0m', 'Source code changed. Starting bundler...');
-		// 			});
-		// 		}
-		// 		console.log(chalk.cyan('Starting bundler...'));
-		// 		clearHashedAssets();
-		// 		hasError = false;
-		// 	}
-		// 	// End of bundle process, close the bundle
-		// 	else if (event.code === 'BUNDLE_END') {
-		// 		if (hasError) {
-		// 			return;
-		// 		}
-		// 		bundleOutput = await event.result.generate(outputOptions);
-		// 		assetBundle = await createAssetBundle(buildDir, entryPart);
-		// 		try {
-		// 			page = await openPage({ ...testConfig, assetBundle }, true);
-		// 		} catch (error) {
-		// 			console.log('Error while opening page', error);
-		// 		}
-		// 		hasError = false;
-		// 		await event.result.close();
-		// 	}
-		// 	// event.code can be one of:
-		// 	//   START        — the watcher is (re)starting
-		// 	//   BUNDLE_START — building an individual bundle
-		// 	//   BUNDLE_END   — finished building a bundle
-		// 	//   END          — finished building all bundles
-		// 	//   ERROR        — encountered an error while bundling
-		// });
 	}
 	return { ...testConfig, assetBundle, watcher };
-}
-
-function toKb(str = '') {
-	return Math.round((str.length / 1024) * 10) / 10 + ' kB';
 }
 
 /**
@@ -1132,6 +1062,7 @@ function getPluginsConfig(defaults, override = []) {
 		'preact-debug': preactDebug,
 		svgr,
 		replace,
+		'css-inject': cssInjectedByJsPlugin,
 	};
 
 	return defaults

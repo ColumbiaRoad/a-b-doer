@@ -54,6 +54,7 @@
     "rollup-plugin-svg-hyperscript": "^0.1.2",
     "sass": "^1.56.1",
     "string-hash": "^1.1.3",
+    "terser": "^5.16.1",
     "tslib": "^2.4.1",
     "typescript": "^4.9.4",
     "vite": "^3.2.5",
