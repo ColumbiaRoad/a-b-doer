@@ -19,6 +19,7 @@ export default {
 			...config,
 			alias: [
 				{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
+				{ find: 'a-b-doer/lib', replacement: path.join(__dirname, 'lib') },
 				{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
 				...(config.alias || []),
 			],

@@ -671,6 +671,14 @@ Extra browser args for Puppeteer
 }
 ```
 
+### modules
+
+Type `boolean | (id: string) => boolean` (optional)
+
+Default `true`
+
+Load style files as modules
+
 ### Advanced example config.js with custom bundler options
 
 ```js

@@ -4,7 +4,7 @@ import chokidar from 'chokidar';
 import minimist from 'minimist';
 import path from 'node:path';
 import { createFilter } from '@rollup/pluginutils';
-import fs, { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
 import get from 'lodash.get';
 import set from 'lodash.set';
 import merge from 'lodash.merge';
@@ -17,6 +17,7 @@ import replace from '@rollup/plugin-replace';
 import rimraf from 'rimraf';
 import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
+import stringHash from 'string-hash';
 import { fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';
 
@@ -363,7 +364,18 @@ async function openPage(config, singlePage) {
 			}, urls);
 
 			if (!isTest) {
-				// injectToolbar(page, { ...config, disabled }, wasInitial);
+				await page.evaluate(
+					(TEST_ID, testPath, config) => {
+						window.abPreview = {
+							testId: TEST_ID,
+							config,
+							testPath,
+						};
+					},
+					process.env.TEST_ID,
+					config.testPath.replace(process.cwd(), ''),
+					config
+				);
 			}
 
 			if (disabled) {
@@ -612,7 +624,7 @@ async function getBrowser(config = {}) {
 	return browser;
 }
 
-let page$1;
+let page;
 
 /**
  * Return a puppeteer page. If there's no page created then this also creates the page.
@@ -621,8 +633,8 @@ let page$1;
  * @returns {Promise<import("puppeteer").Page>}
  */
 async function getPage(config, singlePage) {
-	if (singlePage && page$1) {
-		return page$1;
+	if (singlePage && page) {
+		return page;
 	}
 
 	const browser = await getBrowser(config);
@@ -630,7 +642,7 @@ async function getPage(config, singlePage) {
 	/** @type {Promise<import("puppeteer").Page>}*/
 	let newPage;
 	if (singlePage) {
-		page$1 = newPage = (await browser.pages())[0];
+		page = newPage = (await browser.pages())[0];
 		aboutpage = null;
 	} else {
 		newPage = await context.newPage();
@@ -661,7 +673,7 @@ function preactDebug() {
 	let config = {};
 
 	return {
-		name: 'preact-debug',
+		name: 'a-b-doer:preact-debug',
 		enforce: 'pre',
 		configResolved(resolvedConfig) {
 			config = resolvedConfig;
@@ -687,7 +699,7 @@ function cssInjectedByJsPlugin() {
 	return {
 		apply: 'build',
 		enforce: 'post',
-		name: 'css-in-js-plugin',
+		name: 'a-b-doer:css-in-js-plugin',
 		configResolved(_config) {
 			config = _config;
 		},
@@ -748,6 +760,52 @@ function cssInjectedByJsPlugin() {
 						(abConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
 					"})();"
 					+ appCode;
+			}
+		},
+	};
+}
+
+/**
+ * Plugin that enables style modules to all style files if A/B doer configuration setting `modules` is enabled
+ */
+function cssModules() {
+	let config;
+
+	const cssLangs = `\\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)($|\\?)`;
+	const cssLangRE = new RegExp(cssLangs);
+	const cssLangModuleRE = new RegExp(`\\.module${cssLangs}`);
+	const isCSSRequest = (request) => cssLangRE.test(request);
+	const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
+
+	const modules = new Map();
+
+	return {
+		enforce: 'pre',
+		name: 'a-b-doer:css-modules',
+		configResolved(_config) {
+			config = _config;
+		},
+		async resolveId(source, importer, options) {
+			const convertToModule =
+				!isCSSModuleRequest(source) &&
+				isCSSRequest(source) &&
+				(config.abConfig.modules || (typeof config.abConfig.modules === 'function' && config.abConfig.modules(source)));
+
+			if (convertToModule) {
+				const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
+				if (resolution?.id) {
+					const parts = resolution.id.split('.');
+					const ext = parts.pop();
+					const newId = parts.join('.') + '.module.' + ext;
+					modules.set(newId, resolution.id);
+					return newId;
+				}
+			}
+		},
+		load(id) {
+			const realID = modules.get(id);
+			if (realID) {
+				return readFileSync(realID, { encoding: 'utf-8' }).toString();
 			}
 		},
 	};
@@ -884,6 +942,23 @@ async function bundler(buildSpecConfig) {
 			jsxFragment: preact ? 'Fragment' : 'hf',
 			jsxInject,
 		},
+		css: {
+			modules: modules && {
+				generateScopedName: (name, file, css) => {
+					const hash = stringHash(unifyPath(file + css))
+						.toString(36)
+						.substring(0, 5);
+					if (minify) {
+						return `t${hash}-${name}`;
+					} else {
+						const folder = path.basename(path.dirname(file));
+						const fileNameParts = path.basename(file).split('.').slice(0, -1);
+						if (fileNameParts.at(-1) === 'module') fileNameParts.pop();
+						return `t_${folder}_${fileNameParts.join('.')}_${name}__${hash}`;
+					}
+				},
+			},
+		},
 		build: {
 			lib: {
 				name: 'entryPart',
@@ -927,6 +1002,7 @@ async function bundler(buildSpecConfig) {
 			[
 				['preact-debug'],
 				['css-inject'],
+				['css-modules'],
 				[
 					'replace',
 					{
@@ -998,11 +1074,14 @@ async function bundler(buildSpecConfig) {
 	}
 	// Otherwise start vite dev server
 	else {
+		const port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
+		const serverConfig = bundlerConfig.server || {};
+
 		const server = await createServer({
 			root: testPath,
 			configFile: false,
 			server: {
-				port: DEV_SERVER_PORT,
+				port: port,
 				https: true,
 				cors: {
 					origin: '*',
@@ -1013,28 +1092,35 @@ async function bundler(buildSpecConfig) {
 				watch: {
 					ignored: [path.join(testConfig.buildDir, '**')],
 				},
+				fs: {
+					allow: [testPath, path.join(rootDir, 'lib', 'utils')],
+				},
+				...serverConfig,
 			},
 			...bundlerConfig,
 			plugins: [basicSsl()].concat(bundlerConfig.plugins).filter(Boolean),
 		});
 
-		await server.listen(DEV_SERVER_PORT);
+		await server.listen();
 
-		const injection = `
-		!(() => {
-			document.head.appendChild(Object.assign(document.createElement('script'), {
-				type: 'module',
-				src: 'https://localhost:${DEV_SERVER_PORT}/@vite/client',
-			}));
-			document.head.appendChild(Object.assign(document.createElement('script'), {
-				type: 'module',
-				src: 'https://localhost:${DEV_SERVER_PORT}${entryFile}',
-			}));
-		})();
+		const moduleScripts = [
+			`https://localhost:${port}/@vite/client`,
+			`https://localhost:${port}/${path.basename(entryFile)}`,
+		];
+
+		if (testConfig.toolbar) {
+			moduleScripts.push(
+				`https://localhost:${port}/${path.join(rootDir, 'lib', 'utils', 'toolbar', 'pptr-toolbar.jsx')}`
+			);
+		}
+
+		const injection = `!(() => { \ndocument.head.append(${moduleScripts
+			.map((script) => `Object.assign(document.createElement('script'), { type: 'module', src: '${script}', })`)
+			.join(', ')}); \n})();
 		`;
 
 		try {
-			page = await openPage({ ...testConfig, assetBundle: { js: true, bundle: injection } }, true);
+			await openPage({ ...testConfig, assetBundle: { js: true, bundle: injection } }, true);
 		} catch (error) {
 			console.log('Error while opening page', error);
 		}
@@ -1059,10 +1145,11 @@ function getFileAs(entryPart, ext) {
  */
 function getPluginsConfig(defaults, override = []) {
 	const fns = {
-		'preact-debug': preactDebug,
-		svgr,
-		replace,
 		'css-inject': cssInjectedByJsPlugin,
+		'css-modules': cssModules,
+		'preact-debug': preactDebug,
+		replace,
+		svgr,
 	};
 
 	return defaults
