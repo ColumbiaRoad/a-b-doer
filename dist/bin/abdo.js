@@ -20,6 +20,7 @@ import browserslist from 'browserslist';
 import stringHash from 'string-hash';
 import { fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';
+import prefresh from '@prefresh/vite';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -803,9 +804,15 @@ function cssModules() {
 			}
 		},
 		load(id) {
-			const realID = modules.get(id);
-			if (realID) {
-				return readFileSync(realID, { encoding: 'utf-8' }).toString();
+			const info = this.getModuleInfo(id);
+			if (info?.id) {
+				const idPath = info.id.startsWith(config.abConfig.libDir)
+					? info.id
+					: path.join(config.abConfig.libDir, info.id);
+				const realID = info && modules.get(idPath);
+				if (realID) {
+					return readFileSync(realID, { encoding: 'utf-8' }).toString();
+				}
 			}
 		},
 	};
@@ -924,19 +931,23 @@ async function bundler(buildSpecConfig) {
 		? 'import {h,Fragment} from "preact"'
 		: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`;
 
+	const optimizeDeps = {
+		exclude: [`@prefresh/vite/runtime`, `@prefresh/vite/utils`],
+	};
+
 	const bundlerConfig = getBundlerConfig({
 		abConfig: {
 			...testConfig,
 			TEST_ID,
 			stylesOnly,
+			libDir: rootDir,
 		},
-		...(stylesOnly
+		optimizeDeps: stylesOnly
 			? {
-					optimizeDeps: {
-						entries: [entryFile],
-					},
+					...optimizeDeps,
+					entries: [entryFile],
 			  }
-			: {}),
+			: optimizeDeps,
 		esbuild: {
 			jsxFactory: 'h',
 			jsxFragment: preact ? 'Fragment' : 'hf',
@@ -1034,6 +1045,7 @@ async function bundler(buildSpecConfig) {
 						include: '**/*.svg',
 					},
 				],
+				watch && preact && ['prefresh'],
 			].filter(Boolean),
 			defaultConfig.bundler.plugins
 		),
@@ -1077,8 +1089,11 @@ async function bundler(buildSpecConfig) {
 		const port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
 		const serverConfig = bundlerConfig.server || {};
 
+		console.log(chalk.cyanBright('\nStarting dev server'), 'port ' + port);
+		console.log();
+
 		const server = await createServer({
-			root: testPath,
+			root: cwd,
 			configFile: false,
 			server: {
 				port: port,
@@ -1092,25 +1107,42 @@ async function bundler(buildSpecConfig) {
 				watch: {
 					ignored: [path.join(testConfig.buildDir, '**')],
 				},
-				fs: {
-					allow: [testPath, path.join(rootDir, 'lib', 'utils')],
-				},
 				...serverConfig,
 			},
 			...bundlerConfig,
-			plugins: [basicSsl()].concat(bundlerConfig.plugins).filter(Boolean),
+			plugins: [
+				basicSsl(),
+				{
+					name: 'configure-response-headers',
+					configureServer: (server) => {
+						server.middlewares.use((_req, res, next) => {
+							res.setHeader('Access-Control-Request-Private-Network', 'true');
+							res.setHeader('Access-Control-Allow-Private-Network', 'true');
+							next();
+						});
+					},
+				},
+			]
+				.concat(bundlerConfig.plugins)
+				.filter(Boolean),
 		});
 
 		await server.listen();
 
 		const moduleScripts = [
 			`https://localhost:${port}/@vite/client`,
-			`https://localhost:${port}/${path.basename(entryFile)}`,
+			`https://localhost:${port}${entryFile.replace(cwd, '')}`,
 		];
 
 		if (testConfig.toolbar) {
 			moduleScripts.push(
-				`https://localhost:${port}/${path.join(rootDir, 'lib', 'utils', 'toolbar', 'pptr-toolbar.jsx')}`
+				`https://localhost:${port}/${path.join(
+					rootDir.replace(cwd, ''),
+					'lib',
+					'utils',
+					'toolbar',
+					'pptr-toolbar.jsx'
+				)}`
 			);
 		}
 
@@ -1150,6 +1182,7 @@ function getPluginsConfig(defaults, override = []) {
 		'preact-debug': preactDebug,
 		replace,
 		svgr,
+		prefresh,
 	};
 
 	return defaults
