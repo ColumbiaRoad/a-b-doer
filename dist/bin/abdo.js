@@ -46,6 +46,10 @@ function hashf(s) {
 	return hash;
 }
 
+/**
+ * @param {string} path
+ * @returns {string}
+ */
 function unifyPath(path) {
 	return path.replace(process.cwd(), '').replace(/\\/g, '/');
 }
@@ -91,6 +95,10 @@ const config = {
 	},
 };
 
+/**
+ * @param {string} configPath
+ * @returns {object | () => object)}
+ */
 async function getConfigFileJsonOrJSContent(configPath) {
 	const fileDir = path.dirname(configPath);
 	const fileWithoutExt = path.basename(configPath, '.json');
@@ -109,6 +117,10 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	return {};
 }
 
+/**
+ * @param  {...string[]} specConfigPaths
+ * @returns {Promise<Array<{file: string, config: object}>}
+ */
 async function getValidatedSpecs(...specConfigPaths) {
 	const specs = await Promise.all(
 		specConfigPaths.map(async (configPath) => {
@@ -118,15 +130,18 @@ async function getValidatedSpecs(...specConfigPaths) {
 			}
 			return {
 				file: configPath,
-				code: typeof specConfig === 'function' ? specConfig() : specConfig,
+				config: typeof specConfig === 'function' ? specConfig() : specConfig,
 			};
 		})
 	);
-
 	return specs.filter(Boolean);
 }
 
-async function buildspec (testPath) {
+/**
+ * Returns a build spec object for given test path
+ * @param {string} testPath
+ */
+async function getBuildSpec(testPath) {
 	if (!testPath) {
 		console.log('Test folder is missing');
 		process.exit();
@@ -213,9 +228,9 @@ async function buildspec (testPath) {
 		getSpecConfig(options) {
 			return testConfig.specs.reduce(
 				(acc, spec) => {
-					Object.keys(spec.code).forEach((key) => {
+					Object.keys(spec.config).forEach((key) => {
 						if (key === 'bundler') return;
-						const option = spec.code[key];
+						const option = spec.config[key];
 						if (typeof option === 'function') {
 							set(acc, [key], option(get(acc, [key])));
 						} else if (typeof option === 'object' && option) {
@@ -235,7 +250,7 @@ async function buildspec (testPath) {
 		getBundlerConfig(config) {
 			return testConfig.specs.reduce(
 				(acc, spec) => {
-					const bundlerConfig = get(spec, ['code', 'bundler']);
+					const bundlerConfig = get(spec, ['config', 'bundler']);
 					if (bundlerConfig) {
 						Object.keys(bundlerConfig).forEach((key) => {
 							const option = bundlerConfig[key];
@@ -844,10 +859,14 @@ const defaultConfig = {
 	},
 };
 
+/**
+ * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
+ * @returns {object} Bundler config
+ */
 async function bundler(buildSpecConfig) {
 	let { getBundlerConfig, getSpecConfig, ...restConfig } = buildSpecConfig;
 
-	const testConfig = getSpecConfig({ ...restConfig, ...defaultConfig });
+	const testConfig = getSpecConfig({ ...defaultConfig, ...restConfig });
 
 	let { entryFile, testPath, entry, entryPart, preview = false } = testConfig;
 
@@ -1113,7 +1132,7 @@ async function bundler(buildSpecConfig) {
 			plugins: [
 				basicSsl(),
 				{
-					name: 'configure-response-headers',
+					name: 'a-b-doer:response-headers',
 					configureServer: (server) => {
 						server.middlewares.use((_req, res, next) => {
 							res.setHeader('Access-Control-Request-Private-Network', 'true');
@@ -1172,8 +1191,8 @@ function getFileAs(entryPart, ext) {
 
 /**
  * Returns an array containing plugins for the bundler input configuration.
- * @param {Array} defaults
- * @param {Array} [override]
+ * @param {Array<[string, {[key: string]: any}]>} defaults
+ * @param {Array<[string, {[key: string]: any} | Function] | {[key]: any}>} [override]
  */
 function getPluginsConfig(defaults, override = []) {
 	const fns = {
@@ -1575,7 +1594,7 @@ async function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			const spec = await buildspec(entryFile);
+			const spec = await getBuildSpec(entryFile);
 			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
