@@ -22,14 +22,6 @@ export const useRef = (current = null) => {
 	return ret;
 };
 
-/**
- * Runs given function in the next tick.
- * @param {Function} cb
- */
-export const useHook = (cb) => {
-	onNextTick(cb);
-};
-
 export const useEffect = (cb, deps) => {
 	const oldDeps = hooks.h[hooks.c]?.[1];
 	let shouldCall = !oldDeps || !deps;

@@ -6,21 +6,24 @@ import {
 	getTestID as _getTestID,
 	getVNodeDom,
 } from './utils/render';
+import { onNextTick } from './utils/internal';
 
 /**
  * Super simple class abstract for class like components.
  */
 export class Component {
-	_v;
 	state = {};
 	constructor(props) {
 		this.props = props;
 	}
 	setState(newState) {
-		Object.assign(this.state, newState);
 		const old = { ...this._v };
-		this._v = renderVnode(this._v, old);
-		patchVnodeDom(this._v, old);
+		this._s = { ...this.state };
+		onNextTick(() => {
+			Object.assign(this.state, newState);
+			this._v = renderVnode(vnode, old);
+			patchVnodeDom(vnode, old);
+		});
 	}
 }
 

@@ -9,12 +9,6 @@ export interface Ref<T> {
 export function useRef<T = any>(current?: T): Ref<T>;
 
 /**
- * Runs given function in the next tick.
- * @param cb Function to be executed
- */
-export function useHook(cb: Function): void;
-
-/**
  * Effect hook that'll be called after component has been rendered.
  * @param cb Function to be executed
  * @param cache Values that works as a cache key

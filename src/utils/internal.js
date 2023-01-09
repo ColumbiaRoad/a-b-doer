@@ -77,3 +77,8 @@ export const createVNode = (tag = '', props) => {
 		key: props.key || props['data-o'] || process.env.TEST_ID,
 	};
 };
+
+export const options = {
+	vnode: (vnode) => {},
+	unmount: (vnode) => {},
+};
