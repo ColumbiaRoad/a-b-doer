@@ -8,7 +8,7 @@ import buildspec from '../lib/buildspec';
 import { bundler, openPage } from '../lib/bundler';
 import { getBrowser } from '../lib/puppeteer';
 
-const { cyan, yellow, green, red } = chalk;
+const { cyan, yellow, red } = chalk;
 
 const cmd = process.argv[2];
 
@@ -22,7 +22,8 @@ if (!cmds.includes(cmd)) {
 
 const watch = cmd === 'watch';
 
-let rollupWatcher = null;
+let devServer = null;
+let watcher = null;
 
 const targetPath = process.argv[3] || '.';
 
@@ -71,19 +72,29 @@ async function buildSingleEntry(targetPath) {
 
 	switch (cmd) {
 		case 'watch':
-			if (rollupWatcher) {
-				rollupWatcher.close();
+			if (watcher) {
+				console.log(cyan('Stopping previous config watcher...'));
+				await watcher.close();
+			}
+			if (devServer) {
+				console.log(cyan('Stopping previous dev server...'));
+				console.log('');
+				await devServer.close();
 			} else {
 				console.log(cyan('Starting bundler with a file watcher...'));
 			}
-			const watcher = chokidar.watch(config._specFiles, {
-				awaitWriteFinish: true,
-			});
+			watcher = chokidar.watch(
+				config.specs.map((spec) => spec.file),
+				{
+					awaitWriteFinish: true,
+				}
+			);
 			watcher.on('change', (filepath) => {
 				console.log('');
-				console.log('Buildspec changed', yellow(filepath));
-				console.log(green('Restarting bundler...'));
+				console.log(cyan('Some test configuration file was changed...'));
+				console.log('Config file', yellow(filepath));
 				console.log('');
+				console.log(cyan('Restarting...'));
 				buildSingleEntry(targetPath);
 				watcher.close();
 			});
@@ -96,13 +107,12 @@ async function buildSingleEntry(targetPath) {
 	}
 
 	console.log('Entry:', yellow(config.entryFile));
-	console.log('');
 
 	try {
 		const output = await bundler({ ...config, watch });
-		rollupWatcher = output.watcher;
+		devServer = output.server;
 		if (!watch) {
-			console.log(green('Bundle built.'));
+			console.log(cyan('Bundle built.'));
 		}
 		console.log('');
 	} catch (error) {
@@ -148,13 +158,13 @@ async function buildMultiEntry(targetPath) {
 			if (!buildOnly) {
 				await openPage(output);
 			} else {
-				console.log(entryFile.replace(process.env.INIT_CWD, ''), green('Done.'));
+				console.log(entryFile.replace(process.env.INIT_CWD, ''), cyan('Done.'));
 			}
 		}
 
 		if (buildOnly) {
 			console.log();
-			console.log(green('Variant bundles built.'));
+			console.log(cyan('Variant bundles built.'));
 			console.log();
 			process.exit(0);
 		}
@@ -306,11 +316,11 @@ async function createScreenshots(targetPath) {
 		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);
 		console.log();
 
-		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
+		console.log(cyan('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
 	}
 
-	console.log(green('Done.'));
+	console.log(cyan('Done.'));
 	if (origPage) {
 		await origPage.browser().close();
 	}

@@ -108,13 +108,13 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
 		delete specRequire.cache[configPath];
-		return specRequire(configPath);
+		return { file: configPath, config: specRequire(configPath) };
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
 		const { default: configMod } = await import(
 			convertToEsmPath(configPathJs) + '?cb=' + Math.random().toString(36).substring(3)
 		);
-		return configMod;
+		return { file: configPathJs, config: configMod };
 	}
 	return {};
 }
@@ -127,12 +127,12 @@ async function getValidatedSpecs(...specConfigPaths) {
 	const specs = await Promise.all(
 		specConfigPaths.map(async (configPath) => {
 			const specConfig = await getConfigFileJsonOrJSContent(configPath);
-			if (!['function', 'object'].includes(typeof specConfig) || !Object.keys(specConfig).length) {
+			if (!Object.keys(specConfig).length || !['function', 'object'].includes(typeof specConfig.config)) {
 				return;
 			}
 			return {
-				file: configPath,
-				config: typeof specConfig === 'function' ? specConfig() : specConfig,
+				...specConfig,
+				config: typeof specConfig.config === 'function' ? specConfig() : specConfig.config,
 			};
 		})
 	);
@@ -275,7 +275,7 @@ async function getBuildSpec(testPath) {
 
 // import { injectToolbar } from './utils/toolbar/pptr-toolbar';
 
-const { yellow: yellow$1, green: green$1 } = chalk;
+const { yellow: yellow$1, green } = chalk;
 
 const isTest = getFlagEnv('TEST_ENV');
 let initial = true;
@@ -550,6 +550,14 @@ function isOneOfBuildspecUrls(url, urls = []) {
 			if (url === cur) {
 				return true;
 			}
+			// Check also with trailing slash in domain
+			if (url === cur.replace(/(\.[a-z]{2})\?/, '$1/?')) {
+				return true;
+			}
+			// Ignore http/https protocol difference
+			if (url === cur.replace('http://', 'https://')) {
+				return true;
+			}
 			if (typeof cur === 'string' && cur[0] === '/' && cur[cur.length - 1] === '/') {
 				const re = new RegExp(cur.substring(1, cur.length - 2));
 				return re.test(url);
@@ -588,7 +596,7 @@ async function getBrowser(config = {}) {
 
 	// Setup puppeteer
 	if (!browser) {
-		console.log(green$1('Starting browser...'));
+		console.log(green('Starting browser...'));
 		if (config.debug) {
 			console.log('With config:');
 			console.log(config);
@@ -1198,7 +1206,7 @@ async function bundler(buildSpecConfig) {
 	};
 
 	let assetBundle;
-	let watcher;
+	let server;
 
 	if (!watch) {
 		clearHashedAssets();
@@ -1221,7 +1229,7 @@ async function bundler(buildSpecConfig) {
 		console.log(chalk.cyanBright('\nStarting dev server'), 'port ' + port);
 		console.log();
 
-		const server = await createServer({
+		server = await createServer({
 			root: cwd,
 			configFile: false,
 			server: {
@@ -1286,7 +1294,7 @@ async function bundler(buildSpecConfig) {
 			console.log('Error while opening page', error);
 		}
 	}
-	return { ...testConfig, assetBundle, watcher };
+	return { ...testConfig, assetBundle, server };
 }
 
 /**
@@ -1370,7 +1378,7 @@ function getPluginsConfig(defaults, override = []) {
 		);
 }
 
-const { cyan, yellow, green, red } = chalk;
+const { cyan, yellow, red } = chalk;
 
 const cmd = process.argv[2];
 
@@ -1384,7 +1392,8 @@ if (!cmds.includes(cmd)) {
 
 const watch = cmd === 'watch';
 
-let rollupWatcher = null;
+let devServer = null;
+let watcher = null;
 
 const targetPath = process.argv[3] || '.';
 
@@ -1433,19 +1442,29 @@ async function buildSingleEntry(targetPath) {
 
 	switch (cmd) {
 		case 'watch':
-			if (rollupWatcher) {
-				rollupWatcher.close();
+			if (watcher) {
+				console.log(cyan('Stopping previous config watcher...'));
+				await watcher.close();
+			}
+			if (devServer) {
+				console.log(cyan('Stopping previous dev server...'));
+				console.log('');
+				await devServer.close();
 			} else {
 				console.log(cyan('Starting bundler with a file watcher...'));
 			}
-			const watcher = chokidar.watch(config._specFiles, {
-				awaitWriteFinish: true,
-			});
+			watcher = chokidar.watch(
+				config.specs.map((spec) => spec.file),
+				{
+					awaitWriteFinish: true,
+				}
+			);
 			watcher.on('change', (filepath) => {
 				console.log('');
-				console.log('Buildspec changed', yellow(filepath));
-				console.log(green('Restarting bundler...'));
+				console.log(cyan('Some test configuration file was changed...'));
+				console.log('Config file', yellow(filepath));
 				console.log('');
+				console.log(cyan('Restarting...'));
 				buildSingleEntry(targetPath);
 				watcher.close();
 			});
@@ -1456,13 +1475,12 @@ async function buildSingleEntry(targetPath) {
 	}
 
 	console.log('Entry:', yellow(config.entryFile));
-	console.log('');
 
 	try {
 		const output = await bundler({ ...config, watch });
-		rollupWatcher = output.watcher;
+		devServer = output.server;
 		if (!watch) {
-			console.log(green('Bundle built.'));
+			console.log(cyan('Bundle built.'));
 		}
 		console.log('');
 	} catch (error) {
@@ -1506,13 +1524,13 @@ async function buildMultiEntry(targetPath) {
 			if (!buildOnly) {
 				await openPage(output);
 			} else {
-				console.log(entryFile.replace(process.env.INIT_CWD, ''), green('Done.'));
+				console.log(entryFile.replace(process.env.INIT_CWD, ''), cyan('Done.'));
 			}
 		}
 
 		if (buildOnly) {
 			console.log();
-			console.log(green('Variant bundles built.'));
+			console.log(cyan('Variant bundles built.'));
 			console.log();
 			process.exit(0);
 		}
@@ -1664,11 +1682,11 @@ async function createScreenshots(targetPath) {
 		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);
 		console.log();
 
-		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
+		console.log(cyan('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
 	}
 
-	console.log(green('Done.'));
+	console.log(cyan('Done.'));
 	if (origPage) {
 		await origPage.browser().close();
 	}
