@@ -347,19 +347,19 @@ The lib exports some helpers for adding the created element to dom. Those helper
 
 ### append
 
-TODO
+Inserts JSX or DOM node after the last child of given parent DOM node
 
 ### prepend
 
-TODO
+Inserts JSX or DOM node before the first child given parent DOM node
 
 ### insertBefore
 
-TODO
+Inserts JSX or DOM node in the children list of given target's parent, just before the target
 
 ### insertAfter
 
-TODO
+Inserts JSX or DOM node in the children list of given target's parent, just after the target
 
 ## Hooks
 
@@ -688,9 +688,13 @@ import fooPlugin from 'vite-foo-plugin';
 Supported plugins for array format are currently.
 Note, changing the configuration for these plugins might break something.
 
+css-inject,
+css-modules,
+preact-debug,
 replace,
 svgr,
-preact-debug
+prefresh,
+custom-prefresh,
 */
 
 export default {
