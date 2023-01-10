@@ -17,7 +17,8 @@ export class Component {
 		this.props = props;
 	}
 	setState(newState) {
-		const old = { ...this._v };
+		const vnode = this._v;
+		const old = { ...vnode };
 		this._s = { ...this.state };
 		onNextTick(() => {
 			Object.assign(this.state, newState);

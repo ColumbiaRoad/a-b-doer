@@ -1,5 +1,5 @@
 import './polyfills.js';
-import { config, createVNode } from './utils/internal';
+import { config, createVNode, options } from './utils/internal';
 import { Fragment } from './utils/render';
 
 /**
@@ -33,6 +33,10 @@ const createElement = (tag, props, ...children) => {
 	}
 
 	config.j = true; // Helps terser to detect if jsx support should be bundled
+
+	if (import.meta.hot) {
+		options.vnode(vnode);
+	}
 
 	return vnode;
 };

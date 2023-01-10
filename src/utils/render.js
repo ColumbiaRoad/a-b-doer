@@ -57,7 +57,11 @@ const isRenderableElement = (element) => !!element || element === 0;
  * @returns {boolean}
  */
 const isSameChild = (vnode, vnode2) =>
-	vnode && vnode2 && (vnode === vnode2 || (vnode.key === vnode2.key && vnode.type === vnode2.type));
+	vnode &&
+	vnode2 &&
+	(vnode === vnode2 ||
+		(vnode.key === vnode2.key &&
+			(vnode.type === vnode2.type || (vnode.type.name && vnode.type.name === vnode2.type.name))));
 
 const isFragment = (tag) => {
 	if (isVNode(tag)) tag = tag.type;
@@ -222,10 +226,6 @@ export const renderVnode = (vnode, oldVnode) => {
 		vnode._c = createChildren(vnode, children, oldVnode?._c);
 	}
 
-	if (import.meta.hot) {
-		options.vnode(vnode);
-	}
-
 	return vnode;
 };
 
@@ -276,9 +276,9 @@ const createChildren = (vnode, children = [], oldChildren) => {
 				oldChild = undefined;
 			}
 
-			renderVnode(child, oldChild);
+			const newVnode = renderVnode(child, oldChild);
 
-			if (getVNodeDom(child, true) && isVNode(oldChild)) {
+			if (getVNodeDom(newVnode, true) && isVNode(oldChild)) {
 				oldChildrenMap.delete(oldChild.key);
 			}
 		}
@@ -325,15 +325,16 @@ const getStyleString = (style) => {
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
+	const prevDom = prevVnode && getVNodeDom(prevVnode, true);
 	if (!isRenderableElement(vnode)) {
 		if (prevVnode) {
-			domRemove(getVNodeDom(prevVnode, true));
+			domRemove(prevDom);
 		}
 		return vnode;
 	}
 	const isVnodeSame = isSameChild(vnode, prevVnode);
-	if (prevVnode && !isVnodeSame) {
-		domRemove(getVNodeDom(prevVnode, true));
+	if (prevDom && getVNodeDom(vnode) !== prevDom) {
+		domRemove(prevDom);
 	}
 	let returnDom = vnode._n || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
@@ -342,16 +343,24 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	}
 	const oldChildrenList = getChildrenList(prevVnode?._c);
 	const oldChildren = oldChildrenList.items;
+	const oldChildrenMap = oldChildrenList.map;
 	let childrenParentNode = returnDom;
 	let insertAt = 0;
-	// First remove all unmounted components
+	// Loop though all children and try to patch/remove them as well.
 	(vnode._c || []).forEach((child, index) => {
-		const oldChildVnode = (child && oldChildrenList.map.get(child.key)) || oldChildren[index];
+		const oldChildVnode = (child && oldChildrenMap.get(child.key)) || oldChildren[index];
 		const patchedNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, childrenParentNode, insertAt);
 		if (isRenderableElement(patchedNode)) {
 			insertAt++;
+			// Found a match from previous children, remove it from the map so know which must removed later
+			if (oldChildVnode) oldChildrenMap.delete(oldChildVnode.key);
 		}
 	});
+	// Handle cleaning of all removed children
+	for (const [_, oldChild] of oldChildrenMap) {
+		patchVnodeDom(null, oldChild);
+	}
+
 	if (isRenderableElement(returnDom)) {
 		if (vnode._drt && targetDomNode) {
 			const domChildren = targetDomNode.childNodes;
@@ -368,8 +377,6 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 
 const renderer = document.createElement('div');
 
-const attributeToEventname = (name) => name.substr(2).toLowerCase();
-
 /**
  *
  * @param {HTMLElement} element
@@ -380,17 +387,17 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 	if (element instanceof Text) {
 		element.textContent = props.text;
 	} else if (isDomNode(element)) {
+		if (element._e) {
+			Object.keys(element._e).forEach((key) => {
+				element.removeEventListener(key, element._e[key]);
+				delete element._e[key];
+			});
+		}
 		const sameProps = {};
 		for (let name in oldProps) {
 			let value = oldProps[name];
 			if (isSame(value, props[name])) {
 				sameProps[name] = true;
-			} else if (/^on[A-Z]/.test(name)) {
-				const evtName = attributeToEventname(name);
-				if (element._e && element._e[evtName]) {
-					element.removeEventListener(evtName, element._e[evtName]);
-					delete element._e[evtName];
-				}
 			} else element.removeAttribute(name);
 		}
 		for (let name in props) {
@@ -399,9 +406,6 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 				continue;
 			} else if (name === 'style') {
 				value = getStyleString(value);
-			} else if (name === 'html') {
-				element.innerHTML = value;
-				continue;
 			} else if (name === 'dangerouslySetInnerHTML') {
 				element.innerHTML = value.__html;
 				continue;
@@ -418,7 +422,7 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 					element[name] = value;
 				}
 			} else if (/^on[A-Z]/.test(name)) {
-				const evtName = attributeToEventname(name);
+				const evtName = name.substring(2).toLowerCase();
 				element.addEventListener(evtName, value);
 				element._e = element._e || {};
 				element._e[evtName] = value;
@@ -449,7 +453,7 @@ export const runUnmountCallbacks = (vnode) => {
 			vnode._h = [];
 		} else if (config.c && vnode._i && vnode._i.componentWillUnmount) {
 			vnode._i.componentWillUnmount();
-			delete vnode._i;
+			delete vnode._i._v;
 		}
 		(vnode._c || []).forEach((child) => runUnmountCallbacks(child));
 		if (import.meta.hot) {

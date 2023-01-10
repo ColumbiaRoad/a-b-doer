@@ -926,7 +926,6 @@ function customJsxPrefreshPlugin(options = {}) {
             try {
               flushUpdates();
             } catch (e) {
-							console.log(e);
               self.location.reload();
             }
           });
@@ -1086,6 +1085,7 @@ async function bundler(buildSpecConfig) {
 			  }
 			: optimizeDeps,
 		esbuild: {
+			jsx: 'transform',
 			jsxFactory: 'h',
 			jsxFragment: preact ? 'Fragment' : 'hf',
 			jsxInject,
