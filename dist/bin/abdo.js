@@ -94,6 +94,7 @@ const config = {
 		classes: true,
 		className: true,
 		namespaces: true,
+		extendedVnodes: true,
 	},
 };
 
@@ -233,10 +234,13 @@ async function getBuildSpec(testPath) {
 					Object.keys(spec.config).forEach((key) => {
 						if (key === 'bundler') return;
 						const option = spec.config[key];
+						const accVal = get(acc, [key]);
 						if (typeof option === 'function') {
-							set(acc, [key], option(get(acc, [key])));
-						} else if (typeof option === 'object' && option) {
-							set(acc, [key], merge(get(acc, [key]), option));
+							set(acc, [key], option(accVal));
+						} else if (Array.isArray(accVal)) {
+							accVal.concat(option);
+						} else if (typeof option === 'object' && option && !Array.isArray(option)) {
+							set(acc, [key], merge(accVal, option));
 						} else {
 							set(acc, [key], option);
 						}
@@ -256,10 +260,13 @@ async function getBuildSpec(testPath) {
 					if (bundlerConfig) {
 						Object.keys(bundlerConfig).forEach((key) => {
 							const option = bundlerConfig[key];
+							const accVal = get(acc, [key]);
 							if (typeof option === 'function') {
-								set(acc, [key], option(get(acc, [key])));
-							} else if (typeof option === 'object' && option) {
-								set(acc, [key], merge(get(acc, [key]), option));
+								set(acc, [key], option(accVal));
+							} else if (Array.isArray(accVal)) {
+								accVal.concat(option);
+							} else if (typeof option === 'object' && option && !Array.isArray(option)) {
+								set(acc, [key], merge(accVal, option));
 							} else {
 								set(acc, [key], option);
 							}
@@ -769,12 +776,13 @@ function cssInjectedByJsPlugin() {
 					cssToInject = allCssCode;
 				}
 
-				const jsAsset = bundle[jsAssets[0]];
+				if (cssToInject) {
+					const jsAsset = bundle[jsAssets[0]];
 
-				const appCode = jsAsset.code;
-				jsAsset.code =
-					/* prettier-ignore */
-					"!(function(){" +
+					const appCode = jsAsset.code;
+					jsAsset.code =
+						/* prettier-ignore */
+						"!(function(){" +
 						"var __a,__s,__f=function(){" +
 							"if(__a){return;}" +
 							"__a=1;" +
@@ -786,6 +794,7 @@ function cssInjectedByJsPlugin() {
 						(abConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
 					"})();"
 					+ appCode;
+				}
 			}
 		},
 	};
@@ -1012,7 +1021,7 @@ async function bundler(buildSpecConfig) {
 		}
 	} catch (error) {}
 
-	const { minify: configMinify, preact, modules, id, chunks, extractCss, watch, features } = testConfig;
+	const { minify: configMinify, preact, modules, id, chunks, watch, features } = testConfig;
 	const minify = configMinify ?? !watch;
 
 	// Bundler behaves a little bit differently when there's style file as an entry.
@@ -1040,7 +1049,10 @@ async function bundler(buildSpecConfig) {
 	const featuresReplaces = {};
 	Object.entries(features).forEach(([key, value]) => {
 		if (value !== 'auto') {
-			const letter = key === 'className' ? 'x' : key[0];
+			let letter = key === 'className' ? 'x' : key[0];
+			if (key === 'extendedVnodes') {
+				letter = 'v';
+			}
 			featuresReplaces[`config.${letter}`] = value.toString();
 		}
 	});

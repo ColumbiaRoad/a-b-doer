@@ -35,12 +35,11 @@ export const createDocumentFragment = () => document.createDocumentFragment();
  * @prop {boolean} h Internal hooks support flag
  * @prop {boolean} n Internal namespace tag/attribute support flag
  * @prop {boolean} x Internal class as className props support flag
+ * @prop {boolean} v Internal extended VNode type support (DOM element & HTML string)
  */
 export const config = {
-	c: true, // Classes. Helps terser to detect if class component support should be bundled
 	h: false, // Hooks. Helps terser to detect if hook related code should be bundled
 	j: false, // JSX. Helps terser to detect if jsx support should be bundled
-	n: true, // Namespaces. Helps terser to detect if namespace tag/attribute support should be bundled.
 };
 
 // Internal object for storing details of currently rendered component's hooks

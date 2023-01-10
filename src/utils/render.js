@@ -6,7 +6,6 @@ import {
 	config,
 	createVNode,
 	domRemove,
-	domReplaceWith,
 	isArray,
 	domAppend,
 	createDocumentFragment,
@@ -61,7 +60,7 @@ const isSameChild = (vnode, vnode2) =>
 	vnode2 &&
 	(vnode === vnode2 ||
 		(vnode.key === vnode2.key &&
-			(vnode.type === vnode2.type || (vnode.type.name && vnode.type.name === vnode2.type.name))));
+			(vnode.type === vnode2.type || (config.c && vnode.type.name && vnode.type.name === vnode2.type.name))));
 
 const isFragment = (tag) => {
 	if (isVNode(tag)) tag = tag.type;
@@ -185,7 +184,7 @@ export const renderVnode = (vnode, oldVnode) => {
 	else {
 		// Build element if it's not a fragment
 		if (!frag) {
-			if (isDomNode(tag)) {
+			if (config.v && isDomNode(tag)) {
 				element = tag;
 			}
 
@@ -201,7 +200,7 @@ export const renderVnode = (vnode, oldVnode) => {
 
 				// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
 				// At least in Google Optimize there's quite small size limit for assets.
-				if (tag.indexOf('<') !== -1) {
+				if (config.v && tag.indexOf('<') !== -1) {
 					renderer.innerHTML = tag;
 					element = renderer.firstElementChild.cloneNode(true);
 					renderer.innerHTML = '';
@@ -333,9 +332,6 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 		return vnode;
 	}
 	const isVnodeSame = isSameChild(vnode, prevVnode);
-	if (prevDom && getVNodeDom(vnode) !== prevDom) {
-		domRemove(prevDom);
-	}
 	let returnDom = vnode._n || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
 	if (vnode._r) {
@@ -375,7 +371,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	return null;
 };
 
-const renderer = document.createElement('div');
+const renderer = config.v && document.createElement('div');
 
 /**
  *
@@ -402,22 +398,20 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 		}
 		for (let name in props) {
 			let value = props[name];
+			if (name === 'style') {
+				value = getStyleString(value);
+			}
 			if (sameProps[name] || value === undefined || /^className|children|key$/.test(name)) {
 				continue;
-			} else if (name === 'style') {
-				value = getStyleString(value);
 			} else if (name === 'dangerouslySetInnerHTML') {
 				element.innerHTML = value.__html;
-				continue;
 			} else if (name === 'ref' && value) {
 				if (isFunction(value)) {
 					value(element);
 				} else if (value.current !== undefined) {
 					value.current = element;
 				}
-				continue;
-			}
-			if (typeof value === 'boolean') {
+			} else if (typeof value === 'boolean') {
 				if (name in element) {
 					element[name] = value;
 				}
