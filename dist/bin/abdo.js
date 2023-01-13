@@ -89,12 +89,12 @@ const config = {
 	toolbar: false,
 	extractCss: false,
 	features: {
-		hooks: 'auto',
-		jsx: 'auto',
-		classes: true,
+		hook: true,
+		jsx: true,
 		className: true,
-		namespaces: true,
-		extendedVnodes: true,
+		classComponent: true,
+		namespace: true,
+		extendedVnode: true,
 	},
 };
 
@@ -220,10 +220,18 @@ async function getBuildSpec(testPath) {
 		return null;
 	}
 
-	return {
+	const overrideConfig = {
 		...config,
 		...testConfig,
-		features: { ...config.features, ...(testConfig.features || {}) },
+	};
+
+	return {
+		...overrideConfig,
+		features: {
+			...config.features,
+			...(testConfig.features || {}),
+			...(overrideConfig.preact ? { jsx: false, hooks: false } : {}),
+		},
 		testPath,
 		entryFile,
 		entryPart,
@@ -1049,11 +1057,7 @@ async function bundler(buildSpecConfig) {
 	const featuresReplaces = {};
 	Object.entries(features).forEach(([key, value]) => {
 		if (value !== 'auto') {
-			let letter = key === 'className' ? 'x' : key[0];
-			if (key === 'extendedVnodes') {
-				letter = 'v';
-			}
-			featuresReplaces[`config.${letter}`] = value.toString();
+			featuresReplaces[`config._${key}`] = value.toString();
 		}
 	});
 
@@ -1167,6 +1171,7 @@ async function bundler(buildSpecConfig) {
 					'replace',
 					{
 						preventAssignment: true,
+						delimiters: ['\\b', '\\b(?!\\.)'],
 						values: {
 							'process.env.PREACT': PREACT,
 							'process.env.preact': PREACT,

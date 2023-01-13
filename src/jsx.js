@@ -1,11 +1,15 @@
 import './polyfills.js';
-import { config, createVNode, options } from './utils/internal';
+import { config, createVNode, initNs, options } from './utils/internal';
 import { Fragment } from './utils/render';
 
 /**
  * Simple parser utility for jsx syntax. Converts JSX syntax to simple objects that can be rendered to DOM nodes with render utility (@see render() [./utils/render.js])
  * Should be used with babel and plugin-transform-react-jsx.
  */
+
+if (config._namespace) {
+	initNs();
+}
 
 /**
  * Creates a html element with given attributes and child nodes.
@@ -17,7 +21,7 @@ import { Fragment } from './utils/render';
 const createElement = (tag, props, ...children) => {
 	props = props || {};
 
-	if (config.x) {
+	if (config._className) {
 		if (props.class) {
 			props.className = props.class;
 		} else if (props.className) {
@@ -31,8 +35,6 @@ const createElement = (tag, props, ...children) => {
 	if (tag === 'svg') {
 		vnode.svg = true;
 	}
-
-	config.j = true; // Helps terser to detect if jsx support should be bundled
 
 	if (import.meta.hot) {
 		options.vnode(vnode);

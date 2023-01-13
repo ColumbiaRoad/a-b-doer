@@ -6,8 +6,6 @@
 import { config, hooks, isSame, onNextTick } from './utils/internal';
 import { renderVnode, patchVnodeDom } from './utils/render';
 
-config.h = true;
-
 /**
  * Initializes the reference object.
  * @param {*} current Initial value

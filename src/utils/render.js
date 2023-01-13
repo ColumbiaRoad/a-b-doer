@@ -6,12 +6,14 @@ import {
 	config,
 	createVNode,
 	domRemove,
+	domReplaceWith,
 	isArray,
 	domAppend,
 	createDocumentFragment,
 	isSame,
 	domInsertBefore,
 	options,
+	getNs,
 } from './internal';
 
 /**
@@ -60,7 +62,8 @@ const isSameChild = (vnode, vnode2) =>
 	vnode2 &&
 	(vnode === vnode2 ||
 		(vnode.key === vnode2.key &&
-			(vnode.type === vnode2.type || (config.c && vnode.type.name && vnode.type.name === vnode2.type.name))));
+			(vnode.type === vnode2.type ||
+				(config._classComponent && vnode.type.name && vnode.type.name === vnode2.type.name))));
 
 const isFragment = (tag) => {
 	if (isVNode(tag)) tag = tag.type;
@@ -77,26 +80,6 @@ const copyInternal = (source, target) => {
 	});
 };
 
-let NAMESPACES;
-
-const initNs = () => {
-	if (config.n && !NAMESPACES) {
-		NAMESPACES = window.__namespaces || {
-			svg: '2000/svg',
-			xlink: '1999/xlink',
-			xmlns: '2000/xmlns/',
-		};
-		window.__namespaces = NAMESPACES;
-	}
-};
-
-const getNs = (key) => {
-	if (!config.j || !config.n) return null;
-	const ns = NAMESPACES[key];
-	if (!ns) return null;
-	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
-};
-
 /**
  * Renders given AB Doer VNode.
  * @param {VNode} vnode
@@ -104,11 +87,9 @@ const getNs = (key) => {
  * @returns {VNode}
  */
 export const renderVnode = (vnode, oldVnode) => {
-	if (!config.j || !vnode) {
+	if (!config._jsx || !vnode) {
 		return vnode;
 	}
-
-	initNs();
 
 	/** @type {HTMLElement} */
 	let element;
@@ -129,7 +110,7 @@ export const renderVnode = (vnode, oldVnode) => {
 		let newVNode;
 
 		// Class syntax components
-		if (config.c && tag.prototype?.render) {
+		if (config._classComponent && tag.prototype?.render) {
 			let comp = vnode._i;
 			const cb = [];
 			// First render
@@ -184,7 +165,7 @@ export const renderVnode = (vnode, oldVnode) => {
 	else {
 		// Build element if it's not a fragment
 		if (!frag) {
-			if (config.v && isDomNode(tag)) {
+			if (config._extendedVnode && isDomNode(tag)) {
 				element = tag;
 			}
 
@@ -200,7 +181,7 @@ export const renderVnode = (vnode, oldVnode) => {
 
 				// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
 				// At least in Google Optimize there's quite small size limit for assets.
-				if (config.v && tag.indexOf('<') !== -1) {
+				if (config._extendedVnode && tag.indexOf('<') !== -1) {
 					renderer.innerHTML = tag;
 					element = renderer.firstElementChild.cloneNode(true);
 					renderer.innerHTML = '';
@@ -208,7 +189,8 @@ export const renderVnode = (vnode, oldVnode) => {
 					if (!tag) {
 						element = document.createTextNode(props.text);
 					} else {
-						element = config.n && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
+						element =
+							config._namespace && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 					}
 				}
 			}
@@ -285,7 +267,7 @@ const createChildren = (vnode, children = [], oldChildren) => {
 		return child;
 	});
 
-	if (config.h || config.c) {
+	if (config._hooks || config._classComponent) {
 		// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
 		for (const [_, oldChild] of oldChildrenMap) {
 			runUnmountCallbacks(oldChild);
@@ -332,6 +314,9 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 		return vnode;
 	}
 	const isVnodeSame = isSameChild(vnode, prevVnode);
+	if (prevDom && getVNodeDom(vnode) !== prevDom) {
+		domRemove(prevDom);
+	}
 	let returnDom = vnode._n || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
 	if (vnode._r) {
@@ -371,7 +356,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	return null;
 };
 
-const renderer = config.v && document.createElement('div');
+const renderer = config._extendedVnode && document.createElement('div');
 
 /**
  *
@@ -422,7 +407,7 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 				element._e[evtName] = value;
 			} else if (value !== null) {
 				value = value.toString();
-				if (config.n && name.includes(':') && element.tagName != 'SVG') {
+				if (config._namespace && name.includes(':') && element.tagName != 'SVG') {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 				} else {
@@ -438,14 +423,14 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
  */
 export const runUnmountCallbacks = (vnode) => {
 	if (isVNode(vnode)) {
-		if (config.h && vnode._h) {
+		if (config._hooks && vnode._h) {
 			vnode._h.forEach((h) => {
 				if (h.length === 3 && isFunction(h[2])) {
 					h[2]();
 				}
 			});
 			vnode._h = [];
-		} else if (config.c && vnode._i && vnode._i.componentWillUnmount) {
+		} else if (config._classComponent && vnode._i && vnode._i.componentWillUnmount) {
 			vnode._i.componentWillUnmount();
 			delete vnode._i._v;
 		}

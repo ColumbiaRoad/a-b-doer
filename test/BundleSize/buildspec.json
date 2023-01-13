@@ -1,10 +1,10 @@
 {
   "url": ["https://partt.ee?perf"],
   "preact": false,
-  "featuresa": {
-    "classes": false,
+  "features": {
+    "classComponent": false,
     "className": false,
-    "namespaces": false,
-    "extendedVnodes": false
+    "namespace": false,
+    "extendedVnode": false
   }
 }

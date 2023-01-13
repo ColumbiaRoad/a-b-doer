@@ -30,17 +30,14 @@ export const createDocumentFragment = () => document.createDocumentFragment();
 
 // Internal object for storing details of current output/etc
 /**
- * @prop {boolean} j Internal jsx support flag
- * @prop {boolean} c Internal class component support flag
- * @prop {boolean} h Internal hooks support flag
- * @prop {boolean} n Internal namespace tag/attribute support flag
- * @prop {boolean} x Internal class as className props support flag
- * @prop {boolean} v Internal extended VNode type support (DOM element & HTML string)
+ * @prop {boolean} _jsx Internal jsx support flag
+ * @prop {boolean} _classComponent Internal class component support flag
+ * @prop {boolean} _hooks Internal hooks support flag
+ * @prop {boolean} _namespace Internal namespace tag/attribute support flag
+ * @prop {boolean} _className Internal class as className props support flag
+ * @prop {boolean} _extendedVnode Internal extended VNode type support (DOM element & HTML string)
  */
-export const config = {
-	h: false, // Hooks. Helps terser to detect if hook related code should be bundled
-	j: false, // JSX. Helps terser to detect if jsx support should be bundled
-};
+export const config = {};
 
 // Internal object for storing details of currently rendered component's hooks
 export const hooks = {
@@ -51,11 +48,14 @@ export const hooks = {
 
 export const isSame = (iter, iter2) => {
 	if (iter === iter2) return true;
+	if ((!iter && iter2) || (iter && !iter2)) return false;
+	iter2 = iter2 || {};
 	if (iter && typeof iter === 'object') {
 		let same = true;
-		for (const key of Object.keys(iter)) {
-			if (iter[key] !== iter2?.[key]) {
-				same = key === 'props' ? isSame(iter[key], iter2?.[key]) : false;
+		const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
+		for (const key of keys) {
+			if (key[0] !== '_' && iter[key] !== iter2[key]) {
+				same = key === 'props' ? isSame(iter[key], iter2[key]) : false;
 				break;
 			}
 		}
@@ -75,6 +75,30 @@ export const createVNode = (tag = '', props) => {
 		props,
 		key: props.key || props['data-o'] || process.env.TEST_ID,
 	};
+};
+
+let NAMESPACES;
+
+export const initNs = () => {
+	if (!NAMESPACES) {
+		NAMESPACES = {
+			svg: '2000/svg',
+			xlink: '1999/xlink',
+			xmlns: '2000/xmlns/',
+		};
+	}
+};
+
+export const getNs = (key) => {
+	if (!config._jsx || !config._namespace) return null;
+	const ns = NAMESPACES[key];
+	if (!ns) return null;
+	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
+};
+
+export const addNs = (ns, url) => {
+	NAMESPACES = NAMESPACES || {};
+	NAMESPACES[ns] = url;
 };
 
 export const options = {
