@@ -994,15 +994,15 @@ const defaultConfig = {
 };
 
 const minifiedProperties = {
-	__hooks: 'h',
-	__class: 'c',
-	__vnode: 'v',
-	__current: 'i',
-	__state: 's',
-	__dirty: 'd',
-	__children: 'a',
-	__result: 'r',
-	__dom: 'e',
+	__hooks: '_h',
+	__class: '_c',
+	__vnode: '_v',
+	__current: '_i',
+	__state: '_s',
+	__dirty: '_d',
+	__children: '_a',
+	__result: '_r',
+	__dom: '_e',
 };
 
 /**
@@ -1069,7 +1069,7 @@ async function bundler(buildSpecConfig) {
 	const featuresReplaces = {};
 	Object.entries(features).forEach(([key, value]) => {
 		if (value !== 'auto') {
-			featuresReplaces[`config._${key}`] = value.toString();
+			featuresReplaces[`config.${key}`] = value.toString();
 		}
 	});
 
@@ -1195,11 +1195,12 @@ async function bundler(buildSpecConfig) {
 						},
 					},
 				],
-				replace({
-					preventAssignment: false,
-					delimiters: ['', ''],
-					values: minifiedProperties,
-				}),
+				!watch &&
+					replace({
+						preventAssignment: false,
+						delimiters: ['', ''],
+						values: minifiedProperties,
+					}),
 				[
 					'svgr',
 					{

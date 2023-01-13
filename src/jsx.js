@@ -7,7 +7,7 @@ import { Fragment } from './utils/render';
  * Should be used with babel and plugin-transform-react-jsx.
  */
 
-if (config._namespace) {
+if (config.namespace) {
 	initNs();
 }
 
@@ -21,7 +21,7 @@ if (config._namespace) {
 const createElement = (tag, props, ...children) => {
 	props = props || {};
 
-	if (config._className) {
+	if (config.className) {
 		if (props.class) {
 			props.className = props.class;
 		} else if (props.className) {

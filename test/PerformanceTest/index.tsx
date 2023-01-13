@@ -1,9 +1,9 @@
 import { pollQuerySelector } from 'a-b-doer';
-// import { render } from 'a-b-doer';
-// import { useEffect, useState } from 'a-b-doer/hooks';
+import { render } from 'a-b-doer';
+import { useEffect, useState } from 'a-b-doer/hooks';
 import { init } from './src/stats';
-import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+// import { render } from 'preact';
+// import { useEffect, useState } from 'preact/hooks';
 import './styles.scss';
 
 function shuffle(array) {
@@ -58,8 +58,6 @@ const TestComponent = () => {
 pollQuerySelector('#app', (target) => {
 	init();
 	console.time();
-	const a = <TestComponent />;
-	render(a, target);
-	console.log(a);
+	render(<TestComponent />, target);
 	console.timeEnd();
 });

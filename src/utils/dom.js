@@ -156,7 +156,7 @@ const createMutation = (child) => {
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
 	let node = child;
-	if (!process.env.preact && config._jsx && isVNode(child)) {
+	if (!process.env.preact && config.jsx && isVNode(child)) {
 		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
 	}
 

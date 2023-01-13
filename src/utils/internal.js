@@ -31,12 +31,12 @@ export const createDocumentFragment = () => document.createDocumentFragment();
 // Internal object for storing details of current output/etc
 // This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
 /**
- * @prop {boolean} _jsx Internal jsx support flag
- * @prop {boolean} _classComponent Internal class component support flag
- * @prop {boolean} _hooks Internal hooks support flag
- * @prop {boolean} _namespace Internal namespace tag/attribute support flag
- * @prop {boolean} _className Internal class as className props support flag
- * @prop {boolean} _extendedVnode Internal extended VNode type support (DOM element & HTML string)
+ * @prop {boolean} jsx Internal jsx support flag
+ * @prop {boolean} classComponent Internal class component support flag
+ * @prop {boolean} hooks Internal hooks support flag
+ * @prop {boolean} namespace Internal namespace tag/attribute support flag
+ * @prop {boolean} className Internal class as className props support flag
+ * @prop {boolean} extendedVnode Internal extended VNode type support (DOM element & HTML string)
  */
 export const config = {};
 
@@ -80,7 +80,7 @@ export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
 		props,
-		key: props.key || props['data-o'] || process.env.TEST_ID,
+		key: props.key || props['data-o'],
 	};
 };
 
@@ -97,7 +97,7 @@ export const initNs = () => {
 };
 
 export const getNs = (key) => {
-	if (!config._jsx || !config._namespace) return null;
+	if (!config.jsx || !config.namespace) return null;
 	const ns = NAMESPACES[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
