@@ -22,12 +22,12 @@ import {
  * @prop {Array} children
  * @prop {String|Function} type VNode type
  * @prop {Object} props Element/Component props
- * @prop {Array} [_h] Hooks of custom component
- * @prop {*} [_i] Class component instance
- * @prop {HTMLElement} [_n] Rendered DOM node
- * @prop {VNode} [_r] Rendered VNode of custom component
- * @prop {VNode[]} [_c] Children where all renderable elements has been converted to VNodes
- * @prop {boolean} [_drt] VNode marked as dirty and the DOM should be updated
+ * @prop {Array} [__hooks] Hooks of custom component
+ * @prop {*} [__class] Class component instance
+ * @prop {HTMLElement} [__dom] Rendered DOM node
+ * @prop {VNode} [__result] Rendered VNode of custom component
+ * @prop {VNode[]} [__children] Children where all renderable elements has been converted to VNodes
+ * @prop {boolean} [__dirty] VNode marked as dirty and the DOM should be updated
  */
 
 export const Fragment = (props) => props.children;
@@ -48,7 +48,7 @@ export const isVNode = (vnode) => !!vnode && (!!vnode._n || !!vnode.props);
  * @returns {Element|null}
  */
 export const getVNodeDom = (vnode, recursive) =>
-	vnode ? vnode._n || (recursive ? getVNodeDom(vnode._r) : vnode._r?._n) : null;
+	vnode ? vnode._n || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
 
 const isRenderableElement = (element) => !!element || element === 0;
 
@@ -75,7 +75,7 @@ const isFragment = (tag) => {
  * @param {VNode2} source
  */
 const copyInternal = (source, target) => {
-	['_h', '_i'].forEach((a) => {
+	['__hooks', '__class'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
 	});
 };
@@ -97,7 +97,7 @@ export const renderVnode = (vnode, oldVnode) => {
 	if (oldVnode) {
 		copyInternal(oldVnode, vnode);
 	} else {
-		vnode._drt = true;
+		vnode.__dirty = true;
 	}
 
 	const { type: tag, props = {}, svg } = vnode;
@@ -111,21 +111,21 @@ export const renderVnode = (vnode, oldVnode) => {
 
 		// Class syntax components
 		if (config._classComponent && tag.prototype?.render) {
-			let comp = vnode._i;
+			let comp = vnode.__class;
 			const cb = [];
 			// First render
 			if (!comp) {
-				vnode._i = comp = new tag(props);
-				comp._v = vnode; // So render call inside of Component setState knows which VNode to render
+				vnode.__class = comp = new tag(props);
+				comp.__vnode = vnode; // So render call inside of Component setState knows which VNode to render
 				if (comp.componentDidMount) {
 					cb.push(() => comp.componentDidMount());
 				}
 			}
 			// Subsequent render
 			else {
-				vnode._i.props = props;
+				vnode.__class.props = props;
 				if (comp.componentDidUpdate) {
-					const oldState = vnode._i._s;
+					const oldState = vnode.__class.__state;
 					cb.push(() => comp.componentDidUpdate(oldProps, oldState));
 				}
 			}
@@ -137,20 +137,20 @@ export const renderVnode = (vnode, oldVnode) => {
 		}
 		// Functional components
 		else {
-			vnode._h = vnode._h || [];
-			hooks.h = vnode._h;
-			hooks.c = 0;
-			hooks.v = vnode;
+			vnode.__hooks = vnode.__hooks || [];
+			hooks.__hooks = vnode.__hooks;
+			hooks.__current = 0;
+			hooks.__vnode = vnode;
 			newVNode = tag(props);
 			if (!isVNode(newVNode)) {
-				// delete vnode._n;
+				// delete vnode.__dom;
 				return newVNode;
 			}
 		}
 
 		newVNode.key = vnode.key;
-		vnode._r = newVNode;
-		children = [vnode._r];
+		vnode.__result = newVNode;
+		children = [vnode.__result];
 
 		// If one of props is a ref, put the component instance to the ref value.
 		if (props.ref) {
@@ -173,7 +173,7 @@ export const renderVnode = (vnode, oldVnode) => {
 			if (!element && nNode && isSameChild(oldVnode, vnode)) {
 				element = nNode;
 			} else {
-				vnode._drt = true;
+				vnode.__dirty = true;
 			}
 
 			if (!element) {
@@ -197,14 +197,15 @@ export const renderVnode = (vnode, oldVnode) => {
 
 			if (!isSame(vnode, oldVnode)) {
 				setElementAttributes(element, props, oldProps);
+				vnode.__dirty = true;
 			}
 		}
 
-		if (!frag) vnode._n = element;
+		if (!frag) vnode.__dom = element;
 	}
 
 	if (children?.length) {
-		vnode._c = createChildren(vnode, children, oldVnode?._c);
+		vnode.__children = createChildren(vnode, children, oldVnode?.__children);
 	}
 
 	return vnode;
@@ -317,18 +318,23 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	if (prevDom && getVNodeDom(vnode) !== prevDom) {
 		domRemove(prevDom);
 	}
-	let returnDom = vnode._n || createDocumentFragment();
+	let returnDom = vnode.__dom || createDocumentFragment();
 	// VNode is a component, try to insert the rendered component
-	if (vnode._r) {
-		return patchVnodeDom(vnode._r, isVnodeSame ? prevVnode?._r || prevVnode : undefined, targetDomNode, atIndex);
+	if (vnode.__result) {
+		return patchVnodeDom(
+			vnode.__result,
+			isVnodeSame ? prevVnode?.__result || prevVnode : undefined,
+			targetDomNode,
+			atIndex
+		);
 	}
-	const oldChildrenList = getChildrenList(prevVnode?._c);
+	const oldChildrenList = getChildrenList(prevVnode?.__children);
 	const oldChildren = oldChildrenList.items;
 	const oldChildrenMap = oldChildrenList.map;
 	let childrenParentNode = returnDom;
 	let insertAt = 0;
 	// Loop though all children and try to patch/remove them as well.
-	(vnode._c || []).forEach((child, index) => {
+	(vnode.__children || []).forEach((child, index) => {
 		const oldChildVnode = (child && oldChildrenMap.get(child.key)) || oldChildren[index];
 		const patchedNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, childrenParentNode, insertAt);
 		if (isRenderableElement(patchedNode)) {
@@ -343,7 +349,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	}
 
 	if (isRenderableElement(returnDom)) {
-		if (vnode._drt && targetDomNode) {
+		if (vnode.__dirty && targetDomNode) {
 			const domChildren = targetDomNode.childNodes;
 			if (atIndex !== undefined && domChildren.length > atIndex) {
 				domInsertBefore(returnDom, domChildren[atIndex]);
@@ -430,11 +436,11 @@ export const runUnmountCallbacks = (vnode) => {
 				}
 			});
 			vnode._h = [];
-		} else if (config._classComponent && vnode._i && vnode._i.componentWillUnmount) {
-			vnode._i.componentWillUnmount();
-			delete vnode._i._v;
+		} else if (config._classComponent && vnode.__class && vnode.__class.componentWillUnmount) {
+			vnode.__class.componentWillUnmount();
+			delete vnode.__class.__vnode;
 		}
-		(vnode._c || []).forEach((child) => runUnmountCallbacks(child));
+		(vnode.__children || []).forEach((child) => runUnmountCallbacks(child));
 		if (import.meta.hot) {
 			options.unmount(vnode);
 		}

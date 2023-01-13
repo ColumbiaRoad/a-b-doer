@@ -29,6 +29,7 @@ export const isArray = (arr) => Array.isArray(arr);
 export const createDocumentFragment = () => document.createDocumentFragment();
 
 // Internal object for storing details of current output/etc
+// This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
 /**
  * @prop {boolean} _jsx Internal jsx support flag
  * @prop {boolean} _classComponent Internal class component support flag
@@ -39,11 +40,17 @@ export const createDocumentFragment = () => document.createDocumentFragment();
  */
 export const config = {};
 
-// Internal object for storing details of currently rendered component's hooks
+/**
+ * Internal object for storing details of currently rendered component's hooks.
+ * Hook pointer properties:
+ * @prop {boolean} __current Currently processed hook index
+ * @prop {boolean} __hooks Array pointer to current VNode's hooks
+ * @prop {boolean} __vnode Current VNode
+ */
 export const hooks = {
-	c: 0,
-	h: [],
-	v: null,
+	__current: 0,
+	__hooks: [],
+	__vnode: null,
 };
 
 export const isSame = (iter, iter2) => {

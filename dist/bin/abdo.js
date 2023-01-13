@@ -993,6 +993,18 @@ const defaultConfig = {
 	},
 };
 
+const minifiedProperties = {
+	__hooks: 'h',
+	__class: 'c',
+	__vnode: 'v',
+	__current: 'i',
+	__state: 's',
+	__dirty: 'd',
+	__children: 'a',
+	__result: 'r',
+	__dom: 'e',
+};
+
 /**
  * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
  * @returns {object} Bundler config
@@ -1171,7 +1183,6 @@ async function bundler(buildSpecConfig) {
 					'replace',
 					{
 						preventAssignment: true,
-						delimiters: ['\\b', '\\b(?!\\.)'],
 						values: {
 							'process.env.PREACT': PREACT,
 							'process.env.preact': PREACT,
@@ -1184,6 +1195,11 @@ async function bundler(buildSpecConfig) {
 						},
 					},
 				],
+				replace({
+					preventAssignment: false,
+					delimiters: ['', ''],
+					values: minifiedProperties,
+				}),
 				[
 					'svgr',
 					{

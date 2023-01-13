@@ -17,12 +17,12 @@ export class Component {
 		this.props = props;
 	}
 	setState(newState) {
-		const vnode = this._v;
+		const vnode = this.__vnode;
 		const old = { ...vnode };
-		this._s = { ...this.state };
+		this.__state = { ...this.state };
 		onNextTick(() => {
 			Object.assign(this.state, newState);
-			this._v = renderVnode(vnode, old);
+			this.__vnode = renderVnode(vnode, old);
 			patchVnodeDom(vnode, old);
 		});
 	}

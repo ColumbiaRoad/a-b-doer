@@ -3,7 +3,7 @@
  * @property {*|null} current
  */
 
-import { config, hooks, isSame, onNextTick } from './utils/internal';
+import { hooks, isSame, onNextTick } from './utils/internal';
 import { renderVnode, patchVnodeDom } from './utils/render';
 
 /**
@@ -12,40 +12,40 @@ import { renderVnode, patchVnodeDom } from './utils/render';
  * @returns {Ref}
  */
 export const useRef = (current = null) => {
-	if (!hooks.h[hooks.c]) {
-		hooks.h[hooks.c] = { current };
+	if (!hooks.__hooks[hooks.__current]) {
+		hooks.__hooks[hooks.__current] = { current };
 	}
-	const ret = hooks.h[hooks.c];
-	hooks.c++;
+	const ret = hooks.__hooks[hooks.__current];
+	hooks.__current++;
 	return ret;
 };
 
 export const useEffect = (cb, deps) => {
-	const oldDeps = hooks.h[hooks.c]?.[1];
+	const oldDeps = hooks.__hooks[hooks.__current]?.[1];
 	let shouldCall = !oldDeps || !deps;
 	if (!shouldCall && deps) {
 		shouldCall = !isSame(deps, oldDeps || []);
 	}
 	if (shouldCall) {
-		if (oldDeps && hooks.h[hooks.c][2]) {
-			hooks.h[hooks.c][2]();
+		if (oldDeps && hooks.__hooks[hooks.__current][2]) {
+			hooks.__hooks[hooks.__current][2]();
 		}
-		hooks.h[hooks.c] = ['e', deps, null];
+		hooks.__hooks[hooks.__current] = ['e', deps, null];
 		((hooks, index) => {
 			onNextTick(() => {
 				hooks[index][2] = cb();
 			});
-		})(hooks.h, hooks.c);
+		})(hooks.__hooks, hooks.__current);
 	}
-	hooks.c++;
+	hooks.__current++;
 };
 
 export const useState = (defaultValue) => {
-	if (!hooks.h[hooks.c]) {
-		hooks.h[hooks.c] = [defaultValue];
+	if (!hooks.__hooks[hooks.__current]) {
+		hooks.__hooks[hooks.__current] = [defaultValue];
 	}
 
-	hooks.h[hooks.c][1] = ((hooks, index, vnode) => (value) => {
+	hooks.__hooks[hooks.__current][1] = ((hooks, index, vnode) => (value) => {
 		hooks[index][0] = value;
 		if (vnode) {
 			onNextTick(() => {
@@ -55,9 +55,9 @@ export const useState = (defaultValue) => {
 				patchVnodeDom(vnode, old);
 			});
 		}
-	})(hooks.h, hooks.c, hooks.v);
+	})(hooks.__hooks, hooks.__current, hooks.__vnode);
 
-	const state = hooks.h[hooks.c];
-	hooks.c++;
+	const state = hooks.__hooks[hooks.__current];
+	hooks.__current++;
 	return state;
 };
