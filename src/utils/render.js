@@ -32,7 +32,6 @@ import {
  * @prop {VNode} [__result] Rendered VNode of custom component
  * @prop {VNode[]} [__children] Children where all renderable elements has been converted to VNodes
  * @prop {boolean} [__dirty] VNode marked as dirty and the DOM should be updated
- * @prop {boolean} [__delete] VNode marked for removal
  */
 
 export const Fragment = (props) => props.children;
@@ -59,8 +58,7 @@ const isSameChild = (vnode, vnode2) =>
 	vnode2 &&
 	(vnode === vnode2 ||
 		(vnode.key === vnode2.key &&
-			(vnode.type === vnode2.type ||
-				(config.classComponent && vnode.type.name && vnode.type.name === vnode2.type.name))));
+			(vnode.type === vnode2.type || (import.meta.hot && vnode.__oldType === vnode2.__oldType))));
 
 const isFragment = (tag) => {
 	if (isVNode(tag)) tag = tag.type;
@@ -90,7 +88,7 @@ export const renderVnode = (vnode, oldVnode) => {
 
 	/** @type {HTMLElement} */
 	let element;
-	const oldProps = oldVnode?.props;
+	const oldProps = oldVnode ? oldVnode.props : undefined;
 	if (oldVnode) {
 		copyInternal(oldVnode, vnode);
 	} else {
@@ -145,7 +143,7 @@ export const renderVnode = (vnode, oldVnode) => {
 		}
 
 		newVNode.key = vnode.key;
-		vnode.__result = renderVnode(newVNode, oldVnode?.__result);
+		vnode.__result = renderVnode(newVNode, oldVnode ? oldVnode.__result : undefined);
 
 		// If one of props is a ref, put the component instance to the ref value.
 		if (props.ref) {
@@ -199,7 +197,7 @@ export const renderVnode = (vnode, oldVnode) => {
 		if (!frag) vnode.__dom = element;
 	}
 
-	if (children?.length) {
+	if (children) {
 		vnode.__children = renderVnodeChildren(vnode, children, oldVnode?.__children);
 	}
 
@@ -215,7 +213,7 @@ const createChildrenMap = (children) => {
 	const childrenMap = new Map();
 	if (children) {
 		children.forEach((child) => {
-			if (child?.key) {
+			if (child && child.key) {
 				childrenMap.set(child.key, child);
 			}
 		});
@@ -242,9 +240,7 @@ const renderVnodeChildren = (vnode, children, oldChildren) => {
 				child.svg = true;
 			}
 
-			if (!child.props.key) {
-				child.key = '#' + index;
-			}
+			child.key = child.props.key || '#' + index;
 
 			oldChild = childrenMap && childrenMap.get(child.key);
 			if (oldChild && !isSameChild(child, oldChild)) {
@@ -299,6 +295,7 @@ const getStyleString = (style) => {
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
+	// Handle case where Fragment or simila is a root of updated top level component
 	if (!targetDomNode && prevVnode) {
 		const someDom = getVNodeFirstRenderedDom(prevVnode);
 		if (someDom) {
@@ -314,7 +311,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 		return vnode;
 	}
 	const isVnodeSame = isSameChild(vnode, prevVnode);
-	if (prevDom && (getVNodeDom(vnode) !== prevDom || prevDom.__delete)) {
+	if (prevDom && getVNodeDom(vnode) !== prevDom) {
 		domRemove(prevDom);
 	}
 	let returnDom = vnode.__dom || createDocumentFragment();
@@ -333,17 +330,18 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	let childIndex = 0;
 	// Loop though all children and try to patch/remove them as well.
 	if (vnode.__children) {
-		for (const child of vnode.__children) {
+		vnode.__children.forEach((child, index) => {
+			const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
 			const patchedDomNode = patchVnodeDom(
 				child,
-				(!child || isVnodeSame) && oldChildrenMap && oldChildrenMap.get(child.key),
+				(!child || isVnodeSame) && oldChildVnode,
 				childrenParentNode,
 				childIndex
 			);
 			if (isRenderableElement(patchedDomNode)) {
 				childIndex++;
 			}
-		}
+		});
 	}
 
 	if (isRenderableElement(returnDom)) {

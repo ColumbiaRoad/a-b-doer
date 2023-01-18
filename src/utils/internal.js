@@ -98,7 +98,6 @@ export const hookPointer = {
 export const isSame = (iter, iter2) => {
 	if (iter === iter2) return true;
 	if ((!iter && iter2) || (iter && !iter2)) return false;
-	iter2 = iter2 || {};
 	if (isObject(iter) && isObject(iter2)) {
 		let same = true;
 		const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
