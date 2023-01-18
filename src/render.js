@@ -1,12 +1,6 @@
 import { append } from './utils/dom';
-import {
-	patchVnodeDom,
-	renderVnode,
-	Fragment as _Fragment,
-	getTestID as _getTestID,
-	getVNodeDom,
-} from './utils/render';
-import { onNextTick } from './utils/internal';
+import { patchVnodeDom, renderVnode, Fragment as _Fragment, getTestID as _getTestID } from './utils/render';
+import { getVNodeDom, onNextTick } from './utils/internal';
 
 /**
  * Super simple class abstract for class like components.

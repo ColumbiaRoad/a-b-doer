@@ -1,6 +1,14 @@
 import { Promise } from '../polyfills';
-import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode, getVNodeDom } from './render';
-import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
+import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode } from './render';
+import {
+	config,
+	createDocumentFragment,
+	domAppend,
+	domInsertBefore,
+	domRemove,
+	getVNodeDom,
+	isArray,
+} from './internal';
 
 export const createSelector = (node, selector) => [node, selector];
 

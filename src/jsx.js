@@ -28,7 +28,8 @@ const createElement = (tag, props, ...children) => {
 			props.class = props.className;
 		}
 	}
-	props.children = children || [];
+
+	if (children) props.children = children;
 
 	const vnode = createVNode(tag, props);
 

@@ -1,12 +1,11 @@
 import {
-	hooks,
+	hookPointer,
 	onNextTick,
 	isFunction,
 	isString,
 	config,
 	createVNode,
 	domRemove,
-	domReplaceWith,
 	isArray,
 	domAppend,
 	createDocumentFragment,
@@ -14,6 +13,11 @@ import {
 	domInsertBefore,
 	options,
 	getNs,
+	getIndexInParent,
+	getVNodeDom,
+	getVNodeFirstRenderedDom,
+	getParent,
+	isObject,
 } from './internal';
 
 /**
@@ -28,6 +32,7 @@ import {
  * @prop {VNode} [__result] Rendered VNode of custom component
  * @prop {VNode[]} [__children] Children where all renderable elements has been converted to VNodes
  * @prop {boolean} [__dirty] VNode marked as dirty and the DOM should be updated
+ * @prop {boolean} [__delete] VNode marked for removal
  */
 
 export const Fragment = (props) => props.children;
@@ -40,15 +45,7 @@ export const isDomNode = (tag) => tag instanceof Element;
  * @param {VNode} vnode
  * @returns {boolean}
  */
-export const isVNode = (vnode) => !!vnode && (!!vnode.__dom || !!vnode.props);
-
-/**
- * @param {VNode} vnode
- * @param {boolean} recursive
- * @returns {Element|null}
- */
-export const getVNodeDom = (vnode, recursive) =>
-	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
+export const isVNode = (vnode) => !!vnode && !!vnode.props;
 
 const isRenderableElement = (element) => !!element || element === 0;
 
@@ -138,19 +135,17 @@ export const renderVnode = (vnode, oldVnode) => {
 		// Functional components
 		else {
 			vnode.__hooks = vnode.__hooks || [];
-			hooks.__hooks = vnode.__hooks;
-			hooks.__current = 0;
-			hooks.__vnode = vnode;
+			hookPointer.__hooks = vnode.__hooks;
+			hookPointer.__current = 0;
+			hookPointer.__vnode = vnode;
 			newVNode = tag(props);
 			if (!isVNode(newVNode)) {
-				// delete vnode.__dom;
 				return newVNode;
 			}
 		}
 
 		newVNode.key = vnode.key;
-		vnode.__result = newVNode;
-		children = [vnode.__result];
+		vnode.__result = renderVnode(newVNode, oldVnode?.__result);
 
 		// If one of props is a ref, put the component instance to the ref value.
 		if (props.ref) {
@@ -169,9 +164,9 @@ export const renderVnode = (vnode, oldVnode) => {
 				element = tag;
 			}
 
-			const nNode = getVNodeDom(oldVnode);
-			if (!element && nNode && isSameChild(oldVnode, vnode)) {
-				element = nNode;
+			const vnodeDom = getVNodeDom(oldVnode);
+			if (!element && vnodeDom && isSameChild(oldVnode, vnode)) {
+				element = vnodeDom;
 			} else {
 				vnode.__dirty = true;
 			}
@@ -181,7 +176,7 @@ export const renderVnode = (vnode, oldVnode) => {
 
 				// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
 				// At least in Google Optimize there's quite small size limit for assets.
-				if (config.extendedVnode && tag.indexOf('<') !== -1) {
+				if (config.extendedVnode && tag[0] === '<') {
 					renderer.innerHTML = tag;
 					element = renderer.firstElementChild.cloneNode(true);
 					renderer.innerHTML = '';
@@ -195,7 +190,7 @@ export const renderVnode = (vnode, oldVnode) => {
 				}
 			}
 
-			if (!isSame(vnode, oldVnode)) {
+			if (!isSame(props, oldProps)) {
 				setElementAttributes(element, props, oldProps);
 				vnode.__dirty = true;
 			}
@@ -205,32 +200,27 @@ export const renderVnode = (vnode, oldVnode) => {
 	}
 
 	if (children?.length) {
-		vnode.__children = createChildren(vnode, children, oldVnode?.__children);
+		vnode.__children = renderVnodeChildren(vnode, children, oldVnode?.__children);
 	}
 
 	return vnode;
 };
 
-const flatten = (items) => {
-	const flat = [];
-
-	items.forEach((item) => {
-		if (isArray(item)) {
-			flat.push(...flatten(item));
-		} else {
-			flat.push(item);
-		}
-	});
-
-	return flat;
-};
-
-const getChildrenList = (children = []) => {
+/**
+ * Creates extended map from given children and returns a getter function for fetching a child with either key or index
+ * @param {VNode[]} children
+ * @returns {Map<string, VNode>}
+ */
+const createChildrenMap = (children) => {
 	const childrenMap = new Map();
-	children.forEach((child) => {
-		if (child?.key) childrenMap.set(child.key, child);
-	});
-	return { map: childrenMap, items: children };
+	if (children) {
+		children.forEach((child) => {
+			if (child?.key) {
+				childrenMap.set(child.key, child);
+			}
+		});
+	}
+	return childrenMap;
 };
 
 /**
@@ -238,36 +228,42 @@ const getChildrenList = (children = []) => {
  * @param {Array} children
  * @param {Array} [oldChildren]
  */
-const createChildren = (vnode, children = [], oldChildren) => {
-	const oldChildrenMap = getChildrenList(oldChildren).map;
-	const newChildren = flatten(children).map((child, index) => {
+const renderVnodeChildren = (vnode, children, oldChildren) => {
+	const childrenMap = oldChildren && createChildrenMap(oldChildren);
+
+	const newChildren = children.map((child, index) => {
 		let oldChild;
 		if (isRenderableElement(child)) {
-			if (!isVNode(child)) {
+			if (isArray(child)) {
+				child = createVNode(Fragment, { children: child });
+			} else if (!isVNode(child)) {
 				child = createVNode('', { text: child });
-			}
-			if (vnode.svg) {
+			} else if (vnode.svg) {
 				child.svg = true;
 			}
 
-			oldChild = oldChildrenMap.get(child.key);
-			if (!isSameChild(child, oldChild)) {
+			if (!child.props.key) {
+				child.key = '#' + index;
+			}
+
+			oldChild = childrenMap && childrenMap.get(child.key);
+			if (oldChild && !isSameChild(child, oldChild)) {
 				oldChild = undefined;
 			}
 
 			const newVnode = renderVnode(child, oldChild);
 
 			if (getVNodeDom(newVnode, true) && isVNode(oldChild)) {
-				oldChildrenMap.delete(oldChild.key);
+				childrenMap && childrenMap.delete(oldChild.key);
 			}
 		}
 
 		return child;
 	});
 
-	if (config.hooks || config.classComponent) {
+	if ((config.hooks || config.classComponent) && childrenMap) {
 		// Loop all the rest old children and run unmount callbacks and finally remove them from the DOM
-		for (const [_, oldChild] of oldChildrenMap) {
+		for (const oldChild of childrenMap.values()) {
 			runUnmountCallbacks(oldChild);
 		}
 	}
@@ -282,7 +278,7 @@ const createChildren = (vnode, children = [], oldChildren) => {
  */
 const getStyleString = (style) => {
 	if (isString(style)) return style;
-	if (!style || typeof style !== 'object') return '';
+	if (!isObject(style)) return '';
 
 	return Object.keys(style).reduce(
 		(prev, curr) =>
@@ -296,14 +292,20 @@ const getStyleString = (style) => {
 
 /**
  * Replaces the targeted DOM element with rendered VNode element's DOM node or appends the rendered VNode into the DOM node.
- * TODO: Make this less hacky
  * @param {VNode} vnode
  * @param {VNode} [prevVnode]
  * @param {HTMLElement} [targetDomNode]
- * @param {number} [atIndex]
+ * @param {NumberConstructor} [atIndex]
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
+	if (!targetDomNode && prevVnode) {
+		const someDom = getVNodeFirstRenderedDom(prevVnode);
+		if (someDom) {
+			targetDomNode = getParent(someDom);
+			atIndex = getIndexInParent(someDom);
+		}
+	}
 	const prevDom = prevVnode && getVNodeDom(prevVnode, true);
 	if (!isRenderableElement(vnode)) {
 		if (prevVnode) {
@@ -312,7 +314,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 		return vnode;
 	}
 	const isVnodeSame = isSameChild(vnode, prevVnode);
-	if (prevDom && getVNodeDom(vnode) !== prevDom) {
+	if (prevDom && (getVNodeDom(vnode) !== prevDom || prevDom.__delete)) {
 		domRemove(prevDom);
 	}
 	let returnDom = vnode.__dom || createDocumentFragment();
@@ -325,28 +327,27 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 			atIndex
 		);
 	}
-	const oldChildrenList = getChildrenList(prevVnode?.__children);
-	const oldChildren = oldChildrenList.items;
-	const oldChildrenMap = oldChildrenList.map;
+	const oldChildren = prevVnode && prevVnode.__children;
+	const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	let childrenParentNode = returnDom;
-	let insertAt = 0;
+	let childIndex = 0;
 	// Loop though all children and try to patch/remove them as well.
-	(vnode.__children || []).forEach((child, index) => {
-		const oldChildVnode = (child && oldChildrenMap.get(child.key)) || oldChildren[index];
-		const patchedNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, childrenParentNode, insertAt);
-		if (isRenderableElement(patchedNode)) {
-			insertAt++;
-			// Found a match from previous children, remove it from the map so know which must removed later
-			if (oldChildVnode) oldChildrenMap.delete(oldChildVnode.key);
+	if (vnode.__children) {
+		for (const child of vnode.__children) {
+			const patchedDomNode = patchVnodeDom(
+				child,
+				(!child || isVnodeSame) && oldChildrenMap && oldChildrenMap.get(child.key),
+				childrenParentNode,
+				childIndex
+			);
+			if (isRenderableElement(patchedDomNode)) {
+				childIndex++;
+			}
 		}
-	});
-	// Handle cleaning of all removed children
-	for (const [_, oldChild] of oldChildrenMap) {
-		patchVnodeDom(null, oldChild);
 	}
 
 	if (isRenderableElement(returnDom)) {
-		if (vnode.__dirty && targetDomNode) {
+		if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
 			const domChildren = targetDomNode.childNodes;
 			if (atIndex !== undefined && domChildren.length > atIndex) {
 				domInsertBefore(returnDom, domChildren[atIndex]);
@@ -354,6 +355,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 				domAppend(targetDomNode, returnDom);
 			}
 		}
+		vnode.__dirty = undefined;
 		return returnDom;
 	}
 	return null;
@@ -361,16 +363,19 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 
 const renderer = config.extendedVnode && document.createElement('div');
 
+const protectedKeysRegex = /^className|children|key$/;
+
 /**
  *
  * @param {HTMLElement} element
  * @param {Object} props
  * @param {Object} [oldProps]
  */
-const setElementAttributes = (element, props = {}, oldProps = {}) => {
-	if (element instanceof Text) {
+const setElementAttributes = (element, props, oldProps) => {
+	const nodeType = element.nodeType;
+	if (nodeType === 3) {
 		element.textContent = props.text;
-	} else if (isDomNode(element)) {
+	} else if (nodeType === 1) {
 		if (element._e) {
 			Object.keys(element._e).forEach((key) => {
 				element.removeEventListener(key, element._e[key]);
@@ -378,38 +383,44 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
 			});
 		}
 		const sameProps = {};
-		for (let name in oldProps) {
-			let value = oldProps[name];
-			if (isSame(value, props[name])) {
-				sameProps[name] = true;
-			} else element.removeAttribute(name);
+		if (oldProps) {
+			for (let name in oldProps) {
+				if (isSame(oldProps[name], props[name])) {
+					sameProps[name] = true;
+				} else element.removeAttribute(name);
+			}
 		}
 		for (let name in props) {
 			let value = props[name];
-			if (name === 'style') {
-				value = getStyleString(value);
-			}
-			if (sameProps[name] || value === undefined || /^className|children|key$/.test(name)) {
+			if (sameProps[name] || value === undefined || protectedKeysRegex.test(name)) {
 				continue;
-			} else if (name === 'dangerouslySetInnerHTML') {
+			}
+			// Support React like innerHTML
+			else if (name === 'dangerouslySetInnerHTML') {
 				element.innerHTML = value.__html;
-			} else if (name === 'ref' && value) {
+			}
+			// Function and object like reference support
+			else if (name === 'ref' && value) {
 				if (isFunction(value)) {
 					value(element);
 				} else if (value.current !== undefined) {
 					value.current = element;
 				}
-			} else if (typeof value === 'boolean') {
+			}
+			// Some DOM attributes must be booleans, key-in seems to work match them
+			else if (typeof value === 'boolean') {
 				if (name in element) {
 					element[name] = value;
 				}
-			} else if (/^on[A-Z]/.test(name)) {
+			}
+			// Event handlers
+			else if (/^on[A-Z]/.test(name)) {
 				const evtName = name.substring(2).toLowerCase();
 				element.addEventListener(evtName, value);
 				element._e = element._e || {};
 				element._e[evtName] = value;
 			} else if (value !== null) {
-				value = value.toString();
+				value = name === 'style' ? getStyleString(value) : value.toString();
 				if (config.namespace && name.includes(':') && element.tagName != 'SVG') {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
@@ -426,18 +437,20 @@ const setElementAttributes = (element, props = {}, oldProps = {}) => {
  */
 export const runUnmountCallbacks = (vnode) => {
 	if (isVNode(vnode)) {
-		if (config.hooks && vnode._h) {
-			vnode._h.forEach((h) => {
+		if (config.hooks && vnode.__hooks) {
+			vnode.__hooks.forEach((h) => {
 				if (h.length === 3 && isFunction(h[2])) {
 					h[2]();
 				}
 			});
-			vnode._h = [];
+			vnode.__hooks = [];
 		} else if (config.classComponent && vnode.__class && vnode.__class.componentWillUnmount) {
 			vnode.__class.componentWillUnmount();
 			delete vnode.__class.__vnode;
 		}
-		(vnode.__children || []).forEach((child) => runUnmountCallbacks(child));
+		if (vnode.__children) {
+			vnode.__children.forEach((child) => runUnmountCallbacks(child));
+		}
 		if (import.meta.hot) {
 			options.unmount(vnode);
 		}

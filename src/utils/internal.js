@@ -3,7 +3,7 @@ export const domAppend = (parent, child) => {
 	parent.append(child);
 };
 
-const getParent = (node) => node?.parentElement;
+export const getParent = (node) => node?.parentElement;
 
 export const domInsertBefore = (child, target) => {
 	const parent = getParent(target);
@@ -26,7 +26,49 @@ export const isString = (str) => typeof str === 'string';
 
 export const isArray = (arr) => Array.isArray(arr);
 
+export const isObject = (obj) => obj && typeof obj === 'object';
+
 export const createDocumentFragment = () => document.createDocumentFragment();
+
+/**
+ * @param {VNode} vnode
+ * @param {boolean} recursive
+ * @returns {Element|null}
+ */
+export const getVNodeDom = (vnode, recursive) =>
+	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
+
+/**
+ * Helper function to get first rendered DOM node. Is used by components that has a fragment as root
+ * @param {VNode} vnode
+ * @returns {Element|null}
+ */
+export const getVNodeFirstRenderedDom = (vnode) => {
+	if (!vnode) return null;
+	if (vnode.__dom) return vnode.__dom;
+	if (vnode.__result) return getVNodeDom(vnode.__result);
+	if (vnode.__children) {
+		for (const child of vnode.__children) {
+			const dom = getVNodeDom(child);
+			if (dom && dom.nodeType < 4) {
+				return dom;
+			}
+		}
+	}
+	return null;
+};
+
+/**
+ * Returns an index of given element in its parent children list
+ * @param {Element} child
+ * @returns {number}
+ */
+export const getIndexInParent = (child) => {
+	if (!child) undefined;
+	let index = 0;
+	while ((child = child.previousSibling) != null) index++;
+	return index;
+};
 
 // Internal object for storing details of current output/etc
 // This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
@@ -47,7 +89,7 @@ export const config = {};
  * @prop {boolean} __hooks Array pointer to current VNode's hooks
  * @prop {boolean} __vnode Current VNode
  */
-export const hooks = {
+export const hookPointer = {
 	__current: 0,
 	__hooks: [],
 	__vnode: null,
@@ -57,12 +99,12 @@ export const isSame = (iter, iter2) => {
 	if (iter === iter2) return true;
 	if ((!iter && iter2) || (iter && !iter2)) return false;
 	iter2 = iter2 || {};
-	if (iter && typeof iter === 'object') {
+	if (isObject(iter) && isObject(iter2)) {
 		let same = true;
 		const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
 		for (const key of keys) {
-			if (key[0] !== '_' && iter[key] !== iter2[key]) {
-				same = key === 'props' ? isSame(iter[key], iter2[key]) : false;
+			if (key[0] !== key && iter[key] !== iter2[key]) {
+				same = key == 'props' ? isSame(iter[key], iter2[key]) : false;
 				break;
 			}
 		}
@@ -73,14 +115,14 @@ export const isSame = (iter, iter2) => {
 };
 
 export const onNextTick = (callback) => {
-	setTimeout(callback, 0);
+	setTimeout(callback);
 };
 
 export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
 		props,
-		key: props.key || props['data-o'],
+		key: props.key,
 	};
 };
 
