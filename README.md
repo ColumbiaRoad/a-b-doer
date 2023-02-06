@@ -855,9 +855,9 @@ Extra onLoad event for screenshots. Will be runned after the main onLoad
 ### Example buildspec.js with screenshot options
 
 ```js
-const gobalConfig = require('../config.js');
+import gobalConfig from '../config.js';
 
-module.exports = {
+export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   onLoad: async (page) => {

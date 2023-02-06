@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { bundler, openPage } from '../../lib/bundler';
 import fs from 'fs';
 import path from 'path';

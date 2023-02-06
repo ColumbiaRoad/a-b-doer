@@ -6,5 +6,5 @@ export default {
 		file: 'dist/bin/abdo.js',
 		banner: '#!/usr/bin/env node',
 	},
-	plugins: [externals({ deps: true, include: ['terser', 'browserslist', '@rollup/pluginutils'] })],
+	plugins: [externals({ include: ['terser', 'browserslist', '@rollup/pluginutils'] })],
 };

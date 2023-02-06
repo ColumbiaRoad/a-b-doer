@@ -178,13 +178,10 @@ export const renderVnode = (vnode, oldVnode) => {
 					renderer.innerHTML = tag;
 					element = renderer.firstElementChild.cloneNode(true);
 					renderer.innerHTML = '';
+				} else if (!tag) {
+					element = document.createTextNode(props.text);
 				} else {
-					if (!tag) {
-						element = document.createTextNode(props.text);
-					} else {
-						element =
-							config.namespace && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
-					}
+					element = config.namespace && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 				}
 			}
 
@@ -240,7 +237,7 @@ const renderVnodeChildren = (vnode, children, oldChildren) => {
 				child.svg = true;
 			}
 
-			child.key = child.props.key || '#' + index;
+			child.key = child.props.key || `#${index}`;
 
 			oldChild = childrenMap && childrenMap.get(child.key);
 			if (oldChild && !isSameChild(child, oldChild)) {
@@ -449,7 +446,7 @@ export const runUnmountCallbacks = (vnode) => {
 		if (vnode.__children) {
 			vnode.__children.forEach((child) => runUnmountCallbacks(child));
 		}
-		if (import.meta.hot) {
+		if (import.meta.hot || process.env.TEST_ENV) {
 			options.unmount(vnode);
 		}
 	}

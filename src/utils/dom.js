@@ -33,7 +33,7 @@ export const pollQuerySelector = (selector, callback, wait = defaultTimeout) => 
 	if (el) {
 		callback(el);
 	} else if (wait > 0) {
-		setTimeout(function () {
+		setTimeout(() => {
 			pollQuerySelector(selector, callback, wait - defaultPollDelay);
 		}, defaultPollDelay);
 	}
@@ -52,7 +52,7 @@ export const pollQuerySelectorAll = (selector, callback, wait = defaultTimeout) 
 	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
-		setTimeout(function () {
+		setTimeout(() => {
 			pollQuerySelectorAll(selector, callback, wait - defaultPollDelay);
 		}, defaultPollDelay);
 	}
@@ -120,7 +120,7 @@ export const waitFor = (func, wait = defaultTimeout) => {
 				clearTimeout(t);
 				resolve(res);
 			} else if (count > 0) {
-				setTimeout(function () {
+				setTimeout(() => {
 					_func(count - 1);
 				}, defaultPollDelay);
 			}

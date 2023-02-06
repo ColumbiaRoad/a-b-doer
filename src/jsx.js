@@ -37,7 +37,7 @@ const createElement = (tag, props, ...children) => {
 		vnode.svg = true;
 	}
 
-	if (import.meta.hot) {
+	if (import.meta.hot || process.env.TEST_ENV) {
 		options.vnode(vnode);
 	}
 

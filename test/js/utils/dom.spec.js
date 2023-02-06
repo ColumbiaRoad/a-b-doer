@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import { bundler, openPage } from '../../../lib/bundler';
 import path from 'path';
 import { fileURLToPath } from 'url';

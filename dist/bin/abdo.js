@@ -12,9 +12,7 @@ import { createRequire } from 'node:module';
 import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
 import crypto from 'node:crypto';
-import glob from 'glob';
 import replace from '@rollup/plugin-replace';
-import rimraf from 'rimraf';
 import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
 import stringHash from 'string-hash';
@@ -89,7 +87,7 @@ const config = {
 	toolbar: false,
 	extractCss: false,
 	features: {
-		hook: true,
+		hooks: true,
 		jsx: true,
 		className: true,
 		classComponent: true,
@@ -100,12 +98,12 @@ const config = {
 
 /**
  * @param {string} configPath
- * @returns {object | () => object)}
+ * @returns {object | () => object}
  */
 async function getConfigFileJsonOrJSContent(configPath) {
 	const fileDir = path.dirname(configPath);
 	const fileWithoutExt = path.basename(configPath, '.json');
-	const configPathJs = path.resolve(fileDir, fileWithoutExt + '.js');
+	const configPathJs = path.resolve(fileDir, `${fileWithoutExt}.js`);
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
 		delete specRequire.cache[configPath];
@@ -113,7 +111,7 @@ async function getConfigFileJsonOrJSContent(configPath) {
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
 		const { default: configMod } = await import(
-			convertToEsmPath(configPathJs) + '?cb=' + Math.random().toString(36).substring(3)
+			`${convertToEsmPath(configPathJs)}?cb=${Math.random().toString(36).substring(3)}`
 		);
 		return { file: configPathJs, config: configMod };
 	}
@@ -860,10 +858,10 @@ function cssModules() {
 	};
 }
 
-const __filename = new URL('', import.meta.url).pathname;
-
 /** @returns {import('vite').Plugin} */
 function customJsxPrefreshPlugin(options = {}) {
+	const __filename = new URL('', import.meta.url).pathname;
+
 	let shouldSkip = false;
 	const filter = createFilter(options.include, options.exclude);
 	let config = {};
@@ -1010,8 +1008,8 @@ const minifiedProperties = {
  * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
  * @returns {object} Bundler config
  */
-async function bundler(buildSpecConfig) {
-	let { getBundlerConfig, getSpecConfig, ...restConfig } = buildSpecConfig;
+function getBundlerConfigs(buildSpecConfig) {
+	let { getBundlerConfig = (opts) => opts, getSpecConfig = (opts) => opts, ...restConfig } = buildSpecConfig;
 
 	const testConfig = getSpecConfig({ ...defaultConfig, ...restConfig });
 
@@ -1035,13 +1033,6 @@ async function bundler(buildSpecConfig) {
 	const buildDir = path.join(testPath, testConfig.buildDir);
 	testConfig.buildDir = buildDir;
 
-	// Ensure build folder
-	try {
-		if (!fs.existsSync(buildDir)) {
-			fs.mkdirSync(buildDir);
-		}
-	} catch (error) {}
-
 	const { minify: configMinify, preact, modules, id, chunks, watch, features } = testConfig;
 	const minify = configMinify ?? !watch;
 
@@ -1058,7 +1049,7 @@ async function bundler(buildSpecConfig) {
 	const IE = getFlagEnv('IE') ?? supportIE;
 	const PREVIEW = Boolean(watch || preview);
 	const TEST_ENV = getFlagEnv('TEST_ENV') || false;
-	const TEST_ID = id || 't' + (hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default');
+	const TEST_ID = id || `t${hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default'}`;
 	// Assign some common process.env variables for bundler/etc and custom rollup plugins
 	process.env.PREACT = process.env.preact = PREACT;
 	process.env.IE = IE;
@@ -1090,7 +1081,7 @@ async function bundler(buildSpecConfig) {
 				format: 'iife',
 		  };
 
-	const outputOptions = {};
+	// const outputOptions = {};
 
 	const jsxInject = preact
 		? 'import {h,Fragment} from "preact"'
@@ -1127,12 +1118,11 @@ async function bundler(buildSpecConfig) {
 						.substring(0, 5);
 					if (minify) {
 						return `t${hash}-${name}`;
-					} else {
-						const folder = path.basename(path.dirname(file));
-						const fileNameParts = path.basename(file).split('.').slice(0, -1);
-						if (fileNameParts.at(-1) === 'module') fileNameParts.pop();
-						return `t_${folder}_${fileNameParts.join('.')}_${name}__${hash}`;
 					}
+					const folder = path.basename(path.dirname(file));
+					const fileNameParts = path.basename(file).split('.').slice(0, -1);
+					if (fileNameParts.at(-1) === 'module') fileNameParts.pop();
+					return `t_${folder}_${fileNameParts.join('.')}_${name}__${hash}`;
 				},
 			},
 		},
@@ -1154,6 +1144,7 @@ async function bundler(buildSpecConfig) {
 			chunkSizeWarningLimit: 2048,
 			rollupOptions: {
 				input: [entryFile],
+				external: ['path', 'module', 'url'],
 				treeshake: {
 					propertyReadSideEffects: false,
 					moduleSideEffects: true,
@@ -1177,7 +1168,7 @@ async function bundler(buildSpecConfig) {
 		...defaultConfig.bundler,
 		plugins: getPluginsConfig(
 			[
-				['preact-debug'],
+				!TEST_ENV && ['preact-debug'],
 				['css-inject'],
 				['css-modules'],
 				[
@@ -1196,7 +1187,9 @@ async function bundler(buildSpecConfig) {
 						},
 					},
 				],
-				!watch &&
+				!TEST_ENV &&
+					!watch &&
+					!preact &&
 					replace({
 						preventAssignment: false,
 						delimiters: ['', ''],
@@ -1217,34 +1210,54 @@ async function bundler(buildSpecConfig) {
 						include: '**/*.svg',
 					},
 				],
-				watch && preact ? ['prefresh'] : ['custom-prefresh'],
+				watch && (preact ? ['prefresh'] : ['custom-prefresh']),
 			].filter(Boolean),
 			defaultConfig.bundler.plugins
 		),
 	});
 
-	if (outputOptions.entryFileNames && !output.assetFileNames) {
-		outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
+	return { bundlerConfig, testConfig };
+}
+
+/**
+ * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
+ * @returns {object} Bundler config
+ */
+async function bundler(buildSpecConfig) {
+	const { bundlerConfig, testConfig } = getBundlerConfigs(buildSpecConfig);
+	const { watch, testPath, entryFile, buildDir } = testConfig;
+
+	// Ensure build folder
+	try {
+		if (!fs.existsSync(buildDir)) {
+			fs.mkdirSync(buildDir);
+		}
+	} catch (error) {
+		//
 	}
 
-	const clearHashedAssets = () => {
-		// Check for hashed file names
-		if (/\[hash(]|:)/.test(outputOptions.entryFileNames) || chunks) {
-			// Clear previous hashed files from the build folder.
-			const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
-			files.forEach((file) => {
-				rimraf(`${buildDir}/${file}`, (err) => {
-					if (err) console.error(err);
-				});
-			});
-		}
-	};
+	// if (outputOptions.entryFileNames && !output.assetFileNames) {
+	// 	outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
+	// }
+
+	// const clearHashedAssets = () => {
+	// 	// Check for hashed file names
+	// 	if (/\[hash(]|:)/.test(outputOptions.entryFileNames) || chunks) {
+	// 		// Clear previous hashed files from the build folder.
+	// 		const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
+	// 		files.forEach((file) => {
+	// 			rimraf(`${buildDir}/${file}`, (err) => {
+	// 				if (err) console.error(err);
+	// 			});
+	// 		});
+	// 	}
+	// };
 
 	let assetBundle;
 	let server;
 
 	if (!watch) {
-		clearHashedAssets();
+		// clearHashedAssets();
 
 		try {
 			await build({
@@ -1261,14 +1274,14 @@ async function bundler(buildSpecConfig) {
 		const port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
 		const serverConfig = bundlerConfig.server || {};
 
-		console.log(chalk.cyanBright('\nStarting dev server'), 'port ' + port);
+		console.log(chalk.cyanBright('\nStarting dev server'), `port ${port}`);
 		console.log();
 
 		server = await createServer({
 			root: cwd,
 			configFile: false,
 			server: {
-				port: port,
+				port,
 				https: true,
 				cors: {
 					origin: '*',
@@ -1376,9 +1389,8 @@ function getPluginsConfig(defaults, override = []) {
 				// If plugin config is a function, call it with the original plugin config.
 				if (typeof overridePlugin[1] === 'function') {
 					return fn(overridePlugin[1](options));
-				} else {
-					return fn(overridePlugin[1]);
 				}
+				return fn(overridePlugin[1]);
 			}
 			return fn(options);
 		})
@@ -1392,18 +1404,17 @@ function getPluginsConfig(defaults, override = []) {
 					// Allow removal
 					else if (fn[1] === null) {
 						return null;
-					} else {
-						console.error(
-							chalk.red(
-								`There's no default plugin for ${chalk.bold(fn[0])}. Can't call default plugin with given argument `,
-								fn[1]
-							)
-						);
-						console.error(
-							chalk.red(`Custom plugins should be inserted as objects or as a [string, function] tuple, got`),
-							fn
-						);
 					}
+					console.error(
+						chalk.red(
+							`There's no default plugin for ${chalk.bold(fn[0])}. Can't call default plugin with given argument `,
+							fn[1]
+						)
+					);
+					console.error(
+						chalk.red(`Custom plugins should be inserted as objects or as a [string, function] tuple, got`),
+						fn
+					);
 				}
 				if (typeof fn === 'function') {
 					return fn();
