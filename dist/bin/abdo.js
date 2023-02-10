@@ -757,12 +757,19 @@ function cssInjectedByJsPlugin() {
 			// Support style entries
 			if (!jsAssets[0] && bundleKeys[0] && abConfig.stylesOnly) {
 				// With styles only and extract css, remove the js main chunk
-				if (abConfig.extractCss) {
-					delete bundle[bundleKeys[0]];
+				if (abConfig.extractCss || abConfig.stylesOnly) {
+					const mainKey = bundleKeys[0];
+					// Delete JS bundle
+					delete bundle[mainKey];
+					// Rename style bundle
+					if (mainKey.endsWith('.css')) {
+						bundle[bundleKeys[1]].fileName = mainKey;
+						bundle[bundleKeys[1]].name = mainKey;
+					}
 				}
 				// Create a proper javascript file from the css chunk
 				else {
-					const newKey = path.basename(bundleKeys[0], '.css') + '.js';
+					const newKey = `${path.basename(bundleKeys[0], '.css')}.js`;
 					bundle[newKey] = bundle[bundleKeys[0]];
 					bundle[newKey].fileName = newKey;
 					delete bundle[bundleKeys[0]];
@@ -770,7 +777,7 @@ function cssInjectedByJsPlugin() {
 				}
 			}
 
-			if (!abConfig.extractCss) {
+			if (!abConfig.extractCss && !abConfig.stylesOnly) {
 				const allCssCode = cssAssets.reduce((previousValue, cssName) => {
 					const cssAsset = bundle[cssName];
 					const result = previousValue + cssAsset.source;
@@ -788,18 +795,18 @@ function cssInjectedByJsPlugin() {
 					const appCode = jsAsset.code;
 					jsAsset.code =
 						/* prettier-ignore */
-						"!(function(){" +
-						"var __a,__s,__f=function(){" +
-							"if(__a){return;}" +
-							"__a=1;" +
-							"__s=document.createElement('style');__s.dataset.id='"+abConfig.TEST_ID+"',__s.innerHTML='" +
-							cssToInject.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'") +
-							"';" +
-							"document.head.appendChild(__s);" +
-						"};" +
-						(abConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
-					"})();"
-					+ appCode;
+						`!(function(){` +
+						`var __a,__s,__f=function(){` +
+							`if(__a){return;}` +
+							`__a=1;` +
+							`__s=document.createElement('style');__s.dataset.id='${abConfig.TEST_ID}',__s.innerHTML='${
+							cssToInject.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'")
+							}';` +
+							`document.head.appendChild(__s);` +
+						`};${
+						abConfig.appendStyles ? "__f();" : "window._addStyles=__f;"
+					}})();${
+					 appCode}`;
 				}
 			}
 		},
@@ -837,7 +844,7 @@ function cssModules() {
 				if (resolution?.id) {
 					const parts = resolution.id.split('.');
 					const ext = parts.pop();
-					const newId = parts.join('.') + '.module.' + ext;
+					const newId = `${parts.join('.')}.module.${ext}`;
 					modules.set(newId, resolution.id);
 					return newId;
 				}

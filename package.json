@@ -12,7 +12,8 @@
     "try:preview": "node ./dist/bin/abdo.js preview",
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "vitest",
-    "test:jsx": "vitest -c ./test/js/jsx/vitest.config.js jsx",
+    "test:js": "vitest -c ./test/js/vitest.config.js test/js",
+    "test:styles": "vitest test/styles",
     "release": "standard-version",
     "prepare": "husky install"
   },

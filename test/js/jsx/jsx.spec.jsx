@@ -4,7 +4,6 @@ import { Simple, RefHook, Hooks, Switch, OrderApp } from './templates';
 import { render } from './test-utils';
 
 describe('JSX', () => {
-	const body = document.body;
 	vi.useFakeTimers();
 
 	beforeEach(() => {
@@ -34,11 +33,11 @@ describe('JSX', () => {
 		expect(vnode.props).toMatchObject({ id: 'tpl1', foo: '0', children: [] });
 		expect(element).toContainHTML('"foo":"0"');
 
-		const { vnode: vnode2, element: element2 } = render(<Simple id="tpl2" foo="1" />, body);
+		const { vnode: vnode2, element: element2 } = render(<Simple id="tpl2" foo="1" />);
 		expect(vnode2.props).toMatchObject({ id: 'tpl2', foo: '1', children: [] });
 		expect(element2).toContainHTML('"foo":"1"');
 
-		const { vnode: vnode3, element: element3 } = render(<Simple id="tpl3" foo="2" bar="3" />, body);
+		const { vnode: vnode3, element: element3 } = render(<Simple id="tpl3" foo="2" bar="3" />);
 		expect(vnode3.props).toMatchObject({ id: 'tpl3', foo: '2', children: [] });
 		expect(element3).toContainHTML('"bar":"3"');
 	});

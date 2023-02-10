@@ -1,117 +1,128 @@
-import { jest } from '@jest/globals';
-import { bundler, openPage } from '../../../lib/bundler';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-jest.setTimeout(20000);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const config = { ...global.configDefaults, testPath: __dirname };
+import {
+	append,
+	// clear,
+	insertBefore,
+	insertAfter,
+	prepend,
+	// pollQuerySelector,
+	// pollQuerySelectorAll,
+	waitFor,
+	// waitElement,
+	// waitElements,
+	setDefaultTimeout,
+} from 'a-b-doer';
+import { expect, describe, it } from 'vitest';
 
 describe('DOM', () => {
-	let page;
+	/** @type HTMLElement */
+	let container;
+	/** @type HTMLElement */
+	let wrapper;
 
-	beforeAll(async () => {
-		const output = await bundler({ ...config, entry: './index.js' });
-		page = await openPage(output);
+	beforeAll(() => {
+		container = document.createElement('div');
+		document.body.append(container);
 	});
 
-	it('should append div to body', async () => {
-		const content = await page.evaluate(() => {
-			const { append } = utilFns;
-			const div = document.createElement('div');
-			div.id = 'foo123';
-			div.innerText = 'bar123';
-			append(div, document.body);
-			return document.body.innerHTML;
-		});
-		expect(content).toMatch(`id="foo123"`);
-		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+	afterAll(() => {
+		document.body.remove(container);
+	});
+
+	beforeEach(() => {
+		wrapper = createElement();
+	});
+
+	afterEach(() => {
+		wrapper.remove();
+	});
+
+	const createElement = () => {
+		const div = document.createElement('div');
+		div.dataset.test = 'test-node';
+		container.append(div);
+		return div;
+	};
+
+	it('should append div to body', () => {
+		const div = document.createElement('div');
+		div.id = 'foo1';
+		div.innerText = 'bar1';
+		append(div, wrapper);
+		expect(container).toContainElement(div);
+		expect(div).toHaveAttribute('data-o', process.env.TEST_ID);
 	});
 
 	it('should prepend div to body', async () => {
-		await page.evaluate(() => {
-			const div = document.createElement('div');
-			div.id = 'foo123';
-			div.innerText = 'bar123';
-			utilFns['prepend'](div, document.querySelector('h1').parentNode);
-			return document.body.innerHTML;
-		});
-
-		const content = await page.$eval('h1', (h1) => h1.previousElementSibling.outerHTML);
-
-		expect(content).toMatch(`id="foo123"`);
-		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+		const h1 = document.createElement('h1');
+		wrapper.append(h1);
+		const div = document.createElement('div');
+		div.id = 'foo2';
+		div.innerHTML = 'bar2';
+		prepend(div, wrapper);
+		expect(h1.previousElementSibling).toHaveAttribute('id', 'foo2');
+		expect(h1.previousElementSibling.innerHTML).toMatch(`bar2`);
+		expect(h1.previousElementSibling).toHaveAttribute('data-o', process.env.TEST_ID);
 	});
 
 	it('should create div before given element', async () => {
-		await page.evaluate(() => {
-			const { insertBefore } = utilFns;
-			const div = document.createElement('div');
-			div.id = 'foo123';
-			div.innerText = 'bar123';
-			insertBefore(div, document.querySelector('h1'));
-			return document.body.innerHTML;
-		});
-
-		const content = await page.$eval('h1', (h1) => h1.previousElementSibling.outerHTML);
-
-		expect(content).toMatch(`id="foo123"`);
-		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+		wrapper.append(document.createElement('h2'));
+		const h1 = document.createElement('h1');
+		wrapper.append(h1);
+		const div = document.createElement('div');
+		div.id = 'foo3';
+		div.innerHTML = 'bar3';
+		insertBefore(div, h1);
+		expect(h1.previousElementSibling).toHaveAttribute('id', 'foo3');
+		expect(h1.previousElementSibling.innerHTML).toMatch(`bar3`);
+		expect(h1.previousElementSibling).toHaveAttribute('data-o', process.env.TEST_ID);
+		expect(h1.previousElementSibling.previousElementSibling.tagName).toBe('H2');
 	});
 
 	it('should create div after given element', async () => {
-		await page.evaluate(() => {
-			const { insertAfter } = utilFns;
-			const div = document.createElement('div');
-			div.id = 'foo123';
-			div.innerText = 'bar123';
-			insertAfter(div, document.querySelector('h1'));
-			return document.body.innerHTML;
-		});
+		const h1 = document.createElement('h1');
+		wrapper.append(h1);
+		wrapper.append(document.createElement('h2'));
 
-		const content = await page.$eval('h1', (h1) => h1.nextElementSibling.outerHTML);
+		const div = document.createElement('div');
+		div.id = 'foo4';
+		div.innerHTML = 'bar4';
+		insertAfter(div, h1);
 
-		expect(content).toMatch(`id="foo123"`);
-		expect(content).toMatch(`bar123`);
-		expect(content).toMatch(`data-o="${process.env.TEST_ID}`);
+		expect(h1.nextElementSibling).toHaveAttribute('id', 'foo4');
+		expect(h1.nextElementSibling.innerHTML).toMatch(`bar4`);
+		expect(h1.nextElementSibling).toHaveAttribute('data-o', process.env.TEST_ID);
+		expect(h1.nextElementSibling.nextElementSibling.tagName).toBe('H2');
 	});
 
 	it('should change polling timeout', async () => {
-		await page.evaluate(() => {
-			const { setDefaultTimeout, waitFor } = utilFns;
-			setDefaultTimeout(200);
+		setDefaultTimeout(100);
 
-			window.__timeoutRes = [];
+		window.__timeoutRes = [];
 
-			let t = Date.now();
-			waitFor(() => {
-				return undefined;
-			}).then(() => {
-				window.__timeoutRes.push(Date.now() - t);
-			});
-
-			t = Date.now();
-			waitFor(() => {
-				return undefined;
-			}).then(() => {
-				window.__timeoutRes.push(Date.now() - t);
-			});
+		let t = Date.now();
+		waitFor(() => {
+			return undefined;
+		}).then(() => {
+			window.__timeoutRes.push(Date.now() - t);
 		});
 
-		await page.waitForTimeout(500);
+		t = Date.now();
+		waitFor(() => {
+			return undefined;
+		}).then(() => {
+			window.__timeoutRes.push(Date.now() - t);
+		});
 
-		const res = await page.evaluate(() => window.__timeoutRes);
-		const [first, second] = res;
+		await (() => new Promise((resolve) => setTimeout(resolve, 250)))();
 
-		expect(first).toBeGreaterThan(200);
+		const [first, second] = window.__timeoutRes;
+
+		expect(first).toBeGreaterThan(100);
 		// Allow some milliseconds for value fetching
-		expect(first).toBeLessThan(300);
+		expect(first).toBeLessThan(200);
 
-		expect(second).toBeGreaterThan(200);
+		expect(second).toBeGreaterThan(100);
 		// Allow some milliseconds for value fetching
-		expect(second).toBeLessThan(300);
+		expect(second).toBeLessThan(200);
 	});
 });
