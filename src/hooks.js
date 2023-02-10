@@ -3,7 +3,7 @@
  * @property {*|null} current
  */
 
-import { hookPointer, isSame, onNextTick, getVNodeDom } from './utils/internal';
+import { hookPointer, isSame, onNextTick } from './utils/internal';
 import { renderVnode, patchVnodeDom } from './utils/render';
 
 /**

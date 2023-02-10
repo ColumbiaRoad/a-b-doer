@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { createDocumentFragment } from './utils/internal';
 
 // IE11 NodeList forEach support

@@ -108,9 +108,8 @@ export const isSame = (iter, iter2) => {
 			}
 		}
 		return same;
-	} else {
-		return false;
 	}
+	return false;
 };
 
 export const onNextTick = (callback) => {
@@ -150,6 +149,8 @@ export const addNs = (ns, url) => {
 };
 
 export const options = {
+	// eslint-disable-next-line no-unused-vars
 	vnode: (vnode) => {},
+	// eslint-disable-next-line no-unused-vars
 	unmount: (vnode) => {},
 };
