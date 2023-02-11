@@ -684,6 +684,7 @@ Load style files as modules
 
 ```js
 import fooPlugin from 'vite-foo-plugin';
+import { extendConfig } from 'a-b-doer';
 
 /*
 Supported plugins for array format are currently.
@@ -705,10 +706,10 @@ export default {
   // Override vite config
   bundler: {
     // Add extra entry to alias config
-    resolve: (config = {}) => ({
+    resolve: extendConfig((config = {}) => ({
       ...config,
       alias: [{ find: 'some-library', replacement: 'some-other-library' }, ...(config.alias || [])],
-    }),
+    })),
     plugins: [
       // Add extra entries to replace plugin
       [

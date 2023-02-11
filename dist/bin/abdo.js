@@ -7,7 +7,6 @@ import { createFilter } from '@rollup/pluginutils';
 import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
 import get from 'lodash.get';
 import set from 'lodash.set';
-import merge from 'lodash.merge';
 import { createRequire } from 'node:module';
 import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
@@ -239,17 +238,12 @@ async function getBuildSpec(testPath) {
 				(acc, spec) => {
 					Object.keys(spec.config).forEach((key) => {
 						if (key === 'bundler') return;
-						const option = spec.config[key];
+						let option = spec.config[key];
 						const accVal = get(acc, [key]);
-						if (typeof option === 'function') {
-							set(acc, [key], option(accVal));
-						} else if (Array.isArray(accVal)) {
-							accVal.concat(option);
-						} else if (typeof option === 'object' && option && !Array.isArray(option)) {
-							set(acc, [key], merge(accVal, option));
-						} else {
-							set(acc, [key], option);
+						if (typeof option === 'object' && option?._extended) {
+							option = option.callback(accVal);
 						}
+						set(acc, [key], option);
 					});
 					if (acc.url && !Array.isArray(acc.url)) {
 						acc.url = [acc.url];
@@ -265,17 +259,12 @@ async function getBuildSpec(testPath) {
 					const bundlerConfig = get(spec, ['config', 'bundler']);
 					if (bundlerConfig) {
 						Object.keys(bundlerConfig).forEach((key) => {
-							const option = bundlerConfig[key];
+							let option = bundlerConfig[key];
 							const accVal = get(acc, [key]);
-							if (typeof option === 'function') {
-								set(acc, [key], option(accVal));
-							} else if (Array.isArray(accVal)) {
-								accVal.concat(option);
-							} else if (typeof option === 'object' && option && !Array.isArray(option)) {
-								set(acc, [key], merge(accVal, option));
-							} else {
-								set(acc, [key], option);
+							if (typeof option === 'object' && option?._extended) {
+								option = option.callback(accVal);
 							}
+							set(acc, [key], option);
 						});
 					}
 					return acc;
@@ -1173,55 +1162,56 @@ function getBundlerConfigs(buildSpecConfig) {
 		},
 		clearScreen: false,
 		...defaultConfig.bundler,
-		plugins: getPluginsConfig(
-			[
-				!TEST_ENV && ['preact-debug'],
-				['css-inject'],
-				['css-modules'],
-				[
-					'replace',
-					{
-						preventAssignment: true,
-						values: {
-							'process.env.PREACT': PREACT,
-							'process.env.preact': PREACT,
-							'process.env.NODE_ENV': NODE_ENV,
-							'process.env.IE': IE,
-							'process.env.PREVIEW': PREVIEW,
-							'process.env.TEST_ENV': TEST_ENV,
-							'process.env.TEST_ID': JSON.stringify(TEST_ID),
-							...featuresReplaces,
-						},
-					},
-				],
-				!TEST_ENV &&
-					!watch &&
-					!preact &&
-					replace({
-						preventAssignment: false,
-						delimiters: ['', ''],
-						values: minifiedProperties,
-					}),
-				[
-					'svgr',
-					{
-						exportAsDefault: true,
-						svgrOptions: {
-							jsxRuntime: 'automatic',
-						},
-						esbuildOptions: {
-							jsxFactory: 'h',
-							jsxFragment: preact ? 'Fragment' : 'hf',
-							banner: jsxInject, // Use banner because jsxInject doesn't work
-						},
-						include: '**/*.svg',
-					},
-				],
-				watch && (preact ? ['prefresh'] : ['custom-prefresh']),
-			].filter(Boolean),
-			defaultConfig.bundler.plugins
-		),
 	});
+
+	bundlerConfig.plugins = getPluginsConfig(
+		[
+			!TEST_ENV && ['preact-debug'],
+			['css-inject'],
+			['css-modules'],
+			[
+				'replace',
+				{
+					preventAssignment: true,
+					values: {
+						'process.env.PREACT': PREACT,
+						'process.env.preact': PREACT,
+						'process.env.NODE_ENV': NODE_ENV,
+						'process.env.IE': IE,
+						'process.env.PREVIEW': PREVIEW,
+						'process.env.TEST_ENV': TEST_ENV,
+						'process.env.TEST_ID': JSON.stringify(TEST_ID),
+						...featuresReplaces,
+					},
+				},
+			],
+			!TEST_ENV &&
+				!watch &&
+				!preact &&
+				replace({
+					preventAssignment: false,
+					delimiters: ['', ''],
+					values: minifiedProperties,
+				}),
+			[
+				'svgr',
+				{
+					exportAsDefault: true,
+					svgrOptions: {
+						jsxRuntime: 'automatic',
+					},
+					esbuildOptions: {
+						jsxFactory: 'h',
+						jsxFragment: preact ? 'Fragment' : 'hf',
+						banner: jsxInject, // Use banner because jsxInject doesn't work
+					},
+					include: '**/*.svg',
+				},
+			],
+			watch && (preact ? ['prefresh'] : ['custom-prefresh']),
+		].filter(Boolean),
+		bundlerConfig.plugins
+	);
 
 	return { bundlerConfig, testConfig };
 }

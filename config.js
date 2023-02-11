@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { extendConfig } from './src/utils/config.js';
 
 config();
 
@@ -15,7 +16,7 @@ export default {
 	browser: process.env.BROWSER_PATH,
 	bundler: {
 		// Add extra entry to alias config
-		resolve: (config = {}) => ({
+		resolve: extendConfig((config = {}) => ({
 			...config,
 			alias: [
 				{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
@@ -23,7 +24,7 @@ export default {
 				{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
 				...(config.alias || []),
 			],
-		}),
+		})),
 	},
 	screenshot: {
 		onBefore: (page) => {
