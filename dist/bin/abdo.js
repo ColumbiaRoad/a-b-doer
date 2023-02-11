@@ -811,8 +811,10 @@ function cssModules() {
 	const cssLangs = `\\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)($|\\?)`;
 	const cssLangRE = new RegExp(cssLangs);
 	const cssLangModuleRE = new RegExp(`\\.module${cssLangs}`);
+	const cssLangGlobalRE = new RegExp(`\\.global${cssLangs}`);
 	const isCSSRequest = (request) => cssLangRE.test(request);
 	const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
+	const isCSSGlobalRequest = (request) => cssLangGlobalRE.test(request);
 
 	const modules = new Map();
 
@@ -825,6 +827,7 @@ function cssModules() {
 		async resolveId(source, importer, options) {
 			const convertToModule =
 				!isCSSModuleRequest(source) &&
+				!isCSSGlobalRequest(source) &&
 				isCSSRequest(source) &&
 				(config.abConfig.modules || (typeof config.abConfig.modules === 'function' && config.abConfig.modules(source)));
 
@@ -842,9 +845,7 @@ function cssModules() {
 		load(id) {
 			const info = this.getModuleInfo(id);
 			if (info?.id) {
-				const idPath = info.id.startsWith(config.abConfig.libDir)
-					? info.id
-					: path.join(config.abConfig.libDir, info.id);
+				const idPath = info.id.startsWith(process.cwd()) ? info.id : path.join(process.cwd(), info.id);
 				const realID = info && modules.get(idPath);
 				if (realID) {
 					return readFileSync(realID, { encoding: 'utf-8' }).toString();

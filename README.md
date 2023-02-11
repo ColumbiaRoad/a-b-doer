@@ -678,7 +678,7 @@ Type `boolean | (id: string) => boolean` (optional)
 
 Default `true`
 
-Load style files as modules
+Load style files as modules. When enabled, all style files with `global.` in filename will be loaded as "global" (without hashed properties)
 
 ### Advanced example config.js with custom bundler options
 
