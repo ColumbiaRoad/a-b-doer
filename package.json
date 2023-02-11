@@ -47,7 +47,6 @@
     "glob": "^8.1.0",
     "less": "^4.1.3",
     "lodash.get": "^4.4.2",
-    "lodash.merge": "^4.6.2",
     "lodash.set": "^4.3.2",
     "minimist": "^1.2.7",
     "mkdirp": "^2.1.3",
@@ -120,6 +119,6 @@
   "homepage": "https://github.com/ColumbiaRoad/a-b-doer#readme",
   "type": "module",
   "engines": {
-    "node": ">=14.18.0"
+    "node": ">=16.0.0"
   }
 }
