@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extendConfig } from './src/utils/config.js';
+import { extendConfig } from './bundler.js';
 
 config();
 

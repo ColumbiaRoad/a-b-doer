@@ -107,6 +107,8 @@
     "index.d.ts",
     "hooks.js",
     "hooks.d.ts",
+    "bundler.js",
+    "bundler.d.ts",
     "main.js"
   ],
   "repository": {
