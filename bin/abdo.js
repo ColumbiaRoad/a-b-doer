@@ -15,8 +15,8 @@ const cmd = process.argv[2];
 const cmds = ['watch', 'build', 'preview', 'build-all', 'screenshot'];
 
 if (!cmds.includes(cmd)) {
-	console.log('Unsupported command: ' + cmd);
-	console.log('Supported commands are: ' + cmds.join(', '));
+	console.log(`Unsupported command: ${cmd}`);
+	console.log(`Supported commands are: ${cmds.join(', ')}`);
 	process.exit();
 }
 
@@ -204,21 +204,19 @@ async function createScreenshots(targetPath) {
 		if (cmdArgUrl) {
 			if (isNaN(cmdArgUrl)) {
 				config.url = [cmdArgUrl];
-			} else {
-				if (Array.isArray(config.url)) {
-					const urlIndex = +cmdArgUrl;
-					if (urlIndex < config.url.length) {
-						config.url = [config.url[urlIndex]];
-					} else {
-						console.log(yellow(`Undefined index for test config url. Argument was`), '--url=' + cmdArgUrl);
-						console.log(yellow(`Current config`), config.url);
-					}
+			} else if (Array.isArray(config.url)) {
+				const urlIndex = +cmdArgUrl;
+				if (urlIndex < config.url.length) {
+					config.url = [config.url[urlIndex]];
 				} else {
-					console.log(
-						yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
-						'--url=' + cmdArgUrl
-					);
+					console.log(yellow(`Undefined index for test config url. Argument was`), `--url=${cmdArgUrl}`);
+					console.log(yellow(`Current config`), config.url);
 				}
+			} else {
+				console.log(
+					yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
+					`--url=${cmdArgUrl}`
+				);
 			}
 		}
 		const { testPath, buildDir, entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
@@ -232,7 +230,7 @@ async function createScreenshots(targetPath) {
 			onBefore: screenshotOnBefore,
 			...pptrScreenshotOptions
 		} = screenshot;
-		const entryName = path.basename(entryFile, '.' + entryFileExt);
+		const entryName = path.basename(entryFile, `.${entryFileExt}`);
 
 		// Bundle main events and screenshot events
 		const singleOnLoad = async (page) => {
@@ -357,11 +355,16 @@ async function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			const spec = await buildspec(entryFile);
+			const specSet = await buildspec(entryFile);
+
+			if (!specSet) return null;
+
+			const spec = specSet.getSpecConfig();
+
 			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
-			return spec;
+			return { ...spec, ...specSet };
 		})
 	);
 
