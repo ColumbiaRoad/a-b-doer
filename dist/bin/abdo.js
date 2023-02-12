@@ -187,94 +187,101 @@ async function getBuildSpec(testPath) {
 		return null;
 	}
 
-	if (!entryFile) {
-		if (testConfig.entry) {
-			entryFile = testConfig.entry;
-		} else {
-			const files = fs.readdirSync(testPath, { encoding: 'utf8' });
-			// Find first index file
-			const indexFile = files.find((file) => /index\.(jsx?|tsx?|(le|sa|sc|c)ss)$/.test(file));
-			if (indexFile) {
-				entryFile = indexFile;
-			}
-			// Try some style file
-			else {
-				entryFile = files.find((file) => /styles?\.(le|sa|sc|c)ss$/.test(file));
-			}
-		}
-	}
-
-	let entryPart = entryFile;
-	if (entryFile) {
-		entryFile = path.resolve(testPath, entryFile);
-	}
-
-	if (!entryFile) return null;
-
-	// Check that given entry is not excluded.
-	const filter = createFilter(testConfig.include, testConfig.exclude);
-	if (!filter(entryFile)) {
-		return null;
-	}
-
-	const overrideConfig = {
-		...config,
-		...testConfig,
-	};
-
-	return {
-		...overrideConfig,
-		features: {
-			...config.features,
-			...(testConfig.features || {}),
-			...(overrideConfig.preact ? { jsx: false, hooks: false } : {}),
-		},
-		testPath,
-		entryFile,
-		entryPart,
-		entryFileExt: entryFile.split('.').pop(),
-		getSpecConfig(options) {
-			return testConfig.specs.reduce(
-				(acc, spec) => {
-					Object.keys(spec.config).forEach((key) => {
+	const getSpecConfig = (propertyPath, defaultOptions) => {
+		return testConfig.specs.reduce(
+			(acc, spec) => {
+				const config = get(spec, propertyPath);
+				if (config) {
+					Object.keys(config).forEach((key) => {
 						if (key === 'bundler') return;
-						let option = spec.config[key];
+						let option = config[key];
 						const accVal = get(acc, [key]);
-						if (typeof option === 'object' && option?._extended) {
-							option = option.callback(accVal);
+						if (typeof option === 'object' && option) {
+							if (option._extended) {
+								option = option.callback(accVal);
+							}
 						}
 						set(acc, [key], option);
 					});
-					if (acc.url && !Array.isArray(acc.url)) {
-						acc.url = [acc.url];
+				}
+				if (acc.url && !Array.isArray(acc.url)) {
+					acc.url = [acc.url];
+				}
+				return acc;
+			},
+			{ ...defaultOptions }
+		);
+	};
+
+	return {
+		...testConfig,
+		getSpecConfig: (options = {}) => {
+			const specConfig = getSpecConfig('config', {
+				...config,
+				...options,
+				testPath,
+			});
+
+			if (!entryFile) {
+				if (specConfig.entry) {
+					entryFile = config.entry;
+				} else {
+					const files = fs.readdirSync(testPath, { encoding: 'utf8' });
+					// Find first index file
+					const indexFile = files.find((file) => /index\.(jsx?|tsx?|(le|sa|sc|c)ss)$/.test(file));
+					if (indexFile) {
+						entryFile = indexFile;
 					}
-					return acc;
+					// Try some style file
+					else {
+						entryFile = files.find((file) => /styles?\.(le|sa|sc|c)ss$/.test(file));
+					}
+				}
+			}
+
+			let entryPart = entryFile;
+			if (entryFile) {
+				entryFile = path.resolve(testPath, entryFile);
+			}
+
+			if (!entryFile) return null;
+
+			// Check that given entry is not excluded.
+			const filter = createFilter(specConfig.include, specConfig.exclude);
+			if (!filter(entryFile)) {
+				return null;
+			}
+
+			return {
+				...specConfig,
+				bundler: null,
+				features: {
+					...config.features,
+					...specConfig.features,
+					...(specConfig.preact ? { jsx: false, hooks: false } : {}),
 				},
-				{ ...options }
-			);
+				entryFile,
+				entryPart,
+				entryFileExt: entryFile.split('.').pop(),
+			};
 		},
-		getBundlerConfig(config) {
-			return testConfig.specs.reduce(
-				(acc, spec) => {
-					const bundlerConfig = get(spec, ['config', 'bundler']);
-					if (bundlerConfig) {
-						Object.keys(bundlerConfig).forEach((key) => {
-							let option = bundlerConfig[key];
-							const accVal = get(acc, [key]);
-							if (typeof option === 'object' && option?._extended) {
-								option = option.callback(accVal);
-							}
-							set(acc, [key], option);
-						});
-					}
-					return acc;
+		getBundlerConfig(options = {}) {
+			return getSpecConfig('config.bundler', {
+				resolve: {
+					alias: [
+						{ find: /^@\/(.*)/, replacement: path.join(process.cwd(), '$1') },
+						{ find: 'react', replacement: 'preact/compat' },
+						{ find: 'react-dom', replacement: 'preact/compat' },
+						{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
+					],
 				},
-				{ ...config }
-			);
+				...options,
+			});
 		},
 	};
 }
 
+/* eslint-disable prefer-rest-params */
 // import { injectToolbar } from './utils/toolbar/pptr-toolbar';
 
 const { yellow: yellow$1, green } = chalk;
@@ -423,10 +430,10 @@ async function openPage(config, singlePage) {
 						}
 
 						function newHistoryChange(type) {
-							var orig = history[type];
+							let orig = history[type];
 							return function () {
-								var rv = orig.apply(this, arguments);
-								var e = new Event('changestate');
+								let rv = orig.apply(this, arguments);
+								let e = new Event('changestate');
 								e.arguments = arguments;
 								e.eventName = type;
 								window.dispatchEvent(e);
@@ -437,10 +444,10 @@ async function openPage(config, singlePage) {
 						history.pushState = newHistoryChange('pushState');
 						history.replaceState = newHistoryChange('replaceState');
 
-						window.addEventListener('popstate', function (e) {
+						window.addEventListener('popstate', () => {
 							_appendVariantScripts();
 						});
-						window.addEventListener('changestate', function (e) {
+						window.addEventListener('changestate', () => {
 							_appendVariantScripts();
 						});
 					},
@@ -975,19 +982,6 @@ const cwd = process.cwd();
 
 const DEV_SERVER_PORT = process.env.DEV_SERVER_PORT || 5173;
 
-const defaultConfig = {
-	bundler: {
-		resolve: {
-			alias: [
-				{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
-				{ find: 'react', replacement: 'preact/compat' },
-				{ find: 'react-dom', replacement: 'preact/compat' },
-				{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
-			],
-		},
-	},
-};
-
 const minifiedProperties = {
 	__hooks: 'h',
 	__class: 'c',
@@ -1008,7 +1002,7 @@ const minifiedProperties = {
 function getBundlerConfigs(buildSpecConfig) {
 	let { getBundlerConfig = (opts) => opts, getSpecConfig = (opts) => opts, ...restConfig } = buildSpecConfig;
 
-	const testConfig = getSpecConfig({ ...defaultConfig, ...restConfig });
+	const testConfig = getSpecConfig(restConfig);
 
 	let { entryFile, testPath, entry, entryPart, preview = false } = testConfig;
 
@@ -1162,7 +1156,6 @@ function getBundlerConfigs(buildSpecConfig) {
 			},
 		},
 		clearScreen: false,
-		...defaultConfig.bundler,
 	});
 
 	bundlerConfig.plugins = getPluginsConfig(
@@ -1429,8 +1422,8 @@ const cmd = process.argv[2];
 const cmds = ['watch', 'build', 'preview', 'build-all', 'screenshot'];
 
 if (!cmds.includes(cmd)) {
-	console.log('Unsupported command: ' + cmd);
-	console.log('Supported commands are: ' + cmds.join(', '));
+	console.log(`Unsupported command: ${cmd}`);
+	console.log(`Supported commands are: ${cmds.join(', ')}`);
 	process.exit();
 }
 
@@ -1614,21 +1607,19 @@ async function createScreenshots(targetPath) {
 		if (cmdArgUrl) {
 			if (isNaN(cmdArgUrl)) {
 				config.url = [cmdArgUrl];
-			} else {
-				if (Array.isArray(config.url)) {
-					const urlIndex = +cmdArgUrl;
-					if (urlIndex < config.url.length) {
-						config.url = [config.url[urlIndex]];
-					} else {
-						console.log(yellow(`Undefined index for test config url. Argument was`), '--url=' + cmdArgUrl);
-						console.log(yellow(`Current config`), config.url);
-					}
+			} else if (Array.isArray(config.url)) {
+				const urlIndex = +cmdArgUrl;
+				if (urlIndex < config.url.length) {
+					config.url = [config.url[urlIndex]];
 				} else {
-					console.log(
-						yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
-						'--url=' + cmdArgUrl
-					);
+					console.log(yellow(`Undefined index for test config url. Argument was`), `--url=${cmdArgUrl}`);
+					console.log(yellow(`Current config`), config.url);
 				}
+			} else {
+				console.log(
+					yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
+					`--url=${cmdArgUrl}`
+				);
 			}
 		}
 		const { testPath, buildDir, entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
@@ -1642,7 +1633,7 @@ async function createScreenshots(targetPath) {
 			onBefore: screenshotOnBefore,
 			...pptrScreenshotOptions
 		} = screenshot;
-		const entryName = path.basename(entryFile, '.' + entryFileExt);
+		const entryName = path.basename(entryFile, `.${entryFileExt}`);
 
 		// Bundle main events and screenshot events
 		const singleOnLoad = async (page) => {
@@ -1767,11 +1758,16 @@ async function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			const spec = await getBuildSpec(entryFile);
+			const specSet = await getBuildSpec(entryFile);
+
+			if (!specSet) return null;
+
+			const spec = specSet.getSpecConfig();
+
 			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
-			return spec;
+			return { ...spec, ...specSet };
 		})
 	);
 

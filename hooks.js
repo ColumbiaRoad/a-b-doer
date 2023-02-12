@@ -1,1 +1,1 @@
-export { useRef, useEffect, useState } from './src/hooks';
+export { useRef, useEffect, useState } from './src/hooks.js';
