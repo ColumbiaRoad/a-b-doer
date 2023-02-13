@@ -684,19 +684,17 @@ Load style files as modules. When enabled, all style files with `global.` in fil
 
 ```js
 import fooPlugin from 'vite-foo-plugin';
-import { extendConfig } from 'a-b-doer';
+import { extendConfig, pluginsPattern } from 'a-b-doer';
 
 /*
-Supported plugins for array format are currently.
-Note, changing the configuration for these plugins might break something.
+Supported plugins for pattern match are currently:
+a-b-doer:preact-debug
+a-b-doer:css-in-js-plugin
+a-b-doer:css-modules
+replace2
+vite-plugin-svgr
 
-css-inject,
-css-modules,
-preact-debug,
-replace,
-svgr,
-prefresh,
-custom-prefresh,
+Note, changing the configuration for these plugins might break something.
 */
 
 export default {
@@ -710,23 +708,24 @@ export default {
       ...config,
       alias: [{ find: 'some-library', replacement: 'some-other-library' }, ...(config.alias || [])],
     })),
-    plugins: [
-      // Add extra entries to replace plugin
-      [
-        'replace',
-        (options) => ({
-          ...options,
-          values: {
-            'process.env.SOME': 2,
-            '##OTHER##': '2',
-          },
-        }),
-      ],
-      // Remove a default plugin
-      ['preact-debug', null],
+    plugins: extendConfig((plugins) => [
+      ...pluginsPattern(plugins)
+        // Add extra entries to replace plugin
+        .matches({ name: 'replace' }, ({ plugin, options }) =>
+          plugin({
+            ...options,
+            values: {
+              ...options.values,
+              'process.env.SOME': 2,
+              '##OTHER##': '2',
+            },
+          })
+        )
+        // Remove a default plugin
+        .matches({ name: 'preact-debug' }, () => null),
       // Add extra input plugin to Vite configuration
       fooPlugin({ foo: 1 }),
-    ],
+    ]),
     output: {
       // Some super options for bundler output
     },
