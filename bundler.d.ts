@@ -9,7 +9,7 @@ type Plugin = (...args: any[]) => any;
 type PluginsPattern = Plugin[] & {
 	match(
 		match: Record<string, any>,
-		callback: (params: { plugin: Plugin; options: Record<string, any> }) => Plugin | null | Record<string, any>
+		callback: (params: { plugin: Plugin; options: Record<string, any> }) => Plugin | null
 	): PluginsPattern;
 };
 export function pluginsPattern(plugins: Plugin[]): PluginsPattern;
