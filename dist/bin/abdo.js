@@ -20,6 +20,8 @@ import { build, createServer } from 'vite';
 import prefresh from '@prefresh/vite';
 import { transformSync } from '@babel/core';
 import prefreshBabelPlugin from '@prefresh/babel-plugin';
+import glob from 'glob';
+import rimraf from 'rimraf';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -73,7 +75,6 @@ const specRequire = createRequire(import.meta.url);
  * Config defaults
  */
 const config = {
-	appendStyles: true,
 	buildDir: '.build',
 	chunks: false,
 	devtools: true,
@@ -727,22 +728,33 @@ function preactDebug() {
 	};
 }
 
-function cssInjectedByJsPlugin() {
-	let cssToInject = '';
+function cssEntryPlugin() {
 	let config;
 
 	return {
 		apply: 'build',
 		enforce: 'post',
-		name: 'a-b-doer:css-in-js-plugin',
+		name: 'a-b-doer:css-entry-plugin',
 		configResolved(_config) {
 			config = _config;
+		},
+		async renderChunk(code) {
+			const intro = config.build?.rollupOptions?.output?.intro;
+			const vityStyleVar = 'var __vite_style__';
+			// Move possible intro to be defined before vite style variable
+			if (intro && code.includes(vityStyleVar)) {
+				code = code.replace(intro, '').replace(vityStyleVar, intro + vityStyleVar);
+			}
+			// Inject dataset attribute to Vite's style tag
+			return code.replace(
+				'__vite_style__.textContent',
+				`__vite_style__.dataset.id="${config.abConfig.TEST_ID || ''}";__vite_style__.textContent`
+			);
 		},
 		async generateBundle(opts, bundle) {
 			const { abConfig } = config;
 
 			const bundleKeys = Object.keys(bundle);
-			const cssAssets = bundleKeys.filter((i) => bundle[i].type == 'asset' && bundle[i].fileName.endsWith('.css'));
 			const jsAssets = bundleKeys.filter(
 				(i) =>
 					bundle[i].type == 'chunk' &&
@@ -770,39 +782,6 @@ function cssInjectedByJsPlugin() {
 					bundle[newKey].fileName = newKey;
 					delete bundle[bundleKeys[0]];
 					jsAssets[0] = newKey;
-				}
-			}
-
-			if (!abConfig.extractCss && !abConfig.stylesOnly) {
-				const allCssCode = cssAssets.reduce((previousValue, cssName) => {
-					const cssAsset = bundle[cssName];
-					const result = previousValue + cssAsset.source;
-					delete bundle[cssName];
-					return result;
-				}, '');
-
-				if (allCssCode.length > 0) {
-					cssToInject = allCssCode;
-				}
-
-				if (cssToInject) {
-					const jsAsset = bundle[jsAssets[0]];
-
-					const appCode = jsAsset.code;
-					jsAsset.code =
-						/* prettier-ignore */
-						`!(function(){` +
-						`var __a,__s,__f=function(){` +
-							`if(__a){return;}` +
-							`__a=1;` +
-							`__s=document.createElement('style');__s.dataset.id='${abConfig.TEST_ID}',__s.innerHTML='${
-							cssToInject.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'")
-							}';` +
-							`document.head.appendChild(__s);` +
-						`};${
-						abConfig.appendStyles ? "__f();" : "window._addStyles=__f;"
-					}})();${
-					 appCode}`;
 				}
 			}
 		},
@@ -841,10 +820,11 @@ function cssModules() {
 			if (convertToModule) {
 				const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
 				if (resolution?.id) {
-					const parts = resolution.id.split('.');
+					const realPath = resolution.id.split('?')[0];
+					const parts = realPath.split('.');
 					const ext = parts.pop();
 					const newId = `${parts.join('.')}.module.${ext}`;
-					modules.set(newId, resolution.id);
+					modules.set(newId, realPath);
 					return newId;
 				}
 			}
@@ -1024,7 +1004,7 @@ function getBundlerConfigs(buildSpecConfig) {
 	const buildDir = path.join(testPath, testConfig.buildDir);
 	testConfig.buildDir = buildDir;
 
-	const { minify: configMinify, preact, modules, id, chunks, watch, features } = testConfig;
+	const { minify: configMinify, preact, modules, id, chunks, watch, features, extractCss } = testConfig;
 	const minify = configMinify ?? !watch;
 
 	// Bundler behaves a little bit differently when there's style file as an entry.
@@ -1142,6 +1122,7 @@ function getBundlerConfigs(buildSpecConfig) {
 				: false,
 			emptyOutDir: false,
 			chunkSizeWarningLimit: 2048,
+			cssCodeSplit: !extractCss,
 			rollupOptions: {
 				input: [entryFile],
 				external: ['path', 'module', 'url'],
@@ -1156,7 +1137,6 @@ function getBundlerConfigs(buildSpecConfig) {
 				output: {
 					dir: buildDir,
 					assetFileNames: '[name].css',
-					strict: false,
 					exports: 'named',
 					name: path.basename(entryFile).split('.')[0],
 					intro: minify && !stylesOnly ? 'const window = self; const document = window.document;' : '',
@@ -1167,7 +1147,7 @@ function getBundlerConfigs(buildSpecConfig) {
 		clearScreen: false,
 		plugins: [
 			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
-			createModifiablePlugin(cssInjectedByJsPlugin, { name: 'a-b-doer:css-in-js-plugin' }),
+			createModifiablePlugin(cssEntryPlugin, { name: 'a-b-doer:css-entry-plugin' }),
 			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
 			createModifiablePlugin(replace, {
 				name: 'replace',
@@ -1230,7 +1210,7 @@ function getBundlerConfigs(buildSpecConfig) {
  */
 async function bundler(buildSpecConfig) {
 	const { bundlerConfig, testConfig } = getBundlerConfigs(buildSpecConfig);
-	const { watch, testPath, entryFile, buildDir } = testConfig;
+	const { watch, testPath, entryFile, buildDir, chunks } = testConfig;
 
 	// Ensure build folder
 	try {
@@ -1245,24 +1225,24 @@ async function bundler(buildSpecConfig) {
 	// 	outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
 	// }
 
-	// const clearHashedAssets = () => {
-	// 	// Check for hashed file names
-	// 	if (/\[hash(]|:)/.test(outputOptions.entryFileNames) || chunks) {
-	// 		// Clear previous hashed files from the build folder.
-	// 		const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
-	// 		files.forEach((file) => {
-	// 			rimraf(`${buildDir}/${file}`, (err) => {
-	// 				if (err) console.error(err);
-	// 			});
-	// 		});
-	// 	}
-	// };
+	const clearHashedAssets = () => {
+		// Check for hashed file names
+		if (/\[hash(]|:)/.test(get(bundlerConfig, 'build.rollupOptions.output.entryFileNames', '')) || chunks) {
+			// Clear previous hashed files from the build folder.
+			const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
+			files.forEach((file) => {
+				rimraf(`${buildDir}/${file}`, (err) => {
+					if (err) console.error(err);
+				});
+			});
+		}
+	};
 
 	let assetBundle;
 	let server;
 
 	if (!watch) {
-		// clearHashedAssets();
+		clearHashedAssets();
 
 		try {
 			await build({

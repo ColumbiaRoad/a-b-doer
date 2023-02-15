@@ -559,14 +559,6 @@ Default `false`
 
 Adds some extra logging for debug
 
-### appendStyles
-
-Type `Boolean` (optional)
-
-Default `true`
-
-Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
-
 ### features
 
 Type `Object` (optional)
@@ -689,8 +681,9 @@ import { extendConfig, pluginsPattern } from 'a-b-doer';
 /*
 Supported plugins for pattern match are currently:
 a-b-doer:preact-debug
-a-b-doer:css-in-js-plugin
+a-b-doer:css-entry-plugin
 a-b-doer:css-modules
+replace
 replace2
 vite-plugin-svgr
 

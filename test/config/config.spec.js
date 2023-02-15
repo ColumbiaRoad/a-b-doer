@@ -92,7 +92,7 @@ describe('Configuration options', () => {
 	});
 
 	it('should not append styles', async () => {
-		const output = await bundler({ ...config, modules: false, appendStyles: false, entry: './index.jsx' });
+		const output = await bundler({ ...config, modules: false, extractCss: true, entry: './index.jsx' });
 		page = await openPage(output);
 		await expect(page).toMatchElement('#tpl');
 		const content = await page.content();
