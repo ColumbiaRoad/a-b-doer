@@ -28,7 +28,7 @@ yarn add a-b-doer --dev
 
 # Prerequisites
 
-Create config.json (or config.js) to project root with the following minimum settings:
+Create abd.config.json (or abd.config.js) to project root with the following minimum settings:
 
 ```json
 {
@@ -585,7 +585,7 @@ You can manually control which parts of the code should be left out by terser on
 }
 ```
 
-## config.json usage
+## abd.config.json usage
 
 Global config file for all tests. This is a great place to configure all global buildspec options.
 
@@ -655,7 +655,7 @@ Default `[]`
 
 Extra browser args for Puppeteer
 
-### Example config.json
+### Example abd.config.json
 
 ```json
 {
@@ -676,7 +676,7 @@ Load style files as modules. When enabled, all style files with `global.` in fil
 
 ```js
 import fooPlugin from 'vite-foo-plugin';
-import { extendConfig, pluginsPattern } from 'a-b-doer';
+import { extendConfig, pluginsPattern } from 'a-b-doer/bundler';
 
 /*
 Supported plugins for pattern match are currently:
@@ -848,7 +848,7 @@ Extra onLoad event for screenshots. Will be runned after the main onLoad
 ### Example buildspec.js with screenshot options
 
 ```js
-import gobalConfig from '../config.js';
+import gobalConfig from '../abd.config.js';
 
 export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
