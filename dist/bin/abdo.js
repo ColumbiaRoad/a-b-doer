@@ -1231,9 +1231,7 @@ async function bundler(buildSpecConfig) {
 			// Clear previous hashed files from the build folder.
 			const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
 			files.forEach((file) => {
-				rimraf(`${buildDir}/${file}`, (err) => {
-					if (err) console.error(err);
-				});
+				rimraf(`${buildDir}/${file}`);
 			});
 		}
 	};
