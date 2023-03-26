@@ -4,7 +4,7 @@ import chokidar from 'chokidar';
 import minimist from 'minimist';
 import path from 'node:path';
 import { createFilter } from '@rollup/pluginutils';
-import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
+import fs, { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import get from 'lodash.get';
 import set from 'lodash.set';
 import { createRequire } from 'node:module';
@@ -802,8 +802,6 @@ function cssModules() {
 	const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
 	const isCSSGlobalRequest = (request) => cssLangGlobalRE.test(request);
 
-	const modules = new Map();
-
 	return {
 		enforce: 'pre',
 		name: 'a-b-doer:css-modules',
@@ -820,22 +818,9 @@ function cssModules() {
 			if (convertToModule) {
 				const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
 				if (resolution?.id) {
-					const realPath = resolution.id.split('?')[0];
-					const parts = realPath.split('.');
+					const parts = resolution.id.split('.');
 					const ext = parts.pop();
-					const newId = `${parts.join('.')}.module.${ext}`;
-					modules.set(newId, realPath);
-					return newId;
-				}
-			}
-		},
-		load(id) {
-			const info = this.getModuleInfo(id);
-			if (info?.id) {
-				const idPath = info.id.startsWith(process.cwd()) ? info.id : path.join(process.cwd(), info.id);
-				const realID = info && modules.get(idPath);
-				if (realID) {
-					return readFileSync(realID, { encoding: 'utf-8' }).toString();
+					return `${resolution.id}${resolution.id.includes('?') ? '&' : '?'}.module.${ext}`;
 				}
 			}
 		},
@@ -1100,9 +1085,8 @@ function getBundlerConfigs(buildSpecConfig) {
 						return `t${hash}-${name}`;
 					}
 					const folder = path.basename(path.dirname(file));
-					const fileNameParts = path.basename(file).split('.').slice(0, -1);
-					if (fileNameParts.at(-1) === 'module') fileNameParts.pop();
-					return `t_${folder}_${fileNameParts.join('.')}_${name}__${hash}`;
+					const fileNameParts = path.basename(file).split('.');
+					return `t_${folder}_${fileNameParts.at(0)}__${name}--${hash}`;
 				},
 			},
 		},
