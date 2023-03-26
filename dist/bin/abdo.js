@@ -1106,7 +1106,7 @@ function getBundlerConfigs(buildSpecConfig) {
 				: false,
 			emptyOutDir: false,
 			chunkSizeWarningLimit: 2048,
-			cssCodeSplit: !extractCss,
+			cssCodeSplit: !extractCss && !stylesOnly,
 			rollupOptions: {
 				input: [entryFile],
 				external: ['path', 'module', 'url'],

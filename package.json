@@ -13,7 +13,7 @@
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
     "test": "vitest",
     "test:js": "vitest -c ./test/js/vitest.config.js test/js",
-    "test:styles": "vitest test/styles",
+    "test:styles": "vitest -c ./test/styles/vitest.config.js  test/styles",
     "release": "standard-version",
     "prepare": "husky install"
   },
