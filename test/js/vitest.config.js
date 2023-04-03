@@ -9,9 +9,6 @@ const __dirname = path.dirname(__filename);
 
 const rootDir = path.join(__dirname, '..', '..');
 
-process.env.TEST_ENV = true;
-process.env.IE = false;
-
 const { bundlerConfig } = getBundlerConfigs({
 	...config,
 	buildDir: '.build',
@@ -40,5 +37,6 @@ export default defineConfig({
 		globals: true,
 		environment: 'jsdom',
 		setupFiles: [path.join(rootDir, 'test', 'setup.js')],
+		globalSetup: [path.join(rootDir, 'test', 'global-setup.js')],
 	},
 });

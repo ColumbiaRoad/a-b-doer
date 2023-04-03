@@ -1,5 +1,4 @@
 import path from 'path';
-import { rimrafSync } from 'rimraf';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 import { config } from '../../lib/buildspec';
@@ -9,12 +8,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const rootDir = path.join(__dirname, '..', '..');
-
-process.env.TEST_ENV = true;
-process.env.IE = false;
-
-rimrafSync(`${__dirname}/less/.build`);
-rimrafSync(`${__dirname}/styles/.build`);
 
 const { bundlerConfig } = getBundlerConfigs({
 	...config,
@@ -36,5 +29,6 @@ export default defineConfig({
 		globals: true,
 		environment: 'jsdom',
 		setupFiles: [path.join(rootDir, 'test', 'setup.js')],
+		globalSetup: [path.join(rootDir, 'test', 'global-setup.js')],
 	},
 });

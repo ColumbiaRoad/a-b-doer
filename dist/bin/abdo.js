@@ -283,11 +283,10 @@ async function getBuildSpec(testPath) {
 }
 
 /* eslint-disable prefer-rest-params */
-// import { injectToolbar } from './utils/toolbar/pptr-toolbar';
 
 const { yellow: yellow$1, green } = chalk;
 
-const isTest = getFlagEnv('TEST_ENV');
+const isTest = getFlagEnv('VITEST');
 let initial = true;
 let counter = 0;
 let loadListener = null;
@@ -1004,7 +1003,7 @@ function getBundlerConfigs(buildSpecConfig) {
 	const NODE_ENV = JSON.stringify(watch ? 'development' : 'production');
 	const IE = getFlagEnv('IE') ?? supportIE;
 	const PREVIEW = Boolean(watch || preview);
-	const TEST_ENV = getFlagEnv('TEST_ENV') || false;
+	const TEST_ENV = getFlagEnv('VITEST') || false;
 	const TEST_ID = id || `t${hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default'}`;
 	// Assign some common process.env variables for bundler/etc and custom rollup plugins
 	process.env.PREACT = process.env.preact = PREACT;
@@ -1227,10 +1226,19 @@ async function bundler(buildSpecConfig) {
 		clearHashedAssets();
 
 		try {
-			await build({
+			const result = await build({
 				root: testPath,
 				...bundlerConfig,
 			});
+
+			// Create assetBundle for output so tests could use them.
+			const mainChunk = result.at(0).output.at(0);
+			let code = mainChunk.code;
+			// Css only bundles should have injectable js code
+			if (!code && mainChunk.source) {
+				code = `(()=>{document.head.appendChild(Object.assign(document.createElement('style'),{innerHTML:\`${mainChunk.source}\`}))})();`;
+			}
+			assetBundle = { js: true, bundle: code };
 		} catch (error) {
 			console.log(chalk.red('\nBundle error!'));
 			throw new Error(error.message);
@@ -1303,8 +1311,10 @@ async function bundler(buildSpecConfig) {
 			.join(', ')}); \n})();
 		`;
 
+		assetBundle = { js: true, bundle: injection };
+
 		try {
-			await openPage({ ...testConfig, assetBundle: { js: true, bundle: injection } }, true);
+			await openPage({ ...testConfig, assetBundle }, true);
 		} catch (error) {
 			console.log('Error while opening page', error);
 		}

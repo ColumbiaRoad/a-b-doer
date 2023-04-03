@@ -22,7 +22,7 @@ describe('SASS/less', () => {
 		expect(content).toMatch(/body\{background:(#00f|blue)\}body #t\w{5}-wrapper\{border:1px solid (#00f|blue)\}/);
 	});
 
-	it('should create correct module file', async () => {
+	it('should create correct non-module file', async () => {
 		await bundler({ ...config, entry: './index.less', modules: false });
 		const content = fs.readFileSync(`${__dirname}/.build/index.css`, { encoding: 'utf8' });
 		expect(content).toMatch(/body\{background:(#f00|red)\}body #wrapper\{border:1px solid (#f00|red)\}/);
