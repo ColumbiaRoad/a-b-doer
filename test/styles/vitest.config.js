@@ -18,12 +18,6 @@ const { bundlerConfig } = getBundlerConfigs({
 
 export default defineConfig({
 	...bundlerConfig,
-	resolve: {
-		alias: [
-			{ find: 'a-b-doer/hooks', replacement: path.join(rootDir, 'hooks') },
-			{ find: 'a-b-doer', replacement: path.join(rootDir, 'main') },
-		],
-	},
 	test: {
 		css: true,
 		globals: true,
