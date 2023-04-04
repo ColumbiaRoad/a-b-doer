@@ -1251,7 +1251,7 @@ async function bundler(buildSpecConfig) {
 	}
 	// Otherwise start vite dev server
 	else {
-		const port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
+		let port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
 		const serverConfig = bundlerConfig.server || {};
 
 		console.log(chalk.cyanBright('\nStarting dev server'), `port ${port}`);
@@ -1293,6 +1293,13 @@ async function bundler(buildSpecConfig) {
 		});
 
 		await server.listen();
+
+		const startedPort = server.httpServer.address().port;
+		if (startedPort !== port) {
+			port = startedPort;
+			console.log(chalk.cyanBright('Started dev server'), `port ${port}`);
+			console.log('');
+		}
 
 		const moduleScripts = [
 			`https://localhost:${port}/@vite/client`,
