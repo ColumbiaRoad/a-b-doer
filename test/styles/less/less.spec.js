@@ -7,7 +7,21 @@ import { config as defaultConfig } from '../../../lib/buildspec';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const config = { ...defaultConfig, testPath: __dirname };
+const config = {
+	...defaultConfig,
+	testPath: __dirname,
+	getBundlerConfig(opts) {
+		return {
+			...opts,
+			logLevel: 'error',
+			build: {
+				...opts.build,
+				reportCompressedSize: false,
+				chunkSizeWarningLimit: false,
+			},
+		};
+	},
+};
 
 describe('SASS/less', () => {
 	it('should create file with index.less', async () => {

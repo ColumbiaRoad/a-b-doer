@@ -15,7 +15,7 @@ import replace from '@rollup/plugin-replace';
 import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
 import stringHash from 'string-hash';
-import { URL, fileURLToPath } from 'node:url';
+import { URL as URL$1, fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';
 import prefresh from '@prefresh/vite';
 import { transformSync } from '@babel/core';
@@ -287,12 +287,13 @@ async function getBuildSpec(testPath) {
 const { yellow: yellow$1, green } = chalk;
 
 const isTest = getFlagEnv('VITEST');
-let initial = true;
 let counter = 0;
 let loadListener = null;
 let browser, context;
 let aboutpage = null;
 let disabled = false;
+
+const wasInitialMap = {};
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -304,15 +305,16 @@ async function openPage(config, singlePage) {
 	let url = getDefaultUrl(urls);
 	let urlAfterLoad = url;
 
-	const wasInitial = initial;
-	if (initial) {
-		initial = false;
-	}
-
 	const page = await getPage(config, singlePage);
 	if (isOneOfBuildspecUrls(page.url(), urls)) {
 		url = page.url();
 	}
+
+	const urlObject = new URL(url);
+	const urlKey = urlObject.origin + urlObject.pathname;
+
+	const wasInitial = !wasInitialMap[urlKey];
+	wasInitialMap[urlKey] = true;
 
 	// Remove previous listeners
 	page.removeAllListeners();
@@ -342,6 +344,8 @@ async function openPage(config, singlePage) {
 			.on('console', (message) => console.log('LOG: ', message.text()))
 			.on('pageerror', ({ message }) => console.log('ERR: ', message));
 	}
+
+	const enableHistoryChanges = (!isTest || config.testHistoryChanges) && config.historyChanges;
 
 	if (aboutpage) {
 		await aboutpage.close();
@@ -410,7 +414,7 @@ async function openPage(config, singlePage) {
 			}
 
 			// Always listen the history state api
-			if (!isTest && config.historyChanges) {
+			if (enableHistoryChanges) {
 				await page.evaluate(
 					(bundle, TEST_ID) => {
 						function _appendVariantScripts() {
@@ -516,9 +520,9 @@ async function openPage(config, singlePage) {
 				}
 			}
 
-			if (isTest) {
+			if (isTest && !enableHistoryChanges) {
 				page.off('domcontentloaded', loadListener);
-				loadListener = null;
+				page.__loadListener = loadListener = null;
 			}
 		} catch (error) {
 			console.log(error.message);
@@ -526,6 +530,7 @@ async function openPage(config, singlePage) {
 	};
 
 	page.on('domcontentloaded', loadListener);
+	page.__loadListener = loadListener;
 
 	await page.goto(url, { waitUntil: 'networkidle2' });
 
@@ -828,7 +833,7 @@ function cssModules() {
 
 /** @returns {import('vite').Plugin} */
 function customJsxPrefreshPlugin(options = {}) {
-	const __filename = new URL('', import.meta.url).pathname;
+	const __filename = new URL$1('', import.meta.url).pathname;
 
 	let shouldSkip = false;
 	const filter = createFilter(options.include, options.exclude);

@@ -102,7 +102,6 @@ describe('Configuration options', () => {
 		expect(content).toMatch(`data-o="t-`);
 
 		const files = fs.readdirSync(path.resolve(__dirname, '.build'));
-		expect(files.length).toBe(2);
 		expect(files).toContain('chunks.js');
 		expect(files).toMatch(/templates-\w+\.js/);
 		expect(files.some((val) => /^templates-[a-z0-9]+\.js$/.test(val))).toBeTruthy();
@@ -119,48 +118,110 @@ describe('Configuration options', () => {
 		expect(content).toMatch(`data-o="t-`);
 	});
 
-	it('should disable css modules', async () => {
-		const output = await bundler({ ...config, modules: false, entry: './index.jsx' });
-		page = await openPage(getPuppeteerConfig(output));
-		const content = await page.content();
-		expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
-		expect(content).toMatch(/simple content/);
-		const bg = await page.evaluate(() => {
-			const element = document.querySelector('.content');
-			return window.getComputedStyle(element).getPropertyValue('background-color');
+	describe('Activation', () => {
+		it('should not activate the test without dataLayer event when activationEvent is set', async () => {
+			const output = await bundler({ ...config, entry: './index.jsx' });
+			page = await openPage({ ...getPuppeteerConfig(output), activationEvent: 'activate.test' });
+			const element = await page.$('#tpl');
+			expect(element).not.toBeTruthy();
+			await page.evaluate(() => {
+				window.dataLayer = window.dataLayer || [];
+				window.dataLayer.push({ event: 'activate.test' });
+			});
+			const element2 = await page.$('#tpl');
+			expect(element2).toBeTruthy();
+			const content = await page.content();
+			expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.\w+-content{background:(blue|#00f)}/);
+			expect(content).toMatch(/simple content/);
 		});
-		expect(bg).toMatch(/rgb\(0,\s*0,\s*255\)/);
+
+		it('should listen history changes for activation', async () => {
+			const output = await bundler({ ...config, entry: './index.jsx' });
+			const pptrConfig = getPuppeteerConfig(output);
+			const url = pptrConfig.url[0];
+			pptrConfig.url = ['about:blank', `${url}#test`];
+			page = await openPage({ ...pptrConfig, historyChanges: true, testHistoryChanges: true });
+			const element = await page.$('#tpl');
+			expect(element).not.toBeTruthy();
+			await page.goto(url);
+			await page.evaluate((url) => {
+				window.history.pushState({}, '', `${url}#test`);
+				window.history.pushState({}, '', `${url}#ignored`);
+			}, url);
+			await page.goBack();
+			const element2 = await page.$('#tpl');
+			expect(element2).toBeTruthy();
+			const content = await page.content();
+			expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.\w+-content{background:(blue|#00f)}/);
+			expect(content).toMatch(/simple content/);
+			page.off('domcontentloaded', page.__loadListener);
+		});
+
+		it('should not listen history changes for activation', async () => {
+			const output = await bundler({ ...config, entry: './index.jsx' });
+			const pptrConfig = getPuppeteerConfig(output);
+			const url = pptrConfig.url[0];
+			pptrConfig.url = ['about:blank', `${url}#test2`];
+			page = await openPage({ ...pptrConfig, historyChanges: false });
+			const element = await page.$('#tpl');
+			expect(element).not.toBeTruthy();
+			await page.goto(url);
+			await page.evaluate((url) => {
+				window.history.pushState({}, undefined, `${url}#test2`);
+				window.history.pushState({}, '', `${url}#ignored`);
+			}, url);
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			await page.goBack();
+			const element2 = await page.$('#tpl');
+			const content = await page.content();
+			expect(element2).not.toBeTruthy();
+			expect(content).not.toMatch(/<style[^>]*>body{background:(red|#f00)}\.\w+-content{background:(blue|#00f)}/);
+			expect(content).not.toMatch(/simple content/);
+		});
 	});
 
-	it('should not append styles', async () => {
-		const output = await bundler({ ...config, modules: false, extractCss: true, entry: './index.jsx' });
-		page = await openPage(getPuppeteerConfig(output));
-		const element = await page.$('#tpl');
-		expect(element).toBeTruthy();
-		const content = await page.content();
-		expect(content).not.toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
-		expect(content).toMatch(/simple content/);
-		const bg = await page.evaluate(() => {
-			const element = document.querySelector('.content');
-			return window.getComputedStyle(element).getPropertyValue('background-color');
+	describe('Styles', () => {
+		it('should disable css modules', async () => {
+			const output = await bundler({ ...config, modules: false, entry: './index.jsx' });
+			page = await openPage(getPuppeteerConfig(output));
+			const content = await page.content();
+			expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
+			expect(content).toMatch(/simple content/);
+			const bg = await page.evaluate(() => {
+				const element = document.querySelector('.content');
+				return window.getComputedStyle(element).getPropertyValue('background-color');
+			});
+			expect(bg).toMatch(/rgb\(0,\s*0,\s*255\)/);
 		});
-		expect(bg).toMatch(/rgb\(253,\s*253,\s*255\)/);
-	});
 
-	it('should not activate the test without dataLayer event when activationEvent is set', async () => {
-		const output = await bundler({ ...config, entry: './index.jsx' });
-		page = await openPage({ ...getPuppeteerConfig(output), activationEvent: 'activate.test' });
-		const element = await page.$('#tpl');
-		expect(element).not.toBeTruthy();
-		await page.evaluate(() => {
-			window.dataLayer = window.dataLayer || [];
-			window.dataLayer.push({ event: 'activate.test' });
+		it('should not append styles', async () => {
+			const output = await bundler({ ...config, modules: false, extractCss: true, entry: './index.jsx' });
+			page = await openPage(getPuppeteerConfig(output));
+			const element = await page.$('#tpl');
+			expect(element).toBeTruthy();
+			const content = await page.content();
+			expect(content).not.toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
+			expect(content).toMatch(/simple content/);
+			const bg = await page.evaluate(() => {
+				const element = document.querySelector('.content');
+				return window.getComputedStyle(element).getPropertyValue('background-color');
+			});
+			expect(bg).toMatch(/rgb\(253,\s*253,\s*255\)/);
 		});
-		await new Promise((resolve) => setTimeout(resolve, 100));
-		const element2 = await page.$('#tpl');
-		expect(element2).toBeTruthy();
-		const content = await page.content();
-		expect(content).not.toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
-		expect(content).toMatch(/simple content/);
+
+		it('should extract css to own file', async () => {
+			const output = await bundler({
+				...config,
+				modules: false,
+				extractCss: true,
+				entry: './index.jsx',
+				buildDir: path.join('.build', 'css'),
+			});
+			page = await openPage(getPuppeteerConfig(output));
+			const files = fs.readdirSync(path.resolve(__dirname, '.build', 'css'));
+			expect(files).toContain('style.css');
+			const file = fs.readFileSync(path.resolve(__dirname, '.build', 'css', 'style.css'));
+			expect(file).toMatch(/body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
+		});
 	});
 });
