@@ -1308,13 +1308,7 @@ async function bundler(buildSpecConfig) {
 
 		if (testConfig.toolbar) {
 			moduleScripts.push(
-				`https://localhost:${port}/${path.join(
-					rootDir.replace(cwd, ''),
-					'lib',
-					'utils',
-					'toolbar',
-					'pptr-toolbar.jsx'
-				)}`
+				`https://localhost:${port}/${path.join(rootDir.replace(cwd, ''), 'dist', 'lib', 'pptr-toolbar.js')}`
 			);
 		}
 

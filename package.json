@@ -4,7 +4,7 @@
   "description": "Utility library which makes developing of A/B test variants easier (maybe)",
   "main": "./main.js",
   "scripts": {
-    "build": "rollup ./bin/abdo.js -c",
+    "build": "rollup -c",
     "clean": "rimraf ./dist",
     "try:build": "node ./dist/bin/abdo.js build",
     "try:build-all": "node ./dist/bin/abdo.js build-all",
@@ -67,6 +67,7 @@
     "vite-plugin-svgr": "^2.4.0"
   },
   "devDependencies": {
+    "@rollup/plugin-alias": "5.0.0",
     "@testing-library/dom": "^9.2.0",
     "@testing-library/jest-dom": "^5.16.5",
     "babel-jest": "^29.5.0",
@@ -81,6 +82,8 @@
     "jsdom": "^21.1.1",
     "puppeteer": "^19.8.3",
     "rimraf": "^4.4.1",
+    "rollup-plugin-esbuild": "^5.0.0",
+    "rollup-plugin-styles": "^4.0.0",
     "standard-version": "^9.5.0",
     "vitest": "^0.29.8"
   },
