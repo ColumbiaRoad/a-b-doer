@@ -676,7 +676,7 @@ Load style files as modules. When enabled, all style files with `global.` in fil
 
 ```js
 import fooPlugin from 'vite-foo-plugin';
-import { extendConfig, pluginsPattern } from 'a-b-doer/bundler';
+import { extendConfig, PluginsPattern } from 'a-b-doer/bundler';
 
 /*
 Supported plugins for pattern match are currently:
@@ -701,10 +701,10 @@ export default {
       ...config,
       alias: [{ find: 'some-library', replacement: 'some-other-library' }, ...(config.alias || [])],
     })),
-    plugins: extendConfig((plugins) => [
-      ...pluginsPattern(plugins)
+    plugins: extendConfig((plugins) =>
+      new PluginsPattern(plugins) // or PluginsPattern.create(plugins)
         // Add extra entries to replace plugin
-        .matches({ name: 'replace' }, ({ plugin, options }) =>
+        .match({ name: 'replace' }, ({ plugin, options }) =>
           plugin({
             ...options,
             values: {
@@ -715,10 +715,10 @@ export default {
           })
         )
         // Remove a default plugin
-        .matches({ name: 'preact-debug' }, () => null),
-      // Add extra input plugin to Vite configuration
-      fooPlugin({ foo: 1 }),
-    ]),
+        .match({ name: 'preact-debug' }, () => null),
+        // Add extra input plugin to Vite configuration
+        .concat(fooPlugin({ foo: 1 }))
+    ),
     output: {
       // Some super options for bundler output
     },

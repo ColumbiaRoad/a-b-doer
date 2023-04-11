@@ -22,6 +22,7 @@ import { transformSync } from '@babel/core';
 import prefreshBabelPlugin from '@prefresh/babel-plugin';
 import glob from 'glob';
 import rimraf from 'rimraf';
+import 'lodash.ismatch';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -938,6 +939,22 @@ const transform = (code, path, plugins) =>
 		babelrc: false,
 	});
 
+/**
+ * Creates a modifiable vite plugin from given plugin and plugin options.
+ * Returned function can be matched with PluginsPattern when extending the bundler config.
+ * @param {Function} pluginFn
+ * @param {Object} pluginOptions
+ * @returns {Function}
+ */
+function createModifiablePlugin(pluginFn, pluginOptions) {
+	const bound = pluginFn.bind(null);
+	bound.__fn__ = pluginFn;
+	bound.__name__ = pluginOptions.name || pluginFn.name;
+	delete pluginOptions.name;
+	bound.__options__ = pluginOptions;
+	return bound;
+}
+
 // __dirname is not defined in ES module scope
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1050,15 +1067,6 @@ function getBundlerConfigs(buildSpecConfig) {
 	const optimizeDeps = {
 		exclude: [`@prefresh/vite/runtime`, `@prefresh/vite/utils`],
 	};
-
-	function createModifiablePlugin(fn, options) {
-		const bound = fn.bind(null);
-		bound.__fn__ = fn;
-		bound.__name__ = options.name || fn.name;
-		delete options.name;
-		bound.__options__ = options;
-		return bound;
-	}
 
 	const bundlerConfig = getBundlerConfig({
 		abConfig: {
@@ -1320,12 +1328,12 @@ async function bundler(buildSpecConfig) {
 		assetBundle = { js: true, bundle: injection };
 
 		try {
-			await openPage({ ...testConfig, assetBundle }, true);
+			await openPage({ ...testConfig, assetBundle, bundlerConfig }, true);
 		} catch (error) {
 			console.log('Error while opening page', error);
 		}
 	}
-	return { ...testConfig, assetBundle, server };
+	return { ...testConfig, assetBundle, server, bundlerConfig };
 }
 
 /**

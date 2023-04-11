@@ -1,1 +1,1 @@
-export { extendConfig, pluginsPattern } from './src/utils/bundler.js';
+export { extendConfig, PluginsPattern } from './src/utils/bundler.js';
