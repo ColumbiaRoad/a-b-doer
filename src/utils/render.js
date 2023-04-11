@@ -105,7 +105,7 @@ export const renderVnode = (vnode, oldVnode) => {
 		let newVNode;
 
 		// Class syntax components
-		if (config.classComponent && tag.prototype?.render) {
+		if (config.classComponent && tag.prototype && tag.prototype.render) {
 			let comp = vnode.__class;
 			const cb = [];
 			// First render
@@ -153,49 +153,52 @@ export const renderVnode = (vnode, oldVnode) => {
 				props.ref.current = ref;
 			}
 		}
+
+		return vnode;
 	}
+
 	// HTML/text etc elements
-	else {
-		// Build element if it's not a fragment
-		if (!frag) {
-			if (config.extendedVnode && isDomNode(tag)) {
-				element = tag;
-			}
 
-			const vnodeDom = getVNodeDom(oldVnode);
-			if (!element && vnodeDom && isSameChild(oldVnode, vnode)) {
-				element = vnodeDom;
+	// Build element if it's not a fragment
+	if (!frag) {
+		if (config.extendedVnode && isDomNode(tag)) {
+			element = tag;
+		}
+
+		const vnodeDom = getVNodeDom(oldVnode);
+		if (!element && vnodeDom && isSameChild(oldVnode, vnode)) {
+			element = vnodeDom;
+		} else {
+			vnode.__dirty = true;
+		}
+
+		if (!element) {
+			if (!isString(tag)) return;
+
+			if (!tag) {
+				element = document.createTextNode(props.text);
+			}
+			// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
+			// At least in Google Optimize there's quite small size limit for assets.
+			else if (config.extendedVnode && tag[0] === '<') {
+				renderer.innerHTML = tag;
+				element = renderer.firstElementChild.cloneNode(true);
+				renderer.innerHTML = '';
 			} else {
-				vnode.__dirty = true;
-			}
-
-			if (!element) {
-				if (!isString(tag)) return;
-
-				// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
-				// At least in Google Optimize there's quite small size limit for assets.
-				if (config.extendedVnode && tag[0] === '<') {
-					renderer.innerHTML = tag;
-					element = renderer.firstElementChild.cloneNode(true);
-					renderer.innerHTML = '';
-				} else if (!tag) {
-					element = document.createTextNode(props.text);
-				} else {
-					element = config.namespace && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
-				}
-			}
-
-			if (!isSame(props, oldProps)) {
-				setElementAttributes(element, props, oldProps);
-				vnode.__dirty = true;
+				element = config.namespace && svg ? document.createElementNS(getNs('svg'), tag) : document.createElement(tag);
 			}
 		}
 
-		if (!frag) vnode.__dom = element;
+		if (!isSame(props, oldProps)) {
+			setElementAttributes(element, props, oldProps);
+			vnode.__dirty = true;
+		}
+
+		vnode.__dom = element;
 	}
 
 	if (children) {
-		vnode.__children = renderVnodeChildren(vnode, children, oldVnode?.__children);
+		vnode.__children = renderVnodeChildren(vnode, children, oldVnode && oldVnode.__children);
 	}
 
 	return vnode;
@@ -209,11 +212,11 @@ export const renderVnode = (vnode, oldVnode) => {
 const createChildrenMap = (children) => {
 	const childrenMap = new Map();
 	if (children) {
-		children.forEach((child) => {
+		for (const child of children) {
 			if (child && child.key) {
 				childrenMap.set(child.key, child);
 			}
-		});
+		}
 	}
 	return childrenMap;
 };
@@ -292,7 +295,7 @@ const getStyleString = (style) => {
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
-	// Handle case where Fragment or simila is a root of updated top level component
+	// Handle case where Fragment or similar is a root of updated top level component
 	if (!targetDomNode && prevVnode) {
 		const someDom = getVNodeFirstRenderedDom(prevVnode);
 		if (someDom) {
@@ -324,21 +327,23 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 	const oldChildren = prevVnode && prevVnode.__children;
 	const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	let childrenParentNode = returnDom;
-	let childIndex = 0;
+	const vnodeChildren = vnode.__children;
+	const len = vnodeChildren && vnodeChildren.length;
 	// Loop though all children and try to patch/remove them as well.
-	if (vnode.__children) {
-		vnode.__children.forEach((child, index) => {
+	if (len) {
+		for (let index = 0, childAtIndex = 0; index < len; index++) {
+			let child = vnodeChildren[index];
 			const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
 			const patchedDomNode = patchVnodeDom(
 				child,
 				(!child || isVnodeSame) && oldChildVnode,
 				childrenParentNode,
-				childIndex
+				childAtIndex
 			);
 			if (isRenderableElement(patchedDomNode)) {
-				childIndex++;
+				childAtIndex++;
 			}
-		});
+		}
 	}
 
 	if (isRenderableElement(returnDom)) {
@@ -433,9 +438,9 @@ const setElementAttributes = (element, props, oldProps) => {
 export const runUnmountCallbacks = (vnode) => {
 	if (isVNode(vnode)) {
 		if (config.hooks && vnode.__hooks) {
-			vnode.__hooks.forEach((h) => {
-				if (h.length === 3 && isFunction(h[2])) {
-					h[2]();
+			vnode.__hooks.forEach((hookTuple) => {
+				if (hookTuple.length === 3 && isFunction(hookTuple[2])) {
+					hookTuple[2]();
 				}
 			});
 			vnode.__hooks = [];

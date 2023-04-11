@@ -1,5 +1,6 @@
 import { expect, describe, vi, it } from 'vitest';
 import { clearAll, unmount } from 'a-b-doer';
+import { useState, useEffect } from 'a-b-doer/hooks';
 import { Simple, RefHook, Hooks, Switch, OrderApp } from './templates';
 import { render } from './test-utils';
 
@@ -103,9 +104,53 @@ describe('JSX', () => {
 		expect(queryByTestId('order')).toBeFalsy();
 		vi.runAllTimers();
 		const children = queryByTestId('order').children;
-		expect(queryByTestId('order').children.length).toBe(3);
+		expect(children.length).toBe(3);
 		for (let i = 0; i < children.length; i++) {
 			expect(children[i].id).toBe(`tpl9-${i + 1}`);
+		}
+	});
+
+	it('should render conditional children correctly', async () => {
+		const App = ({ children }) => {
+			const [loading, setLoading] = useState(true);
+			useEffect(() => {
+				setTimeout(() => {
+					setLoading(false);
+				}, 50);
+			}, []);
+			if (loading) return <div data-test="loading">Loading</div>;
+			return <div data-test="app">{children}</div>;
+		};
+
+		const Tpl = (props) => {
+			return (
+				<div data-test="tpl">
+					<h3>tpl test {props.test}</h3>
+				</div>
+			);
+		};
+
+		const { queryByTestId, queryAllByTestId } = render(
+			<App>
+				<Tpl test="1" />
+				<Tpl test="2" />
+				<Tpl test="3" />
+			</App>
+		);
+
+		expect(queryByTestId('app')).toBeFalsy();
+		expect(queryByTestId('loading')).toBeTruthy();
+		vi.runAllTimers();
+		expect(queryByTestId('app')).toBeTruthy();
+
+		const children = queryByTestId('app').children;
+		expect(children.length).toBe(3);
+
+		const tpl = queryAllByTestId('tpl');
+		expect(tpl.length).toBe(3);
+
+		for (let i = 0; i < children.length; i++) {
+			expect(children[i].innerHTML).toBe(`<h3>tpl test ${i + 1}</h3>`);
 		}
 	});
 });
