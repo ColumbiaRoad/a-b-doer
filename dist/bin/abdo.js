@@ -1328,12 +1328,12 @@ async function bundler(buildSpecConfig) {
 		assetBundle = { js: true, bundle: injection };
 
 		try {
-			await openPage({ ...testConfig, assetBundle, bundlerConfig }, true);
+			await openPage({ ...testConfig, assetBundle }, true);
 		} catch (error) {
 			console.log('Error while opening page', error);
 		}
 	}
-	return { ...testConfig, assetBundle, server, bundlerConfig };
+	return { ...testConfig, assetBundle, server };
 }
 
 /**
