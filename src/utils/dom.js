@@ -1,6 +1,14 @@
 import { Promise } from '../polyfills';
-import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode, getVNodeDom } from './render';
-import { config, createDocumentFragment, domAppend, domInsertBefore, domRemove, isArray } from './internal';
+import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode } from './render';
+import {
+	config,
+	createDocumentFragment,
+	domAppend,
+	domInsertBefore,
+	domRemove,
+	getVNodeDom,
+	isArray,
+} from './internal';
 
 export const createSelector = (node, selector) => [node, selector];
 
@@ -25,7 +33,7 @@ export const pollQuerySelector = (selector, callback, wait = defaultTimeout) => 
 	if (el) {
 		callback(el);
 	} else if (wait > 0) {
-		setTimeout(function () {
+		setTimeout(() => {
 			pollQuerySelector(selector, callback, wait - defaultPollDelay);
 		}, defaultPollDelay);
 	}
@@ -44,7 +52,7 @@ export const pollQuerySelectorAll = (selector, callback, wait = defaultTimeout) 
 	if (el.length) {
 		callback(Array.from(el));
 	} else if (wait > 0) {
-		setTimeout(function () {
+		setTimeout(() => {
 			pollQuerySelectorAll(selector, callback, wait - defaultPollDelay);
 		}, defaultPollDelay);
 	}
@@ -112,7 +120,7 @@ export const waitFor = (func, wait = defaultTimeout) => {
 				clearTimeout(t);
 				resolve(res);
 			} else if (count > 0) {
-				setTimeout(function () {
+				setTimeout(() => {
 					_func(count - 1);
 				}, defaultPollDelay);
 			}
@@ -156,7 +164,7 @@ const createMutation = (child) => {
 	// Skip VNode check when we're adding elements in preact env, otherwise ab doer will be in the bundle with preact
 	// If there's no jsx at all, do not add MutationObserver.
 	let node = child;
-	if (!process.env.preact && config.j && isVNode(child)) {
+	if (!process.env.preact && config.jsx && isVNode(child)) {
 		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
 	}
 

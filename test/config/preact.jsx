@@ -9,7 +9,7 @@ const HookSubTemplate = (props) => {
 		if (parent.current) {
 			parent.current.style.background = 'blue';
 		}
-	}, []);
+	}, [parent]);
 	return <div>BarPreact</div>;
 };
 
@@ -23,9 +23,9 @@ const Hooks = (props) => {
 	}, []);
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
+		<div id={id} data-o={`t-temp-${id}`}>
 			<div ref={node}>
-				<div id={id + 'click'} onClick={() => setVal(val + 1)}>
+				<div id={`${id}click`} onClick={() => setVal(val + 1)}>
 					ValPreact:{val}
 				</div>
 				<HookSubTemplate parent={node} />
@@ -36,7 +36,6 @@ const Hooks = (props) => {
 
 pollQuerySelector('html body', (body) => {
 	const component = <Hooks id="preact" />;
-	console.log(component);
 	const div = document.createElement('div');
 	append(div, body);
 	render(component, div);

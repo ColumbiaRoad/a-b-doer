@@ -1,0 +1,17 @@
+{
+  "env": {
+    "node": true,
+    "browser": true
+  },
+  "root": true,
+  "extends": ["preact", "eslint:recommended"],
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaVersion": 2020
+  },
+  "rules": {
+    "no-async-promise-executor": 0,
+    "prefer-const": 0,
+    "no-mixed-spaces-and-tabs": ["error", "smart-tabs"]
+  }
+}

@@ -1,4 +1,4 @@
-import { append, pollQuerySelector, unmount } from 'a-b-doer';
+import { unmount, Fragment } from 'a-b-doer';
 import { useState, useRef } from 'a-b-doer/hooks';
 import styles from './styles.scss';
 import Toggle from './toggle';
@@ -41,10 +41,10 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 		<div id="a-b-toolbar" class={`${styles.toolbar} ${open ? styles.open : styles.closed}`} ref={ref}>
 			<img src={logo} />
 			{toggles.map((tgl, index) => (
-				<>
-					<Toggle key={`toggle${index}`} {...tgl} />
+				<Fragment key={`toggle${index}`}>
+					<Toggle {...tgl} />
 					<hr />
-				</>
+				</Fragment>
 			))}
 			<div>
 				In preview: <small>{testPath}</small>
@@ -85,7 +85,7 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 				Print generated config
 			</button>
 			<hr />
-			{customToolbar && <section dangerouslySetInnerHTML={{ __html: customToolbar }}></section>}
+			{customToolbar && <section dangerouslySetInnerHTML={{ __html: customToolbar }} />}
 			<a
 				onClick={() => {
 					hideInjectionBorders();
@@ -94,7 +94,7 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 			>
 				Remove toolbar DOM
 			</a>
-			<button class={styles.toggle} onClick={() => setOpen(!open)} title="Toggle A/B test toolbar"></button>
+			<button class={styles.toggle} onClick={() => setOpen(!open)} title="Toggle A/B test toolbar" />
 		</div>
 	);
 };
@@ -117,9 +117,4 @@ function hideInjectionBorders() {
 	});
 }
 
-pollQuerySelector('body', (target) => {
-	append(
-		<Toolbar testId={window.abPreview.testId} config={window.abPreview.config} testPath={window.abPreview.testPath} />,
-		target
-	);
-});
+export default Toolbar;

@@ -3,29 +3,26 @@ import chalk from 'chalk';
 import chokidar from 'chokidar';
 import minimist from 'minimist';
 import path from 'node:path';
-import pluginutils, { createFilter } from '@rollup/pluginutils';
-import fs, { readFileSync, lstatSync, readdirSync } from 'node:fs';
-import merge from 'lodash.merge';
+import { createFilter } from '@rollup/pluginutils';
+import fs, { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import get from 'lodash.get';
+import set from 'lodash.set';
 import { createRequire } from 'node:module';
+import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
-import alias from '@rollup/plugin-alias';
-import autoprefixer from 'autoprefixer';
-import commonjs from '@rollup/plugin-commonjs';
-import nodeResolve from '@rollup/plugin-node-resolve';
-import styles from 'rollup-plugin-styles';
-import stringHash from 'string-hash';
+import crypto from 'node:crypto';
 import replace from '@rollup/plugin-replace';
-import { babel } from '@rollup/plugin-babel';
-import { rollup, watch as watch$1 } from 'rollup';
-import { terser } from 'rollup-plugin-terser';
-import { fileURLToPath } from 'node:url';
-import glob from 'glob';
-import image from '@rollup/plugin-image';
-import inlineSvg from 'rollup-plugin-inline-svg';
-import rimraf from 'rimraf';
-import svgImport from 'rollup-plugin-svg-hyperscript';
+import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
-import esbuild from 'rollup-plugin-esbuild';
+import stringHash from 'string-hash';
+import { URL as URL$1, fileURLToPath } from 'node:url';
+import { build, createServer } from 'vite';
+import prefresh from '@prefresh/vite';
+import { transformSync } from '@babel/core';
+import prefreshBabelPlugin from '@prefresh/babel-plugin';
+import glob from 'glob';
+import rimraf from 'rimraf';
+import 'lodash.ismatch';
 
 const specRequire$1 = createRequire(import.meta.url);
 
@@ -51,7 +48,11 @@ function hashf(s) {
 	return hash;
 }
 
-function unifyPath$1(path) {
+/**
+ * @param {string} path
+ * @returns {string}
+ */
+function unifyPath(path) {
 	return path.replace(process.cwd(), '').replace(/\\/g, '/');
 }
 
@@ -75,9 +76,7 @@ const specRequire = createRequire(import.meta.url);
  * Config defaults
  */
 const config = {
-	appendStyles: true,
 	buildDir: '.build',
-	chunkImages: false,
 	chunks: false,
 	devtools: true,
 	historyChanges: true,
@@ -87,44 +86,64 @@ const config = {
 	watch: false,
 	windowSize: [1920, 1080],
 	toolbar: false,
+	extractCss: false,
 	features: {
-		hooks: 'auto',
-		jsx: 'auto',
-		classes: true,
+		hooks: true,
+		jsx: true,
 		className: true,
-		namespaces: true,
+		classComponent: true,
+		namespace: true,
+		extendedVnode: true,
 	},
 };
 
+/**
+ * @param {string} configPath
+ * @returns {object | () => object}
+ */
 async function getConfigFileJsonOrJSContent(configPath) {
 	const fileDir = path.dirname(configPath);
 	const fileWithoutExt = path.basename(configPath, '.json');
-	const configPathJs = path.resolve(fileDir, fileWithoutExt + '.js');
+	const configPathJs = path.resolve(fileDir, `${fileWithoutExt}.js`);
 	if (fs.existsSync(configPath)) {
 		// Clear require cache before loading the file
 		delete specRequire.cache[configPath];
-		return specRequire(configPath);
+		return { file: configPath, config: specRequire(configPath) };
 	} else if (fs.existsSync(configPathJs)) {
 		// Import file with a cache buster
 		const { default: configMod } = await import(
-			convertToEsmPath(configPathJs) + '?cb=' + Math.random().toString(36).substring(3)
+			`${convertToEsmPath(configPathJs)}?cb=${Math.random().toString(36).substring(3)}`
 		);
-		return configMod;
+		return { file: configPathJs, config: configMod };
 	}
 	return {};
 }
 
-async function mergeSpecs(testConfig, specConfigPath) {
-	const specConfig = await getConfigFileJsonOrJSContent(specConfigPath);
-	if (!Object.keys(specConfig).length) {
-		return;
-	}
-	merge(testConfig, specConfig);
-	testConfig._specFiles = testConfig._specFiles || [];
-	testConfig._specFiles.push(specConfigPath, specConfigPath.substr(0, specConfigPath.length - 2));
+/**
+ * @param  {...string[]} specConfigPaths
+ * @returns {Promise<Array<{file: string, config: object}>}
+ */
+async function getValidatedSpecs(...specConfigPaths) {
+	const specs = await Promise.all(
+		specConfigPaths.map(async (configPath) => {
+			const specConfig = await getConfigFileJsonOrJSContent(configPath);
+			if (!Object.keys(specConfig).length || !['function', 'object'].includes(typeof specConfig.config)) {
+				return;
+			}
+			return {
+				...specConfig,
+				config: typeof specConfig.config === 'function' ? specConfig() : specConfig.config,
+			};
+		})
+	);
+	return specs.filter(Boolean);
 }
 
-async function buildspec (testPath) {
+/**
+ * Returns a build spec object for given test path
+ * @param {string} testPath
+ */
+async function getBuildSpec(testPath) {
 	if (!testPath) {
 		console.log('Test folder is missing');
 		process.exit();
@@ -150,204 +169,132 @@ async function buildspec (testPath) {
 	}
 
 	// Check & load build related data
-	const testConfig = {};
-
-	await mergeSpecs(testConfig, path.resolve(process.cwd(), 'config.json'));
+	const testConfig = {
+		specs: [],
+	};
 
 	try {
-		await mergeSpecs(testConfig, path.join(testPath, '..', 'buildspec.json'));
-		await mergeSpecs(testConfig, path.join(testPath, 'buildspec.json'));
+		testConfig.specs = await getValidatedSpecs(
+			path.resolve(process.cwd(), 'abd.config.json'),
+			path.join(testPath, '..', '..', 'buildspec.json'),
+			path.join(testPath, '..', 'buildspec.json'),
+			path.join(testPath, 'buildspec.json')
+		);
 	} catch (error) {
 		console.error(error);
 	}
 
 	// Empty config object or the buildspec.json is missing
-	if (!Object.keys(testConfig).length) {
+	if (!testConfig.specs.length) {
 		return null;
 	}
 
-	if (!entryFile) {
-		if (testConfig.entry) {
-			entryFile = testConfig.entry;
-		} else {
-			const files = fs.readdirSync(testPath, { encoding: 'utf8' });
-			// Find first index file
-			const indexFile = files.find((file) => /index\.(jsx?|tsx?|(le|sa|sc|c)ss)$/.test(file));
-			if (indexFile) {
-				entryFile = indexFile;
-			}
-			// Try some style file
-			else {
-				entryFile = files.find((file) => /styles?\.(le|sa|sc|c)ss$/.test(file));
-			}
-		}
-	}
-
-	let entryPart = entryFile;
-	if (entryFile) {
-		entryFile = path.resolve(testPath, entryFile);
-	}
-
-	if (!entryFile) return null;
-
-	// Check that given entry is not excluded.
-	const filter = createFilter(testConfig.include, testConfig.exclude);
-	if (!filter(entryFile)) {
-		return null;
-	}
-
-	if (testConfig.url && !Array.isArray(testConfig.url)) {
-		testConfig.url = [testConfig.url];
-	}
+	const getSpecConfig = (propertyPath, defaultOptions) => {
+		return testConfig.specs.reduce(
+			(acc, spec) => {
+				const config = get(spec, propertyPath);
+				if (config) {
+					Object.keys(config).forEach((key) => {
+						if (key === 'bundler') return;
+						let option = config[key];
+						const accVal = get(acc, [key]);
+						if (typeof option === 'object' && option) {
+							if (option._extended) {
+								option = option.callback(accVal);
+							}
+						}
+						set(acc, [key], option);
+					});
+				}
+				if (acc.url && !Array.isArray(acc.url)) {
+					acc.url = [acc.url];
+				}
+				return acc;
+			},
+			{ ...defaultOptions }
+		);
+	};
 
 	return {
-		...config,
 		...testConfig,
-		features: { ...config.features, ...(testConfig.features || {}) },
-		testPath,
-		entryFile,
-		entryPart,
-		entryFileExt: entryFile.split('.').pop(),
-	};
-}
-
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-
-let cachedToolbar;
-
-/**
- *
- * @param {import('puppeteer').Page} page
- * @param {Object} config
- * @param {Boolean} initial
- * @returns
- */
-async function injectToolbar(page, config, initial) {
-	if (!process.env.PREVIEW || !config.toolbar) {
-		return;
-	}
-
-	if (!cachedToolbar) {
-		cachedToolbar = await buildToolbar();
-	}
-
-	const customToolbar = typeof config.toolbar === 'function' ? `${config.toolbar(page, config, initial)}<hr/>` : '';
-
-	await page.evaluate(
-		(TEST_ID, testPath, config, customToolbar) => {
-			window.abPreview = {
-				testId: TEST_ID,
-				config,
+		getSpecConfig: (options = {}) => {
+			const specConfig = getSpecConfig('config', {
+				...config,
+				...options,
 				testPath,
-				customToolbar,
+			});
+
+			if (!entryFile) {
+				if (specConfig.entry) {
+					entryFile = specConfig.entry;
+				} else {
+					const files = fs.readdirSync(testPath, { encoding: 'utf8' });
+					// Find first index file
+					const indexFile = files.find((file) => /index\.(jsx?|tsx?|(le|sa|sc|c)ss)$/.test(file));
+					if (indexFile) {
+						entryFile = indexFile;
+					}
+					// Try some style file
+					else {
+						entryFile = files.find((file) => /styles?\.(le|sa|sc|c)ss$/.test(file));
+					}
+				}
+			}
+
+			let entryPart = entryFile;
+			if (entryFile) {
+				entryFile = path.resolve(testPath, entryFile);
+			}
+
+			if (!entryFile) return null;
+
+			// Check that given entry is not excluded.
+			const filter = createFilter(specConfig.include, specConfig.exclude);
+			if (!filter(entryFile)) {
+				return null;
+			}
+
+			return {
+				...specConfig,
+				bundler: null,
+				features: {
+					...config.features,
+					...specConfig.features,
+					...(specConfig.preact ? { jsx: false, hooks: false } : {}),
+				},
+				entryFile,
+				entryPart,
+				entryFileExt: entryFile.split('.').pop(),
 			};
 		},
-		process.env.TEST_ID,
-		config.testPath.replace(process.cwd(), ''),
-		config,
-		customToolbar
-	);
-
-	if (cachedToolbar) {
-		await page.addScriptTag({ content: cachedToolbar });
-	}
-}
-
-async function buildToolbar() {
-	const TEST_ID = 'tlbr01';
-
-	const modDir = import.meta.url.includes('dist/bin/abdo.js')
-		? path.join(__dirname$1, '..', '..')
-		: path.join(__dirname$1, '..', '..', '..');
-
-	const babelConfig = {
-		babelrc: false,
-		plugins: [
-			'@babel/plugin-proposal-optional-chaining',
-			'@babel/plugin-proposal-nullish-coalescing-operator',
-			['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'hf', throwIfNamespace: false }],
-			[
-				'@emotion/babel-plugin-jsx-pragmatic',
-				{
-					module: path.join(modDir, 'src', 'jsx'),
-					import: 'h, hf',
-					export: 'h, hf',
+		getBundlerConfig(options = {}) {
+			return getSpecConfig('config.bundler', {
+				resolve: {
+					alias: [
+						{ find: /^@\/(.*)/, replacement: path.join(process.cwd(), '$1') },
+						{ find: 'react', replacement: 'preact/compat' },
+						{ find: 'react-dom', replacement: 'preact/compat' },
+						{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
+					],
 				},
-			],
-		],
-		extensions: ['.js', '.jsx'],
+				...options,
+			});
+		},
 	};
-
-	const bundle = await rollup({
-		input: path.join(modDir, 'lib', 'utils', 'toolbar', 'index.js'),
-		plugins: [
-			alias({
-				entries: [
-					{ find: /^@\/(.*)/, replacement: path.join(modDir, '$1') },
-					{ find: 'a-b-doer/hooks', replacement: path.join(modDir, 'hooks') },
-					{ find: 'a-b-doer', replacement: path.join(modDir, 'main') },
-				],
-			}),
-			nodeResolve({
-				browser: true,
-				preferBuiltins: false,
-				extensions: babelConfig.extensions,
-			}),
-			babel({ ...babelConfig, babelHelpers: 'bundled' }),
-			commonjs({ transformMixedEsModules: true }),
-			styles({
-				mode: ['inject', { singleTag: true, attributes: { 'data-id': TEST_ID } }],
-				minimize: true,
-				modules: {
-					generateScopedName: (name, file) => {
-						return 't' + stringHash(unifyPath(file)).toString(36).substr(0, 4) + '-' + name;
-					},
-				},
-				plugins: [autoprefixer],
-				url: { inline: true },
-			}),
-			replace({
-				preventAssignment: true,
-				values: {
-					'process.env.PREACT': 'false',
-					'process.env.preact': 'false',
-					'process.env.NODE_ENV': process.env.NODE_ENV,
-					'process.env.IE': 'false',
-					'process.env.PREVIEW': process.env.PREVIEW,
-					'process.env.TEST_ENV': process.env.TEST_ENV,
-					'process.env.TEST_ID': JSON.stringify(TEST_ID),
-				},
-			}),
-		],
-	});
-
-	const { output } = await bundle.generate({
-		intro: 'const window = self; const document = window.document;',
-		format: 'iife',
-		plugins: [
-			terser({
-				mangle: { toplevel: true },
-				format: { comments: false },
-			}),
-		],
-	});
-
-	return output[0]?.code;
 }
 
-function unifyPath(path) {
-	return path.replace(process.cwd(), '').replace(/\\/g, '/');
-}
+/* eslint-disable prefer-rest-params */
 
-const { yellow: yellow$1, green: green$1 } = chalk;
+const { yellow: yellow$1, green } = chalk;
 
-const isTest = getFlagEnv('TEST_ENV');
-let initial = true;
+const isTest = getFlagEnv('VITEST');
 let counter = 0;
 let loadListener = null;
 let browser, context;
 let aboutpage = null;
 let disabled = false;
+
+const wasInitialMap = {};
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -359,15 +306,16 @@ async function openPage(config, singlePage) {
 	let url = getDefaultUrl(urls);
 	let urlAfterLoad = url;
 
-	const wasInitial = initial;
-	if (initial) {
-		initial = false;
-	}
-
 	const page = await getPage(config, singlePage);
 	if (isOneOfBuildspecUrls(page.url(), urls)) {
 		url = page.url();
 	}
+
+	const urlObject = new URL(url);
+	const urlKey = urlObject.origin + urlObject.pathname;
+
+	const wasInitial = !wasInitialMap[urlKey];
+	wasInitialMap[urlKey] = true;
 
 	// Remove previous listeners
 	page.removeAllListeners();
@@ -397,6 +345,8 @@ async function openPage(config, singlePage) {
 			.on('console', (message) => console.log('LOG: ', message.text()))
 			.on('pageerror', ({ message }) => console.log('ERR: ', message));
 	}
+
+	const enableHistoryChanges = (!isTest || config.testHistoryChanges) && config.historyChanges;
 
 	if (aboutpage) {
 		await aboutpage.close();
@@ -446,7 +396,18 @@ async function openPage(config, singlePage) {
 			}, urls);
 
 			if (!isTest) {
-				injectToolbar(page, { ...config, disabled }, wasInitial);
+				await page.evaluate(
+					(TEST_ID, testPath, config) => {
+						window.abPreview = {
+							testId: TEST_ID,
+							config,
+							testPath,
+						};
+					},
+					process.env.TEST_ID,
+					config.testPath.replace(process.cwd(), ''),
+					config
+				);
 			}
 
 			if (disabled) {
@@ -454,7 +415,7 @@ async function openPage(config, singlePage) {
 			}
 
 			// Always listen the history state api
-			if (!isTest && config.historyChanges) {
+			if (enableHistoryChanges) {
 				await page.evaluate(
 					(bundle, TEST_ID) => {
 						function _appendVariantScripts() {
@@ -474,10 +435,10 @@ async function openPage(config, singlePage) {
 						}
 
 						function newHistoryChange(type) {
-							var orig = history[type];
+							let orig = history[type];
 							return function () {
-								var rv = orig.apply(this, arguments);
-								var e = new Event('changestate');
+								let rv = orig.apply(this, arguments);
+								let e = new Event('changestate');
 								e.arguments = arguments;
 								e.eventName = type;
 								window.dispatchEvent(e);
@@ -488,10 +449,10 @@ async function openPage(config, singlePage) {
 						history.pushState = newHistoryChange('pushState');
 						history.replaceState = newHistoryChange('replaceState');
 
-						window.addEventListener('popstate', function (e) {
+						window.addEventListener('popstate', () => {
 							_appendVariantScripts();
 						});
-						window.addEventListener('changestate', function (e) {
+						window.addEventListener('changestate', () => {
 							_appendVariantScripts();
 						});
 					},
@@ -560,9 +521,9 @@ async function openPage(config, singlePage) {
 				}
 			}
 
-			if (isTest) {
+			if (isTest && !enableHistoryChanges) {
 				page.off('domcontentloaded', loadListener);
-				loadListener = null;
+				page.__loadListener = loadListener = null;
 			}
 		} catch (error) {
 			console.log(error.message);
@@ -570,6 +531,7 @@ async function openPage(config, singlePage) {
 	};
 
 	page.on('domcontentloaded', loadListener);
+	page.__loadListener = loadListener;
 
 	await page.goto(url, { waitUntil: 'networkidle2' });
 
@@ -603,8 +565,16 @@ function isOneOfBuildspecUrls(url, urls = []) {
 			if (url === cur) {
 				return true;
 			}
+			// Check also with trailing slash in domain
+			if (url === cur.replace(/(\.[a-z]{2})\?/, '$1/?')) {
+				return true;
+			}
+			// Ignore http/https protocol difference
+			if (url === cur.replace('http://', 'https://')) {
+				return true;
+			}
 			if (typeof cur === 'string' && cur[0] === '/' && cur[cur.length - 1] === '/') {
-				const re = new RegExp(cur.substr(1, cur.length - 2));
+				const re = new RegExp(cur.substring(1, cur.length - 2));
 				return re.test(url);
 			}
 			return false;
@@ -641,12 +611,23 @@ async function getBrowser(config = {}) {
 
 	// Setup puppeteer
 	if (!browser) {
-		console.log(green$1('Starting browser...'));
+		console.log(green('Starting browser...'));
 		if (config.debug) {
 			console.log('With config:');
 			console.log(config);
 		}
-		console.log();
+
+		// Load the self-signed cert and create a SPKI fingerprint from it for Chrome so it won't nag about invalid cert
+		const cert = await getCertificate('node_modules/.vite/basic-ssl');
+		const pubKeyObject = crypto.createPublicKey(cert, {
+			type: 'pkcs1',
+			format: 'pem',
+		});
+		const publicKeyDer = pubKeyObject.export({
+			type: 'spki',
+			format: 'der',
+		});
+		const fingerprint = crypto.createHash('sha256').update(publicKeyDer).digest('base64');
 
 		browser = await puppeteerCore.launch({
 			headless: Boolean(config.headless),
@@ -655,9 +636,11 @@ async function getBrowser(config = {}) {
 			userDataDir: config.userDataDir || undefined,
 			defaultViewport: null,
 			ignoreDefaultArgs: ['--disable-extensions'],
-			args: [`--window-size=${config.windowSize[0]},${config.windowSize[1]}`, '--incognito'].concat(
-				config.browserArgs || []
-			),
+			args: [
+				`--window-size=${config.windowSize[0]},${config.windowSize[1]}`,
+				'--incognito',
+				`--ignore-certificate-errors-spki-list=${fingerprint}`,
+			].concat(config.browserArgs || []),
 		});
 
 		aboutpage = (await browser.pages())[0];
@@ -722,111 +705,255 @@ async function getPage(config, singlePage) {
 	return newPage;
 }
 
-const defaults = {
-	size: 150,
-	exclude: null,
-	include: null,
-};
-
-const mimeTypes = {
-	'.jpg': 'image/jpeg',
-	'.jpeg': 'image/jpeg',
-	'.png': 'image/png',
-	'.gif': 'image/gif',
-	'.webp': 'image/webp',
-};
-
-/**
- * Rollup plugin that splits image plugin output base64 string into multiple chunks.
- * Google Tag Manager has a validator in HTML tags that checks that there are not too many contiguous non-whitespace characters.
- *
- * @param {typeof defaults} opts
- */
-function chunkImage(opts = {}) {
-	if (opts === true) {
-		opts = {};
-	} else if (typeof opts === 'number') {
-		opts = { size: opts };
-	}
-
-	const options = Object.assign({}, defaults, opts);
-	const filter = pluginutils.createFilter(options.include, options.exclude);
-
-	const parentName = 'image';
-
-	return {
-		name: 'chunk-image',
-
-		buildStart({ plugins }) {
-			const parentPlugin = plugins.find((plugin) => plugin.name === parentName);
-			if (!parentPlugin) {
-				// or handle this silently if it is optional
-				throw new Error(`This plugin depends on the "${parentName}" plugin.`);
-			}
-		},
-
-		transform: function transform(/** @type {string}*/ code, id) {
-			// Disabled by config?
-			if (opts === false) {
-				return null;
-			}
-
-			if (!filter(id)) {
-				return null;
-			}
-
-			let mime = mimeTypes[path.extname(id)];
-			if (!mime) {
-				// not an image
-				return null;
-			}
-
-			// Skip all other output types than string constants (for now)
-			if (code.indexOf('const img = "data:') !== 0) {
-				return null;
-			}
-
-			const firstQuot = code.indexOf('"') + 1;
-			const lastQuot = code.indexOf('"', firstQuot);
-			const start = code.substr(0, firstQuot);
-			const end = code.substr(lastQuot);
-			const parts = code
-				.replace(start, '')
-				.replace(end, '')
-				.match(new RegExp(`[^]{1,${options.size}}`, 'g'));
-
-			return start + parts.join('" + "') + end;
-		},
-	};
-}
-
 /**
  * Enables preact debug module. This plugin is required because there's another plugin that
  * automatically imports h & Fragment and debug module must be imported before them.
  */
 function preactDebug() {
+	let entry = '';
+	let config = {};
+
 	return {
-		name: 'preact-debug',
-		async resolveId(source, importer) {
-			// Is root level import?
-			if (!importer) {
-				// We need to skip this plugin to avoid an infinite loop
-				const resolution = await this.resolve(source, undefined, { skipSelf: true });
-				// If it cannot be resolved, return `null` so that Rollup displays an error
-				if (!resolution) return null;
-				return resolution;
-			}
-			return null;
+		name: 'a-b-doer:preact-debug',
+		enforce: 'pre',
+		configResolved(resolvedConfig) {
+			config = resolvedConfig;
 		},
-		load(id) {
-			// Prepend preact debug module to the imported code
-			if (!getFlagEnv('TEST_ENV') && this.getModuleInfo(id).isEntry && getFlagEnv('PREACT') && getFlagEnv('PREVIEW')) {
-				const contents = readFileSync(id).toString();
-				return `import "preact/devtools";\n${contents};`;
+		resolveId(id, importer) {
+			if (!importer && !entry) {
+				entry = id;
 			}
-			return null;
+		},
+		transform(code, id) {
+			if (entry === id && config.command === 'serve') {
+				code = `import "preact/devtools";\n${code};`;
+			}
+			return code;
 		},
 	};
+}
+
+function cssEntryPlugin() {
+	let config;
+
+	return {
+		apply: 'build',
+		enforce: 'post',
+		name: 'a-b-doer:css-entry-plugin',
+		configResolved(_config) {
+			config = _config;
+		},
+		async renderChunk(code) {
+			const intro = config.build?.rollupOptions?.output?.intro;
+			const vityStyleVar = 'var __vite_style__';
+			// Manually alter __vite_style__ declaration because it doesn't work well with into.
+			// Move possible intro to be defined before vite style variable
+			if (intro && code.includes(vityStyleVar)) {
+				code = code.replace(intro, '').replace(vityStyleVar, intro + vityStyleVar);
+			}
+			// Inject dataset attribute to Vite's style tag
+			return code.replace(
+				'__vite_style__.textContent',
+				`__vite_style__.dataset.id="${config.abConfig.TEST_ID || ''}";__vite_style__.textContent`
+			);
+		},
+		async generateBundle(opts, bundle) {
+			const { abConfig } = config;
+
+			const bundleKeys = Object.keys(bundle);
+			const jsAssets = bundleKeys.filter(
+				(i) =>
+					bundle[i].type == 'chunk' &&
+					bundle[i].fileName.match(/.[cm]?js$/) != null &&
+					!bundle[i].fileName.includes('polyfill')
+			);
+
+			// Support style entries
+			if (!jsAssets[0] && bundleKeys[0] && abConfig.stylesOnly) {
+				// With styles only and extract css, remove the js main chunk
+				if (abConfig.extractCss || abConfig.stylesOnly) {
+					const mainKey = bundleKeys[0];
+					// Delete JS bundle
+					delete bundle[mainKey];
+					// Rename style bundle
+					if (mainKey.endsWith('.css')) {
+						bundle[bundleKeys[1]].fileName = mainKey;
+						bundle[bundleKeys[1]].name = mainKey;
+					}
+				}
+				// Create a proper javascript file from the css chunk
+				else {
+					const newKey = `${path.basename(bundleKeys[0], '.css')}.js`;
+					bundle[newKey] = bundle[bundleKeys[0]];
+					bundle[newKey].fileName = newKey;
+					delete bundle[bundleKeys[0]];
+					jsAssets[0] = newKey;
+				}
+			}
+		},
+	};
+}
+
+/**
+ * Plugin that enables style modules to all style files if A/B doer configuration setting `modules` is enabled
+ */
+function cssModules() {
+	let config;
+
+	const cssLangs = `\\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)($|\\?)`;
+	const cssLangRE = new RegExp(cssLangs);
+	const cssLangModuleRE = new RegExp(`\\.module${cssLangs}`);
+	const cssLangGlobalRE = new RegExp(`\\.global${cssLangs}`);
+	const isCSSRequest = (request) => cssLangRE.test(request);
+	const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
+	const isCSSGlobalRequest = (request) => cssLangGlobalRE.test(request);
+
+	return {
+		enforce: 'pre',
+		name: 'a-b-doer:css-modules',
+		configResolved(_config) {
+			config = _config;
+		},
+		async resolveId(source, importer, options) {
+			const convertToModule =
+				!isCSSModuleRequest(source) &&
+				!isCSSGlobalRequest(source) &&
+				isCSSRequest(source) &&
+				(config.abConfig.modules || (typeof config.abConfig.modules === 'function' && config.abConfig.modules(source)));
+
+			if (convertToModule) {
+				const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
+				if (resolution?.id) {
+					const parts = resolution.id.split('.');
+					const ext = parts.pop();
+					return `${resolution.id}${resolution.id.includes('?') ? '&' : '?'}.module.${ext}`;
+				}
+			}
+		},
+	};
+}
+
+/** @returns {import('vite').Plugin} */
+function customJsxPrefreshPlugin(options = {}) {
+	const __filename = new URL$1('', import.meta.url).pathname;
+
+	let shouldSkip = false;
+	const filter = createFilter(options.include, options.exclude);
+	let config = {};
+
+	return {
+		name: 'a-b-doer:prefresh',
+		configResolved(_config) {
+			config = _config;
+			shouldSkip = config.command === 'build' || config.isProduction;
+		},
+		async transform(code, id, options) {
+			if (shouldSkip || !/\.(t|j)sx?$/.test(id) || id.includes('node_modules') || id.includes('?worker') || !filter(id))
+				return;
+
+			const parserPlugins = [
+				'jsx',
+				'classProperties',
+				'classPrivateProperties',
+				'classPrivateMethods',
+				/\.tsx?$/.test(id) && 'typescript',
+				...(options.parserPlugins || []),
+			].filter(Boolean);
+
+			const result = transform(code, id, parserPlugins);
+			const hasReg = /\$RefreshReg\$\(/.test(result.code);
+			const hasSig = /\$RefreshSig\$\(/.test(result.code);
+
+			if (!hasSig && !hasReg) return code;
+
+			const prefreshCore = await this.resolve('@prefresh/core', __filename);
+
+			const prelude = `
+        ${'import'} ${JSON.stringify(prefreshCore.id)};
+        ${'import'} { flush as flushUpdates } from "${path.join(
+				config.abConfig.libDir,
+				'lib',
+				'plugins',
+				'custom-prefresh-utils.js'
+			)}";
+
+        let prevRefreshReg;
+        let prevRefreshSig;
+
+        if (import.meta.hot) {
+          prevRefreshReg = self.$RefreshReg$ || (() => {});
+          prevRefreshSig = self.$RefreshSig$ || (() => (type) => type);
+
+          self.$RefreshReg$ = (type, id) => {
+            self.__PREFRESH__.register(type, ${JSON.stringify(id)} + " " + id);
+          };
+
+          self.$RefreshSig$ = () => {
+            let status = 'begin';
+            let savedType;
+            return (type, key, forceReset, getCustomHooks) => {
+              if (!savedType) savedType = type;
+              status = self.__PREFRESH__.sign(type || savedType, key, forceReset, getCustomHooks, status);
+              return type;
+            };
+          };
+        }
+        `.replace(/[\n]+/gm, '');
+
+			if (hasSig && !hasReg) {
+				return {
+					code: `${prelude}${result.code}`,
+					map: result.map,
+				};
+			}
+
+			return {
+				code: `${prelude}${result.code}
+        if (import.meta.hot) {
+          self.$RefreshReg$ = prevRefreshReg;
+          self.$RefreshSig$ = prevRefreshSig;
+          import.meta.hot.accept((m) => {
+            try {
+              flushUpdates();
+            } catch (e) {
+              self.location.reload();
+            }
+          });
+        }
+      `,
+				map: result.map,
+			};
+		},
+	};
+}
+
+const transform = (code, path, plugins) =>
+	transformSync(code, {
+		plugins: [[prefreshBabelPlugin, { skipEnvCheck: true }]],
+		parserOpts: {
+			plugins,
+		},
+		ast: false,
+		sourceMaps: true,
+		sourceFileName: path,
+		configFile: false,
+		babelrc: false,
+	});
+
+/**
+ * Creates a modifiable vite plugin from given plugin and plugin options.
+ * Returned function can be matched with PluginsPattern when extending the bundler config.
+ * @param {Function} pluginFn
+ * @param {Object} pluginOptions
+ * @returns {Function}
+ */
+function createModifiablePlugin(pluginFn, pluginOptions) {
+	const bound = pluginFn.bind(null);
+	bound.__fn__ = pluginFn;
+	bound.__name__ = pluginOptions.name || pluginFn.name;
+	delete pluginOptions.name;
+	bound.__options__ = pluginOptions;
+	return bound;
 }
 
 // __dirname is not defined in ES module scope
@@ -838,7 +965,32 @@ const supportIE = !!browsers.find((b) => b.startsWith('ie'));
 
 const rootDir = __dirname.replace(/(\/|\\)(dist|bin|lib).*/, '');
 
-async function bundler(testConfig) {
+const cwd = process.cwd();
+
+const DEV_SERVER_PORT = process.env.DEV_SERVER_PORT || 5173;
+
+const minifiedProperties = {
+	__hooks: 'h',
+	__class: 'c',
+	__vnode: 'v',
+	__current: 'i',
+	__state: 's',
+	__dirty: 'd',
+	__children: 'a',
+	__result: 'r',
+	__dom: 'e',
+	__delete: 'x',
+};
+
+/**
+ * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
+ * @returns {object} Bundler config
+ */
+function getBundlerConfigs(buildSpecConfig) {
+	let { getBundlerConfig = (opts) => opts, getSpecConfig = (opts) => opts, ...restConfig } = buildSpecConfig;
+
+	const testConfig = getSpecConfig(restConfig);
+
 	let { entryFile, testPath, entry, entryPart, preview = false } = testConfig;
 
 	if (!entryFile && entry) {
@@ -859,63 +1011,8 @@ async function bundler(testConfig) {
 	const buildDir = path.join(testPath, testConfig.buildDir);
 	testConfig.buildDir = buildDir;
 
-	// Ensure build folder
-	try {
-		if (!fs.existsSync(buildDir)) {
-			fs.mkdirSync(buildDir);
-		}
-	} catch (error) {}
-
-	const {
-		minify: configMinify,
-		preact,
-		modules,
-		id,
-		chunks,
-		chunkImages,
-		watch,
-		features,
-		bundler: bundlerConfig = {},
-	} = testConfig;
+	const { minify: configMinify, preact, modules, id, chunks, watch, features, extractCss } = testConfig;
 	const minify = configMinify ?? !watch;
-
-	const babelConfig = {
-		babelrc: false,
-		presets: [
-			[
-				'@babel/preset-typescript',
-				{
-					modules: false,
-				},
-			],
-		],
-		plugins: [
-			'transform-async-to-promises',
-			'@babel/plugin-proposal-class-properties',
-			'@babel/plugin-proposal-optional-chaining',
-			'@babel/plugin-proposal-nullish-coalescing-operator',
-			[
-				'@babel/plugin-transform-react-jsx',
-				{ pragma: 'h', pragmaFrag: preact ? 'Fragment' : 'hf', throwIfNamespace: false },
-			],
-			[
-				'@emotion/babel-plugin-jsx-pragmatic',
-				preact
-					? {
-							module: 'preact',
-							import: 'h, Fragment',
-							export: 'h, Fragment',
-					  }
-					: {
-							module: path.join(rootDir, '/src/jsx'),
-							import: 'h, hf',
-							export: 'h, hf',
-					  },
-			],
-		].filter(Boolean),
-		exclude: [/node_modules(?!(\/|\\)(a-b-doer))/], // Put to regex group all modules that contains something that wouldn't be fixed without babel (like optional chaining)
-		extensions: ['.js', '.jsx', '.ts', '.tsx'],
-	};
 
 	// Bundler behaves a little bit differently when there's style file as an entry.
 	let stylesOnly = /\.(le|sa|sc|c)ss$/.test(entryFile);
@@ -924,31 +1021,25 @@ async function bundler(testConfig) {
 		throw new Error("Couldn't find entry file");
 	}
 
-	const useSourcemaps = watch && testConfig.sourcemap !== false;
-
-	const cwd = process.cwd();
-
-	const { plugins = [], input: _i, watch: _w, output = {}, ...restBundlerConfig } = bundlerConfig;
-
 	// Get parsed boolean values from some common process.env variables
 	const PREACT = getFlagEnv('PREACT') ?? !!preact;
-	const NODE_ENV = JSON.stringify('production');
+	const NODE_ENV = JSON.stringify(watch ? 'development' : 'production');
 	const IE = getFlagEnv('IE') ?? supportIE;
 	const PREVIEW = Boolean(watch || preview);
-	const TEST_ENV = getFlagEnv('TEST_ENV') || false;
-	const TEST_ID = id || 't' + (hashf(path.dirname(unifyPath$1(entryFile))).toString(36) || '-default');
+	const TEST_ENV = getFlagEnv('VITEST') || false;
+	const TEST_ID = id || `t${hashf(path.dirname(unifyPath(entryFile))).toString(36) || '-default'}`;
 	// Assign some common process.env variables for bundler/etc and custom rollup plugins
 	process.env.PREACT = process.env.preact = PREACT;
 	process.env.IE = IE;
 	process.env.PREVIEW = PREVIEW;
 	process.env.TEST_ENV = TEST_ENV;
 	process.env.TEST_ID = TEST_ID;
+	process.env.NODE_ENV = NODE_ENV;
 
 	const featuresReplaces = {};
 	Object.entries(features).forEach(([key, value]) => {
 		if (value !== 'auto') {
-			const letter = key === 'className' ? 'x' : key[0];
-			featuresReplaces[`config.${letter}`] = value.toString();
+			featuresReplaces[`config.${key}`] = value.toString();
 		}
 	});
 
@@ -959,388 +1050,291 @@ async function bundler(testConfig) {
 		  }
 		: {};
 
-	const inputOptions = {
-		input: [entryFile],
-		treeshake: {
-			propertyReadSideEffects: false,
-			moduleSideEffects: true,
-			tryCatchDeoptimization: false,
-			unknownGlobalSideEffects: false,
-			correctVarValueBeforeDeclaration: false,
-		},
-		plugins: getPluginsConfig(
-			[
-				['preact-debug'],
-				[
-					'alias',
-					{
-						entries: [
-							{ find: /^@\/(.*)/, replacement: path.join(cwd, '$1') },
-							{ find: 'react', replacement: 'preact/compat' },
-							{ find: 'react-dom/test-utils', replacement: 'preact/test-utils' },
-							{ find: 'react-dom', replacement: 'preact/compat' },
-							{ find: 'react/jsx-runtime', replacement: 'preact/jsx-runtime' },
-						],
-					},
-				],
-				[
-					'esbuild',
-					{
-						include: /\.[t]sx?$/,
-						target: 'esnext',
-						jsx: 'preserve',
-					},
-				],
-				[
-					'node-resolve',
-					{
-						browser: true,
-						preferBuiltins: false,
-						extensions: babelConfig.extensions,
-						modulePaths: ['node_modules', path.join(rootDir, 'node_modules')],
-					},
-				],
-				['babel', { ...babelConfig, babelHelpers: 'bundled' }],
-				['commonjs', { transformMixedEsModules: true }],
-				[
-					'styles',
-					{
-						mode: 'extract',
-						minimize: minify,
-						modules:
-							modules !== false
-								? {
-										generateScopedName: minify
-											? (name, file) => {
-													return 't' + stringHash(unifyPath$1(file)).toString(36).substr(0, 4) + '-' + name;
-											  }
-											: 't_[dir]_[name]_[local]__[hash:4]',
-								  }
-								: undefined,
-						plugins: [autoprefixer],
-						url: { inline: true },
-						alias: {
-							scss: path.join(cwd, '/scss'),
-							sass: path.join(cwd, '/sass'),
-							less: path.join(cwd, '/less'),
-							styles: path.join(cwd, '/styles'),
-							css: path.join(cwd, 'css'),
-							'@': cwd,
-						},
-					},
-				],
-				[
-					'replace',
-					{
-						preventAssignment: true,
-						values: {
-							'process.env.PREACT': PREACT,
-							'process.env.preact': PREACT,
-							'process.env.NODE_ENV': NODE_ENV,
-							'process.env.IE': IE,
-							'process.env.PREVIEW': PREVIEW,
-							'process.env.TEST_ENV': TEST_ENV,
-							'process.env.TEST_ID': JSON.stringify(TEST_ID),
-							...featuresReplaces,
-						},
-					},
-				],
-				[
-					'image',
-					{
-						exclude: ['**/*.svg'],
-					},
-				],
-				chunkImage(chunkImages),
-				preact
-					? [
-							'svg-hyperscript',
-							{
-								importDeclaration: 'import {h} from "preact"',
-								pragma: 'h',
-								transformPropNames: false,
-							},
-					  ]
-					: [
-							'inline-svg',
-							{
-								removeSVGTagAttrs: false,
-							},
-					  ],
-			].filter(Boolean),
-			[...plugins]
-		),
-		watch: false,
-		...chunksInputConfig,
-		...restBundlerConfig,
-	};
-
-	const sourceMapOptions = useSourcemaps
-		? {
-				sourcemap: 'inline',
-				sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
-					// will replace relative paths with absolute paths
-					return 'file:///' + path.resolve(path.dirname(sourcemapPath), relativeSourcePath);
-				},
-		  }
-		: {};
-
 	const chunksOuputConfig = chunks
 		? {
 				format: 'system',
 				name: '',
 		  }
-		: {};
+		: {
+				format: 'iife',
+		  };
 
-	const outputOptions = {
-		dir: buildDir,
-		assetFileNames: '[name].css',
-		strict: false,
-		format: 'iife',
-		exports: 'named',
-		name: path.basename(entryFile).split('.')[0],
-		// When frequently used global variables are local, they could be minified by terser.
-		intro: minify ? 'const window = self; const document = window.document;' : '',
-		plugins: [
-			minify &&
-				terser(
-					Object.assign(
-						{
-							mangle: { toplevel: true },
-							format: { comments: false },
-						},
-						chunkImages && {
-							compress: {
-								evaluate: false,
-							},
-						}
-					)
-				),
-		].filter(Boolean),
-		...chunksOuputConfig,
-		...sourceMapOptions,
-		...output,
+	// const outputOptions = {};
+
+	const jsxInject = preact
+		? 'import {h,Fragment} from "preact"'
+		: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`;
+
+	const optimizeDeps = {
+		exclude: [`@prefresh/vite/runtime`, `@prefresh/vite/utils`],
 	};
 
-	let bundle;
-	let bundleOutput = { output: [] };
+	const bundlerConfig = getBundlerConfig({
+		abConfig: {
+			...testConfig,
+			TEST_ID,
+			stylesOnly,
+			libDir: rootDir,
+		},
+		optimizeDeps: stylesOnly
+			? {
+					...optimizeDeps,
+					entries: [entryFile],
+			  }
+			: optimizeDeps,
+		esbuild: {
+			jsx: 'transform',
+			jsxFactory: 'h',
+			jsxFragment: preact ? 'Fragment' : 'hf',
+			jsxInject,
+		},
+		css: {
+			modules: modules && {
+				generateScopedName: (name, file, css) => {
+					const hash = stringHash(unifyPath(file + css))
+						.toString(36)
+						.substring(0, 5);
+					if (minify) {
+						return `t${hash}-${name}`;
+					}
+					const folder = path.basename(path.dirname(file));
+					const fileNameParts = path.basename(file).split('.');
+					return `t_${folder}_${fileNameParts.at(0)}__${name}--${hash}`;
+				},
+			},
+		},
+		build: {
+			lib: {
+				name: 'entryPart',
+				entry: [entryFile],
+				formats: [chunksOuputConfig.format],
+				fileName: () => getFileAs(path.basename(entryFile), stylesOnly ? 'css' : 'js'),
+			},
+			minify: minify ? 'terser' : false,
+			terserOptions: minify
+				? {
+						mangle: { toplevel: true },
+						format: { comments: false },
+				  }
+				: false,
+			emptyOutDir: false,
+			chunkSizeWarningLimit: 2048,
+			cssCodeSplit: !extractCss && !stylesOnly,
+			rollupOptions: {
+				input: [entryFile],
+				external: ['path', 'module', 'url'],
+				treeshake: {
+					propertyReadSideEffects: false,
+					moduleSideEffects: true,
+					tryCatchDeoptimization: false,
+					unknownGlobalSideEffects: false,
+					correctVarValueBeforeDeclaration: false,
+				},
+				...chunksInputConfig,
+				output: {
+					dir: buildDir,
+					assetFileNames: '[name].css',
+					exports: 'named',
+					name: path.basename(entryFile).split('.')[0],
+					intro: minify && !stylesOnly ? 'const window = self; const document = window.document;' : '',
+					...chunksOuputConfig,
+				},
+			},
+		},
+		clearScreen: false,
+		plugins: [
+			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
+			createModifiablePlugin(cssEntryPlugin, { name: 'a-b-doer:css-entry-plugin' }),
+			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
+			createModifiablePlugin(replace, {
+				name: 'replace',
+				preventAssignment: true,
+				values: {
+					'process.env.PREACT': PREACT,
+					'process.env.preact': PREACT,
+					'process.env.NODE_ENV': NODE_ENV,
+					'process.env.IE': IE,
+					'process.env.PREVIEW': PREVIEW,
+					'process.env.TEST_ENV': TEST_ENV,
+					'process.env.TEST_ID': JSON.stringify(TEST_ID),
+					...featuresReplaces,
+				},
+			}),
+			!TEST_ENV &&
+				!watch &&
+				!preact &&
+				createModifiablePlugin(replace, {
+					name: 'replace2',
+					preventAssignment: false,
+					delimiters: ['', ''],
+					values: minifiedProperties,
+				}),
+			createModifiablePlugin(svgr, {
+				name: 'vite-plugin-svgr',
+				exportAsDefault: true,
+				svgrOptions: {
+					jsxRuntime: 'automatic',
+				},
+				esbuildOptions: {
+					jsxFactory: 'h',
+					jsxFragment: preact ? 'Fragment' : 'hf',
+					banner: jsxInject, // Use banner because jsxInject doesn't work
+				},
+				include: '**/*.svg',
+			}),
+			watch &&
+				(preact
+					? createModifiablePlugin(prefresh, { name: 'prefresh' })
+					: createModifiablePlugin(customJsxPrefreshPlugin, { name: 'custom-prefresh' })),
+		].filter(Boolean),
+	});
 
-	if (outputOptions.entryFileNames && !output.assetFileNames) {
-		outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
+	bundlerConfig.plugins = bundlerConfig.plugins
+		.map((plugin) => {
+			if (typeof plugin === 'function' && '__options__' in plugin) {
+				return plugin(plugin.__options__);
+			}
+			return plugin;
+		})
+		.filter(Boolean);
+
+	return { bundlerConfig, testConfig };
+}
+
+/**
+ * @param {Awaited<ReturnType<import("./buildspec").default>>} buildSpecConfig
+ * @returns {object} Bundler config
+ */
+async function bundler(buildSpecConfig) {
+	const { bundlerConfig, testConfig } = getBundlerConfigs(buildSpecConfig);
+	const { watch, testPath, entryFile, buildDir, chunks } = testConfig;
+
+	// Ensure build folder
+	try {
+		if (!fs.existsSync(buildDir)) {
+			fs.mkdirSync(buildDir);
+		}
+	} catch (error) {
+		//
 	}
+
+	// if (outputOptions.entryFileNames && !output.assetFileNames) {
+	// 	outputOptions.assetFileNames = getFileAs(outputOptions.entryFileNames, 'css');
+	// }
 
 	const clearHashedAssets = () => {
 		// Check for hashed file names
-		if (/\[hash(]|:)/.test(outputOptions.entryFileNames) || chunks) {
+		if (/\[hash(]|:)/.test(get(bundlerConfig, 'build.rollupOptions.output.entryFileNames', '')) || chunks) {
 			// Clear previous hashed files from the build folder.
 			const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
 			files.forEach((file) => {
-				rimraf(`${buildDir}/${file}`, (err) => {
-					if (err) console.error(err);
-				});
+				rimraf(`${buildDir}/${file}`);
 			});
 		}
-	};
-
-	const fnIifeCheck = /^(\(|function)/;
-
-	const createAssetBundle = async () => {
-		let mainChunk = bundleOutput.output[0];
-		let cssChunks = bundleOutput.output.filter((c) => c.fileName.endsWith('.css'));
-
-		let js = mainChunk?.code;
-		let styles = cssChunks.reduce((acc, cur) => acc + cur.source, '');
-
-		// Remove dummy js generated by rollup
-		if (stylesOnly) {
-			fs.unlink(path.resolve(buildDir, mainChunk.fileName), (err) => {});
-		}
-
-		const outputChunks = [...bundleOutput.output];
-
-		// Base for the bundle map that contains other maps.
-		const bundleMap = {
-			version: 3,
-			file: getFileAs(mainChunk.fileName, 'bundle.js'),
-			sections: [],
-		};
-
-		// Create javascript bundle and keep track where chunk code starts for sourcemaps
-		let assetBundle = outputChunks
-			.filter((c) => !!c.code)
-			.reduce((bundle, chunk) => {
-				if (chunk.map) {
-					bundleMap.sections.push({ offset: { line: bundle.split('\n').length - 1, column: 0 }, map: chunk.map });
-				}
-				let bundleCode = bundle.trim();
-				if (bundleCode) bundleCode += '\n';
-				return `${bundleCode}${chunk.code}`;
-			}, '')
-			.trim();
-
-		if (styles) {
-			/* prettier-ignore */
-			assetBundle +=
-				"!(function(){" +
-					"var __a,__s,__f=function(){" +
-						"if(__a){return;}" +
-						"__a=1;" +
-						"__s=document.createElement('style');__s.dataset.id='"+TEST_ID+"',__s.innerHTML='" +
-						styles.replace(/([\r\n\s]+)/g, ' ').replace(/'/g, "\\'") +
-						"';" +
-						"document.head.appendChild(__s);" +
-					"};" +
-					(testConfig.appendStyles ? "__f();" : "window._addStyles=__f;") +
-				"})();";
-		}
-		// Make sure that the built IIFE starts with ! (e.g. Hubspot cli filemanager upload fails without this)
-		if (assetBundle && fnIifeCheck.test(assetBundle) && outputOptions.format === 'iife') {
-			assetBundle = '!' + assetBundle;
-		}
-
-		if (watch) {
-			assetBundle +=
-				'\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,' +
-				Buffer.from(JSON.stringify(bundleMap)).toString('base64');
-
-			if (testConfig.debug) {
-				fs.writeFile(path.resolve(buildDir, 'bundle.js.map'), JSON.stringify(bundleMap), (err) => {
-					if (!err) {
-						console.log('Wrote bundle.js.map to build folder.');
-					} else {
-						console.error(err);
-					}
-				});
-			}
-		} else {
-			fs.writeFile(path.resolve(buildDir, getFileAs(mainChunk.fileName, 'bundle.js')), assetBundle, (err) => {
-				if (err) {
-					console.error(err);
-				} else if (!TEST_ENV) {
-					const mainChunk = bundleOutput.output[0];
-					const bundleName = getFileAs(mainChunk.fileName, 'bundle.js');
-					const bundleSize = toKb(assetBundle);
-
-					const len =
-						bundleOutput.output.reduce((acc, cur) => Math.max(acc, cur.fileName.length), bundleName.length) + 3;
-					const fullLen = len + bundleSize.length;
-
-					console.log(chalk.cyan('Output size:'));
-					console.log(chalk.cyan('-'.repeat(fullLen)));
-					bundleOutput.output.forEach((output, index) => {
-						let code = output.code || output.source || '';
-						const line = output.fileName.padEnd(len) + toKb(code).padStart(bundleSize.length) || '';
-						console.log(chalk.cyan(line));
-					});
-
-					console.log(chalk.cyan(bundleName.padEnd(len) + bundleSize));
-					console.log(chalk.cyan('-'.repeat(fullLen)));
-					console.log();
-				}
-			});
-		}
-
-		return { bundle: assetBundle, styles: !!styles, js: !!js };
 	};
 
 	let assetBundle;
-	let watcher;
+	let server;
 
-	// Close the bundle if watch option is not set
 	if (!watch) {
 		clearHashedAssets();
 
 		try {
-			bundle = await rollup(inputOptions);
-			bundleOutput = await bundle.write(outputOptions);
+			const result = await build({
+				root: testPath,
+				...bundlerConfig,
+			});
+
+			// Create assetBundle for output so tests could use them.
+			const mainChunk = result.at(0).output.at(0);
+			let code = mainChunk.code;
+			// Css only bundles should have injectable js code
+			if (!code && mainChunk.source) {
+				code = `(()=>{document.head.appendChild(Object.assign(document.createElement('style'),{innerHTML:\`${mainChunk.source}\`}))})();`;
+			}
+			assetBundle = { js: true, bundle: code };
 		} catch (error) {
 			console.log(chalk.red('\nBundle error!'));
 			throw new Error(error.message);
 		}
-
-		assetBundle = await createAssetBundle();
-
-		// closes the bundle
-		await bundle.close();
 	}
-	// Otherwise start rollup watcher
+	// Otherwise start vite dev server
 	else {
-		const watcherConfig = {
-			...inputOptions,
-			output: outputOptions,
-			watch: {
-				buildDelay: 100,
-				skipWrite: true,
-				exclude: [path.join(testConfig.buildDir, '**')],
-			},
-		};
+		let port = get(bundlerConfig, ['server', 'port'], DEV_SERVER_PORT);
+		const serverConfig = bundlerConfig.server || {};
 
-		if (testConfig.debug) {
-			console.log('Starting watcher, with config');
-			console.log(watcherConfig);
+		console.log(chalk.cyanBright('\nStarting dev server'), `port ${port}`);
+		console.log();
+
+		server = await createServer({
+			root: cwd,
+			configFile: false,
+			server: {
+				port,
+				https: true,
+				cors: {
+					origin: '*',
+					methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+					preflightContinue: false,
+					optionsSuccessStatus: 204,
+				},
+				watch: {
+					ignored: [path.join(testConfig.buildDir, '**')],
+				},
+				...serverConfig,
+			},
+			...bundlerConfig,
+			plugins: [
+				basicSsl(),
+				{
+					name: 'a-b-doer:response-headers',
+					configureServer: (server) => {
+						server.middlewares.use((_req, res, next) => {
+							res.setHeader('Access-Control-Request-Private-Network', 'true');
+							res.setHeader('Access-Control-Allow-Private-Network', 'true');
+							next();
+						});
+					},
+				},
+			]
+				.concat(bundlerConfig.plugins)
+				.filter(Boolean),
+		});
+
+		await server.listen();
+
+		const startedPort = server.httpServer.address().port;
+		if (startedPort !== port) {
+			port = startedPort;
+			console.log(chalk.cyanBright('Started dev server'), `port ${port}`);
+			console.log('');
 		}
 
-		watcher = watch$1(watcherConfig);
+		const moduleScripts = [
+			`https://localhost:${port}/@vite/client`,
+			`https://localhost:${port}${entryFile.replace(cwd, '')}`,
+		];
 
-		let page;
-		let hasError = false;
+		if (testConfig.toolbar) {
+			moduleScripts.push(
+				`https://localhost:${port}/${path.join(rootDir.replace(cwd, ''), 'dist', 'lib', 'pptr-toolbar.js')}`
+			);
+		}
 
-		watcher.on('event', async (event) => {
-			// Error in bundle process.
-			if (event.code === 'ERROR') {
-				console.log(chalk.red('\nBundle error!'));
-				console.error(event.error.message, '\n');
-				hasError = true;
+		const injection = `!(() => { \ndocument.head.append(${moduleScripts
+			.map((script) => `Object.assign(document.createElement('script'), { type: 'module', src: '${script}', })`)
+			.join(', ')}); \n})();
+		`;
 
-				if (page) {
-					await page.evaluate((msg) => {
-						// Chalk doesn't work in browser.
-						console.log('\n\x1b[31m%s\x1b[0m', 'Bundle error!');
-						console.warn(msg, '\n');
-					}, event.error.message);
-				}
-			}
-			// Process started
-			else if (event.code === 'BUNDLE_START') {
-				if (page) {
-					console.log(chalk.cyan('Source code changed.'));
-					page.evaluate(() => {
-						// Chalk doesn't work in browser.
-						console.log('\x1b[92m%s\x1b[0m', 'Source code changed. Starting bundler...');
-					});
-				}
-				console.log(chalk.cyan('Starting bundler...'));
-				clearHashedAssets();
-				hasError = false;
-			}
-			// End of bundle process, close the bundle
-			else if (event.code === 'BUNDLE_END') {
-				if (hasError) {
-					return;
-				}
-				bundleOutput = await event.result.generate(outputOptions);
-				assetBundle = await createAssetBundle();
-				try {
-					page = await openPage({ ...testConfig, assetBundle }, true);
-				} catch (error) {
-					console.log('Error while opening page', error);
-				}
-				hasError = false;
-				await event.result.close();
-			}
-			// event.code can be one of:
-			//   START        — the watcher is (re)starting
-			//   BUNDLE_START — building an individual bundle
-			//   BUNDLE_END   — finished building a bundle
-			//   END          — finished building all bundles
-			//   ERROR        — encountered an error while bundling
-		});
+		assetBundle = { js: true, bundle: injection };
+
+		try {
+			await openPage({ ...testConfig, assetBundle, bundlerConfig }, true);
+		} catch (error) {
+			console.log('Error while opening page', error);
+		}
 	}
-	return { ...testConfig, assetBundle, watcher };
-}
-
-function toKb(str = '') {
-	return Math.round((str.length / 1024) * 10) / 10 + ' kB';
+	return { ...testConfig, assetBundle, server, bundlerConfig };
 }
 
 /**
@@ -1353,92 +1347,22 @@ function getFileAs(entryPart, ext) {
 	return entryPathArrWithoutExt.concat(ext).join('.');
 }
 
-/**
- * Returns an array containing plugins for the bundler input configuration.
- * @param {Array} defaults
- * @param {Array} [override]
- */
-function getPluginsConfig(defaults, override = []) {
-	const fns = {
-		alias,
-		'node-resolve': nodeResolve,
-		babel,
-		styles,
-		replace,
-		commonjs,
-		'inline-svg': inlineSvg,
-		'svg-hyperscript': svgImport,
-		image,
-		'preact-debug': preactDebug,
-		esbuild,
-	};
-
-	return defaults
-		.map((plugin) => {
-			if (!Array.isArray(plugin)) return plugin;
-			const [key, options] = plugin;
-
-			const fn = fns[key];
-
-			const overridePlugin = override.find((op) => {
-				if (!Array.isArray(op)) return false;
-				return op[0] === key;
-			});
-
-			if (overridePlugin) {
-				// Remove the found override plugin.
-				override.splice(override.indexOf(overridePlugin), 1);
-				// If plugin config is a function, call it with the original plugin config.
-				if (typeof overridePlugin[1] === 'function') {
-					return fn(overridePlugin[1](options));
-				} else {
-					return fn(overridePlugin[1]);
-				}
-			}
-			return fn(options);
-		})
-		.concat(
-			override.map((plugin) => {
-				let fn = plugin;
-				if (Array.isArray(fn)) {
-					if (typeof fn[1] === 'function') {
-						return fn[1]();
-					} else {
-						console.error(
-							chalk.red(
-								`There's no default plugin for ${chalk.bold(fn[0])}. Can't call default plugin with given argument `,
-								fn[1]
-							)
-						);
-						console.error(
-							chalk.red(`Custom plugins should be inserted as objects or as a [string, function] tuple, got`),
-							fn
-						);
-					}
-				}
-				if (typeof fn === 'function') {
-					return fn();
-				}
-				return fn;
-			})
-		);
-}
-
-const { cyan, yellow, green, red } = chalk;
+const { cyan, yellow, red } = chalk;
 
 const cmd = process.argv[2];
 
 const cmds = ['watch', 'build', 'preview', 'build-all', 'screenshot'];
 
 if (!cmds.includes(cmd)) {
-	console.log('Unsupported command: ' + cmd);
-	console.log('Supported commands are: ' + cmds.join(', '));
+	console.log(`Unsupported command: ${cmd}`);
+	console.log(`Supported commands are: ${cmds.join(', ')}`);
 	process.exit();
 }
 
 const watch = cmd === 'watch';
 
-let rollupWatcher = null;
+let devServer = null;
+let watcher = null;
 
 const targetPath = process.argv[3] || '.';
 
@@ -1487,19 +1411,29 @@ async function buildSingleEntry(targetPath) {
 
 	switch (cmd) {
 		case 'watch':
-			if (rollupWatcher) {
-				rollupWatcher.close();
+			if (watcher) {
+				console.log(cyan('Stopping previous config watcher...'));
+				await watcher.close();
+			}
+			if (devServer) {
+				console.log(cyan('Stopping previous dev server...'));
+				console.log('');
+				await devServer.close();
 			} else {
 				console.log(cyan('Starting bundler with a file watcher...'));
 			}
-			const watcher = chokidar.watch(config._specFiles, {
-				awaitWriteFinish: true,
-			});
+			watcher = chokidar.watch(
+				config.specs.map((spec) => spec.file),
+				{
+					awaitWriteFinish: true,
+				}
+			);
 			watcher.on('change', (filepath) => {
 				console.log('');
-				console.log('Buildspec changed', yellow(filepath));
-				console.log(green('Restarting bundler...'));
+				console.log(cyan('Some test configuration file was changed...'));
+				console.log('Config file', yellow(filepath));
 				console.log('');
+				console.log(cyan('Restarting...'));
 				buildSingleEntry(targetPath);
 				watcher.close();
 			});
@@ -1510,13 +1444,12 @@ async function buildSingleEntry(targetPath) {
 	}
 
 	console.log('Entry:', yellow(config.entryFile));
-	console.log('');
 
 	try {
 		const output = await bundler({ ...config, watch });
-		rollupWatcher = output.watcher;
+		devServer = output.server;
 		if (!watch) {
-			console.log(green('Bundle built.'));
+			console.log(cyan('Bundle built.'));
 		}
 		console.log('');
 	} catch (error) {
@@ -1560,13 +1493,13 @@ async function buildMultiEntry(targetPath) {
 			if (!buildOnly) {
 				await openPage(output);
 			} else {
-				console.log(entryFile.replace(process.env.INIT_CWD, ''), green('Done.'));
+				console.log(entryFile.replace(process.env.INIT_CWD, ''), cyan('Done.'));
 			}
 		}
 
 		if (buildOnly) {
 			console.log();
-			console.log(green('Variant bundles built.'));
+			console.log(cyan('Variant bundles built.'));
 			console.log();
 			process.exit(0);
 		}
@@ -1606,21 +1539,19 @@ async function createScreenshots(targetPath) {
 		if (cmdArgUrl) {
 			if (isNaN(cmdArgUrl)) {
 				config.url = [cmdArgUrl];
-			} else {
-				if (Array.isArray(config.url)) {
-					const urlIndex = +cmdArgUrl;
-					if (urlIndex < config.url.length) {
-						config.url = [config.url[urlIndex]];
-					} else {
-						console.log(yellow(`Undefined index for test config url. Argument was`), '--url=' + cmdArgUrl);
-						console.log(yellow(`Current config`), config.url);
-					}
+			} else if (Array.isArray(config.url)) {
+				const urlIndex = +cmdArgUrl;
+				if (urlIndex < config.url.length) {
+					config.url = [config.url[urlIndex]];
 				} else {
-					console.log(
-						yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
-						'--url=' + cmdArgUrl
-					);
+					console.log(yellow(`Undefined index for test config url. Argument was`), `--url=${cmdArgUrl}`);
+					console.log(yellow(`Current config`), config.url);
 				}
+			} else {
+				console.log(
+					yellow(`Test config url wasn't an array, can't use indexed url argument. Argument was`),
+					`--url=${cmdArgUrl}`
+				);
 			}
 		}
 		const { testPath, buildDir, entryFile, entryFileExt, screenshot = {}, onLoad, onBefore } = config;
@@ -1634,7 +1565,7 @@ async function createScreenshots(targetPath) {
 			onBefore: screenshotOnBefore,
 			...pptrScreenshotOptions
 		} = screenshot;
-		const entryName = path.basename(entryFile, '.' + entryFileExt);
+		const entryName = path.basename(entryFile, `.${entryFileExt}`);
 
 		// Bundle main events and screenshot events
 		const singleOnLoad = async (page) => {
@@ -1718,11 +1649,11 @@ async function createScreenshots(targetPath) {
 		console.log(cyan(`Screenshot ready`), `${entryFile}, original`);
 		console.log();
 
-		console.log(green('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
+		console.log(cyan('Took screenshots for'), entryFile.replace(process.env.INIT_CWD, ''));
 		console.log();
 	}
 
-	console.log(green('Done.'));
+	console.log(cyan('Done.'));
 	if (origPage) {
 		await origPage.browser().close();
 	}
@@ -1759,11 +1690,16 @@ async function getMatchingBuildspec(targetPath) {
 			if (!filter(entryFile) && !lstatSync(entryFile).isDirectory()) {
 				return null;
 			}
-			const spec = await buildspec(entryFile);
+			const specSet = await getBuildSpec(entryFile);
+
+			if (!specSet) return null;
+
+			const spec = specSet.getSpecConfig();
+
 			if (spec && new RegExp(`${spec.buildDir}(/|$)`).test(entryFile)) {
 				return null;
 			}
-			return spec;
+			return { ...spec, ...specSet };
 		})
 	);
 
