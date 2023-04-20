@@ -20,8 +20,8 @@ import { build, createServer } from 'vite';
 import prefresh from '@prefresh/vite';
 import { transformSync } from '@babel/core';
 import prefreshBabelPlugin from '@prefresh/babel-plugin';
-import glob from 'glob';
-import rimraf from 'rimraf';
+import { globSync } from 'glob';
+import { rimrafSync } from 'rimraf';
 import 'lodash.ismatch';
 
 const specRequire$1 = createRequire(import.meta.url);
@@ -1226,9 +1226,9 @@ async function bundler(buildSpecConfig) {
 		// Check for hashed file names
 		if (/\[hash(]|:)/.test(get(bundlerConfig, 'build.rollupOptions.output.entryFileNames', '')) || chunks) {
 			// Clear previous hashed files from the build folder.
-			const files = glob.sync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
+			const files = globSync('**/*.?(js|css|map)', { cwd: buildDir, dot: true });
 			files.forEach((file) => {
-				rimraf(`${buildDir}/${file}`);
+				rimrafSync(`${buildDir}/${file}`);
 			});
 		}
 	};
