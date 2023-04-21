@@ -10,10 +10,8 @@ import {
 	domAppend,
 	createDocumentFragment,
 	isSame,
-	domInsertBefore,
 	options,
 	getNs,
-	getIndexInParent,
 	getVNodeDom,
 	getVNodeFirstRenderedDom,
 	getParent,
@@ -291,16 +289,15 @@ const getStyleString = (style) => {
  * @param {VNode} vnode
  * @param {VNode} [prevVnode]
  * @param {HTMLElement} [targetDomNode]
- * @param {NumberConstructor} [atIndex]
+ * @param {HTMLElement} [afterNode]
  * @returns {HTMLElement|null} Rendered DOM tree
  */
-export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
+export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 	// Handle case where Fragment or similar is a root of updated top level component
 	if (!targetDomNode && prevVnode) {
 		const someDom = getVNodeFirstRenderedDom(prevVnode);
 		if (someDom) {
 			targetDomNode = getParent(someDom);
-			atIndex = getIndexInParent(someDom);
 		}
 	}
 	const prevDom = prevVnode && getVNodeDom(prevVnode, true);
@@ -321,36 +318,28 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, atIndex) => {
 			vnode.__result,
 			isVnodeSame ? prevVnode?.__result || prevVnode : undefined,
 			targetDomNode,
-			atIndex
+			afterNode
 		);
 	}
 	const oldChildren = prevVnode && prevVnode.__children;
 	const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
-	let childrenParentNode = returnDom;
 	const vnodeChildren = vnode.__children;
-	const len = vnodeChildren && vnodeChildren.length;
+	const len = (vnodeChildren && vnodeChildren.length) || 0;
 	// Loop though all children and try to patch/remove them as well.
-	if (len) {
-		for (let index = 0, childAtIndex = 0; index < len; index++) {
-			let child = vnodeChildren[index];
-			const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
-			const patchedDomNode = patchVnodeDom(
-				child,
-				(!child || isVnodeSame) && oldChildVnode,
-				childrenParentNode,
-				childAtIndex
-			);
-			if (isRenderableElement(patchedDomNode)) {
-				childAtIndex++;
-			}
+	let prevNode;
+	for (let index = 0; index < len; index++) {
+		let child = vnodeChildren[index];
+		const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
+		const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
+		if (isRenderableElement(patchedDomNode)) {
+			prevNode = patchedDomNode.nodeType === 11 ? patchedDomNode.lastChild : patchedDomNode;
 		}
 	}
 
 	if (isRenderableElement(returnDom)) {
 		if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
-			const domChildren = targetDomNode.childNodes;
-			if (atIndex !== undefined && domChildren.length > atIndex) {
-				domInsertBefore(returnDom, domChildren[atIndex]);
+			if (afterNode) {
+				afterNode.after(returnDom);
 			} else {
 				domAppend(targetDomNode, returnDom);
 			}

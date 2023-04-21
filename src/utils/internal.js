@@ -58,18 +58,6 @@ export const getVNodeFirstRenderedDom = (vnode) => {
 	return null;
 };
 
-/**
- * Returns an index of given element in its parent children list
- * @param {Element} child
- * @returns {number}
- */
-export const getIndexInParent = (child) => {
-	if (!child) undefined;
-	let index = 0;
-	while ((child = child.previousSibling) != null) index++;
-	return index;
-};
-
 // Internal object for storing details of current output/etc
 // This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
 /**

@@ -153,4 +153,65 @@ describe('JSX', () => {
 			expect(children[i].innerHTML).toBe(`<h3>tpl test ${i + 1}</h3>`);
 		}
 	});
+
+	it('should render correctly mapped array children', async () => {
+		const { queryByTestId } = render(
+			<div data-test="container">
+				{[0, 1, 2].map((i) => (
+					<div key={`i${i}`} data-test="item" id={`item${i}`}>
+						Item {i}
+					</div>
+				))}
+				<div data-test="bottom-element">Bottom</div>
+			</div>
+		);
+
+		const container = queryByTestId('container');
+		expect(container.children.length).toBe(4);
+		const bottom = queryByTestId('bottom-element');
+		expect(container.lastChild).toBe(bottom);
+
+		for (let i = 0; i < container.children.length - 1; i++) {
+			expect(container.children[i].id).toBe(`item${i}`);
+		}
+	});
+
+	it('should render correctly mapped array children with fragments', async () => {
+		const FragComponent = ({ children }) => (
+			<>
+				<>
+					<div data-test="row">Some element</div>
+					<div data-test="row">{children}</div>
+				</>
+			</>
+		);
+
+		const FragComponent2 = ({ children }) => (
+			<>
+				<div data-test="subrow">Some other element</div>
+				<div data-test="subrow">{children}</div>
+			</>
+		);
+
+		const { queryByTestId, queryAllByTestId } = render(
+			<div data-test="container">
+				{[0, 1, 2].map((i) => (
+					<FragComponent key={`i${i}`}>
+						<FragComponent2>Item {i}</FragComponent2>
+					</FragComponent>
+				))}
+				<div data-test="bottom-element">Bottom</div>
+			</div>
+		);
+
+		const container = queryByTestId('container');
+		expect(container.children.length).toBe(7);
+		const bottom = queryByTestId('bottom-element');
+		expect(container.lastChild).toBe(bottom);
+		const rows = queryAllByTestId('row');
+
+		for (let i = 0; i < container.children.length - 1; i++) {
+			expect(container.children[i]).toBe(rows[i]);
+		}
+	});
 });
