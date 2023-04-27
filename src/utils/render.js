@@ -16,6 +16,7 @@ import {
 	getVNodeFirstRenderedDom,
 	getParent,
 	isObject,
+	domInsertBefore,
 } from './internal';
 
 /**
@@ -56,7 +57,7 @@ const isSameChild = (vnode, vnode2) =>
 	vnode2 &&
 	(vnode === vnode2 ||
 		(vnode.key === vnode2.key &&
-			(vnode.type === vnode2.type || (import.meta.hot && vnode.__oldType === vnode2.__oldType))));
+			(vnode.type === vnode2.type || (import.meta.hot && vnode.__oldType && vnode.__oldType === vnode2.__oldType))));
 
 const isFragment = (tag) => {
 	if (isVNode(tag)) tag = tag.type;
@@ -293,11 +294,18 @@ const getStyleString = (style) => {
  * @returns {HTMLElement|null} Rendered DOM tree
  */
 export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
-	// Handle case where Fragment or similar is a root of updated top level component
-	if (!targetDomNode && prevVnode) {
+	let prepend = false;
+
+	// Get targeted domNode from the old rendered vnode.
+	// This also handles the case where Fragment or similar is a root of updated top level component
+	if (prevVnode) {
 		const someDom = getVNodeFirstRenderedDom(prevVnode);
 		if (someDom) {
 			targetDomNode = getParent(someDom);
+			afterNode = someDom.previousSibling;
+			if (!afterNode) {
+				prepend = true;
+			}
 		}
 	}
 	const prevDom = prevVnode && getVNodeDom(prevVnode, true);
@@ -324,10 +332,10 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 	const oldChildren = prevVnode && prevVnode.__children;
 	const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	const vnodeChildren = vnode.__children;
-	const len = (vnodeChildren && vnodeChildren.length) || 0;
+	const childCount = (vnodeChildren && vnodeChildren.length) || 0;
 	// Loop though all children and try to patch/remove them as well.
 	let prevNode;
-	for (let index = 0; index < len; index++) {
+	for (let index = 0; index < childCount; index++) {
 		let child = vnodeChildren[index];
 		const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
 		const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
@@ -338,7 +346,10 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 
 	if (isRenderableElement(returnDom)) {
 		if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
-			if (afterNode) {
+			const firstNode = targetDomNode.childNodes[0];
+			if (prepend && firstNode) {
+				domInsertBefore(returnDom, firstNode);
+			} else if (afterNode) {
 				afterNode.after(returnDom);
 			} else {
 				domAppend(targetDomNode, returnDom);

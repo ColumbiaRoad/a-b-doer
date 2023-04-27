@@ -5,6 +5,10 @@
 	  parent.append(child);
 	};
 	const getParent = (node) => node?.parentElement;
+	const domInsertBefore = (child, target) => {
+	  const parent = getParent(target);
+	  parent && parent.insertBefore(child, target);
+	};
 	const domRemove = (node) => {
 	  const parent = getParent(node);
 	  parent && parent.removeChild(node);
@@ -92,7 +96,7 @@
 	const isDomNode = (tag) => tag instanceof Element;
 	const isVNode = (vnode) => !!vnode && !!vnode.props;
 	const isRenderableElement = (element) => !!element || element === 0;
-	const isSameChild = (vnode, vnode2) => vnode && vnode2 && (vnode === vnode2 || vnode.key === vnode2.key && (vnode.type === vnode2.type || undefined && vnode.__oldType === vnode2.__oldType));
+	const isSameChild = (vnode, vnode2) => vnode && vnode2 && (vnode === vnode2 || vnode.key === vnode2.key && (vnode.type === vnode2.type || undefined && vnode.__oldType && vnode.__oldType === vnode2.__oldType));
 	const isFragment = (tag) => {
 	  if (isVNode(tag))
 	    tag = tag.type;
@@ -250,10 +254,15 @@
 	  );
 	};
 	const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
-	  if (!targetDomNode && prevVnode) {
+	  let prepend = false;
+	  if (prevVnode) {
 	    const someDom = getVNodeFirstRenderedDom(prevVnode);
 	    if (someDom) {
 	      targetDomNode = getParent(someDom);
+	      afterNode = someDom.previousSibling;
+	      if (!afterNode) {
+	        prepend = true;
+	      }
 	    }
 	  }
 	  const prevDom = prevVnode && getVNodeDom(prevVnode, true);
@@ -279,9 +288,9 @@
 	  const oldChildren = prevVnode && prevVnode.__children;
 	  const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	  const vnodeChildren = vnode.__children;
-	  const len = vnodeChildren && vnodeChildren.length || 0;
+	  const childCount = vnodeChildren && vnodeChildren.length || 0;
 	  let prevNode;
-	  for (let index = 0; index < len; index++) {
+	  for (let index = 0; index < childCount; index++) {
 	    let child = vnodeChildren[index];
 	    const oldChildVnode = oldChildren && (child && oldChildrenMap.get(child.key) || oldChildren[index]);
 	    const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
@@ -291,7 +300,10 @@
 	  }
 	  if (isRenderableElement(returnDom)) {
 	    if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
-	      if (afterNode) {
+	      const firstNode = targetDomNode.childNodes[0];
+	      if (prepend && firstNode) {
+	        domInsertBefore(returnDom, firstNode);
+	      } else if (afterNode) {
 	        afterNode.after(returnDom);
 	      } else {
 	        domAppend(targetDomNode, returnDom);
@@ -388,8 +400,7 @@
 	      props.class = props.className;
 	    }
 	  }
-	  if (children)
-	    props.children = children;
+	  props.children = children;
 	  const vnode = createVNode(tag, props);
 	  if (tag === "svg") {
 	    vnode.svg = true;
