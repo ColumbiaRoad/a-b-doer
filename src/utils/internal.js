@@ -30,6 +30,8 @@ export const isObject = (obj) => obj && typeof obj === 'object';
 
 export const createDocumentFragment = () => document.createDocumentFragment();
 
+export const isDomFragment = (node) => node && node.nodeType === 11;
+
 /**
  * @param {VNode} vnode
  * @param {boolean} recursive

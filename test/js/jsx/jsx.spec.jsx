@@ -3,6 +3,7 @@ import { clearAll, unmount } from 'a-b-doer';
 import { useState, useEffect } from 'a-b-doer/hooks';
 import { Simple, RefHook, Hooks, Switch, OrderApp } from './templates';
 import { render } from './test-utils';
+import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
 
 describe('JSX', () => {
 	vi.useFakeTimers();
@@ -29,7 +30,6 @@ describe('JSX', () => {
 	});
 
 	it('should pass props correctly', () => {
-		// 	await expect(t).toMatch(`"foo":"${tpl.indexOf(t)}"`);
 		const { vnode, element } = render(<Simple id="tpl1" foo="0" />);
 		expect(vnode.props).toMatchObject({ id: 'tpl1', foo: '0', children: [] });
 		expect(element).toContainHTML('"foo":"0"');
@@ -92,7 +92,7 @@ describe('JSX', () => {
 		expect(getByTestId('test-node').dataset.test).toBe('test-node');
 	});
 
-	it('should re-render elements in correct order', async () => {
+	it('should re-render elements in correct order', () => {
 		const { queryByTestId } = render(
 			<OrderApp>
 				<Simple class="simple-sub" id="tpl9-1" />
@@ -110,7 +110,7 @@ describe('JSX', () => {
 		}
 	});
 
-	it('should render conditional children correctly', async () => {
+	it('should render conditional children correctly', () => {
 		const App = ({ children }) => {
 			const [loading, setLoading] = useState(true);
 			useEffect(() => {
@@ -154,7 +154,7 @@ describe('JSX', () => {
 		}
 	});
 
-	it('should render correctly mapped array children', async () => {
+	it('should render correctly mapped array children', () => {
 		const { queryByTestId } = render(
 			<div data-test="container">
 				{[0, 1, 2].map((i) => (
@@ -176,7 +176,7 @@ describe('JSX', () => {
 		}
 	});
 
-	it('should render correctly mapped array children with fragments', async () => {
+	it('should render correctly mapped array children with fragments', () => {
 		const FragComponent = ({ children }) => (
 			<>
 				<>
@@ -213,5 +213,24 @@ describe('JSX', () => {
 		for (let i = 0; i < container.children.length - 1; i++) {
 			expect(container.children[i]).toBe(rows[i]);
 		}
+	});
+
+	it('should patch correctly if vnode type changes', () => {
+		const container = document.createElement('div');
+		const vnode = renderVnode(
+			<div>
+				<h1>Testing</h1>
+			</div>
+		);
+		patchVnodeDom(vnode, null, container);
+		expect(container.innerHTML).toBe('<div><h1>Testing</h1></div>');
+		const vnode2 = renderVnode(
+			<div>
+				<h4>Testing</h4>
+			</div>,
+			vnode
+		);
+		patchVnodeDom(vnode2, vnode, container);
+		expect(container.innerHTML).toBe('<div><h4>Testing</h4></div>');
 	});
 });

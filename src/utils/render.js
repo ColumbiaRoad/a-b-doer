@@ -17,6 +17,7 @@ import {
 	getParent,
 	isObject,
 	domInsertBefore,
+	isDomFragment,
 } from './internal';
 
 /**
@@ -298,7 +299,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 
 	// Get targeted domNode from the old rendered vnode.
 	// This also handles the case where Fragment or similar is a root of updated top level component
-	if (prevVnode) {
+	if ((!targetDomNode || isDomFragment(targetDomNode)) && prevVnode) {
 		const someDom = getVNodeFirstRenderedDom(prevVnode);
 		if (someDom) {
 			targetDomNode = getParent(someDom);
@@ -340,7 +341,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 		const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
 		const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
 		if (isRenderableElement(patchedDomNode)) {
-			prevNode = patchedDomNode.nodeType === 11 ? patchedDomNode.lastChild : patchedDomNode;
+			prevNode = isDomFragment(patchedDomNode) ? patchedDomNode.lastChild : patchedDomNode;
 		}
 	}
 

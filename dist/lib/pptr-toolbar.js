@@ -18,6 +18,7 @@
 	const isArray = (arr) => Array.isArray(arr);
 	const isObject = (obj) => obj && typeof obj === "object";
 	const createDocumentFragment = () => document.createDocumentFragment();
+	const isDomFragment = (node) => node && node.nodeType === 11;
 	const getVNodeDom = (vnode, recursive) => vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
 	const getVNodeFirstRenderedDom = (vnode) => {
 	  if (!vnode)
@@ -255,7 +256,7 @@
 	};
 	const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 	  let prepend = false;
-	  if (prevVnode) {
+	  if ((!targetDomNode || isDomFragment(targetDomNode)) && prevVnode) {
 	    const someDom = getVNodeFirstRenderedDom(prevVnode);
 	    if (someDom) {
 	      targetDomNode = getParent(someDom);
@@ -295,7 +296,7 @@
 	    const oldChildVnode = oldChildren && (child && oldChildrenMap.get(child.key) || oldChildren[index]);
 	    const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
 	    if (isRenderableElement(patchedDomNode)) {
-	      prevNode = patchedDomNode.nodeType === 11 ? patchedDomNode.lastChild : patchedDomNode;
+	      prevNode = isDomFragment(patchedDomNode) ? patchedDomNode.lastChild : patchedDomNode;
 	    }
 	  }
 	  if (isRenderableElement(returnDom)) {
@@ -421,7 +422,7 @@
 	    return child;
 	  if (!child)
 	    return [];
-	  return child.nodeType === 11 ? Array.from(child.children) : [child];
+	  return isDomFragment(child) ? Array.from(child.children) : [child];
 	};
 	const clearPrevious = (child, parent) => {
 	  const children = getChildrenArray(child);
