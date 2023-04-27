@@ -640,6 +640,9 @@ async function getBrowser(config = {}) {
 				`--window-size=${config.windowSize[0]},${config.windowSize[1]}`,
 				'--incognito',
 				`--ignore-certificate-errors-spki-list=${fingerprint}`,
+				'--disable-web-security',
+				'--disable-features=IsolateOrigins',
+				'--disable-site-isolation-trials',
 			].concat(config.browserArgs || []),
 		});
 

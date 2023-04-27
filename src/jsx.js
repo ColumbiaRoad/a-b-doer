@@ -29,7 +29,7 @@ const createElement = (tag, props, ...children) => {
 		}
 	}
 
-	if (children) props.children = children;
+	props.children = children;
 
 	const vnode = createVNode(tag, props);
 

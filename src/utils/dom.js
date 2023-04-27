@@ -8,6 +8,7 @@ import {
 	domRemove,
 	getVNodeDom,
 	isArray,
+	isDomFragment,
 } from './internal';
 
 export const createSelector = (node, selector) => [node, selector];
@@ -134,7 +135,7 @@ const getChildrenArray = (child) => {
 	if (isArray(child)) return child;
 	if (!child) return [];
 	// If document fragment, use its contents otherwise return the child in an array
-	return child.nodeType === 11 ? Array.from(child.children) : [child];
+	return isDomFragment(child) ? Array.from(child.children) : [child];
 };
 
 /**

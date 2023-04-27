@@ -30,6 +30,8 @@ export const isObject = (obj) => obj && typeof obj === 'object';
 
 export const createDocumentFragment = () => document.createDocumentFragment();
 
+export const isDomFragment = (node) => node && node.nodeType === 11;
+
 /**
  * @param {VNode} vnode
  * @param {boolean} recursive
@@ -56,18 +58,6 @@ export const getVNodeFirstRenderedDom = (vnode) => {
 		}
 	}
 	return null;
-};
-
-/**
- * Returns an index of given element in its parent children list
- * @param {Element} child
- * @returns {number}
- */
-export const getIndexInParent = (child) => {
-	if (!child) undefined;
-	let index = 0;
-	while ((child = child.previousSibling) != null) index++;
-	return index;
 };
 
 // Internal object for storing details of current output/etc
