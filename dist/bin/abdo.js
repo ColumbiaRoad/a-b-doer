@@ -1243,10 +1243,14 @@ async function bundler(buildSpecConfig) {
 		clearHashedAssets();
 
 		try {
-			const result = await build({
+			let result = await build({
 				root: testPath,
 				...bundlerConfig,
 			});
+
+			if (!Array.isArray(result)) {
+				result = [result];
+			}
 
 			// Create assetBundle for output so tests could use them.
 			const mainChunk = result.at(0).output.at(0);
