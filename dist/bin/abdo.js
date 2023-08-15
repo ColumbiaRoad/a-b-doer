@@ -227,29 +227,33 @@ async function injectToolbar(page, config, initial) {
 		return;
 	}
 
-	if (!cachedToolbar) {
-		cachedToolbar = await buildToolbar();
-	}
+	try {
+		if (!cachedToolbar) {
+			cachedToolbar = await buildToolbar();
+		}
 
-	const customToolbar = typeof config.toolbar === 'function' ? `${config.toolbar(page, config, initial)}<hr/>` : '';
+		const customToolbar = typeof config.toolbar === 'function' ? `${config.toolbar(page, config, initial)}<hr/>` : '';
 
-	await page.evaluate(
-		(TEST_ID, testPath, config, customToolbar) => {
-			window.abPreview = {
-				testId: TEST_ID,
-				config,
-				testPath,
-				customToolbar,
-			};
-		},
-		process.env.TEST_ID,
-		config.testPath.replace(process.cwd(), ''),
-		config,
-		customToolbar
-	);
+		await page.evaluate(
+			(TEST_ID, testPath, config, customToolbar) => {
+				window.abPreview = {
+					testId: TEST_ID,
+					config,
+					testPath,
+					customToolbar,
+				};
+			},
+			process.env.TEST_ID,
+			config.testPath.replace(process.cwd(), ''),
+			config,
+			customToolbar
+		);
 
-	if (cachedToolbar) {
-		await page.addScriptTag({ content: cachedToolbar });
+		if (cachedToolbar) {
+			await page.addScriptTag({ content: cachedToolbar });
+		}
+	} catch (error) {
+		// Fail gracefully
 	}
 }
 
@@ -365,235 +369,240 @@ async function openPage(config, singlePage) {
 	}
 
 	const page = await getPage(config, singlePage);
-	if (isOneOfBuildspecUrls(page.url(), urls)) {
-		url = page.url();
-	}
 
-	// Remove previous listeners
-	page.removeAllListeners();
+	try {
+		if (isOneOfBuildspecUrls(page.url(), urls)) {
+			url = page.url();
+		}
 
-	if (onBefore) {
-		await onBefore(page);
-	}
+		// Remove previous listeners
+		page.removeAllListeners();
 
-	const pageTags = [];
+		if (onBefore) {
+			await onBefore(page);
+		}
 
-	if (assetBundle.js) pageTags.push('js');
-	if (assetBundle.styles) pageTags.push('css');
+		const pageTags = [];
 
-	let text = wasInitial ? 'Opening' : 'Reloading';
+		if (assetBundle.js) pageTags.push('js');
+		if (assetBundle.styles) pageTags.push('css');
 
-	if (!singlePage) {
-		text = 'Opening';
-	}
+		let text = wasInitial ? 'Opening' : 'Reloading';
 
-	if (!isTest) {
-		console.log(
-			...[`#${++counter}`, text, `page ${yellow$1(url)}`].concat(pageTags.length ? ['with custom:', pageTags] : [])
-		);
-	}
-	if (isTest || config.debug) {
-		page
-			.on('console', (message) => console.log('LOG: ', message.text()))
-			.on('pageerror', ({ message }) => console.log('ERR: ', message));
-	}
+		if (!singlePage) {
+			text = 'Opening';
+		}
 
-	if (aboutpage) {
-		await aboutpage.close();
-		aboutpage = null;
-	}
+		if (!isTest) {
+			console.log(
+				...[`#${++counter}`, text, `page ${yellow$1(url)}`].concat(pageTags.length ? ['with custom:', pageTags] : [])
+			);
+		}
+		if (isTest || config.debug) {
+			page
+				.on('console', (message) => console.log('LOG: ', message.text()))
+				.on('pageerror', ({ message }) => console.log('ERR: ', message));
+		}
 
-	if (wasInitial) {
-		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
+		if (aboutpage) {
+			await aboutpage.close();
+			aboutpage = null;
+		}
 
-		await page.exposeFunction('takeScreenshot', async (fullPage = true) => {
-			await page.evaluate(() => {
-				const toolbar = document.getElementById('a-b-toolbar');
-				if (toolbar) {
-					toolbar.style.display = 'none';
+		if (wasInitial) {
+			await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
+
+			await page.exposeFunction('takeScreenshot', async (fullPage = true) => {
+				await page.evaluate(() => {
+					const toolbar = document.getElementById('a-b-toolbar');
+					if (toolbar) {
+						toolbar.style.display = 'none';
+					}
+				});
+
+				await page.screenshot({
+					fullPage,
+					path: path.join(
+						config.buildDir,
+						`screenshot-${new Date()
+							.toISOString()
+							.replace('T', '-')
+							.replace(/[^0-9-]/g, '')}.png`
+					),
+				});
+
+				await page.evaluate(() => {
+					const toolbar = document.getElementById('a-b-toolbar');
+					if (toolbar) {
+						toolbar.style.display = 'block';
+					}
+				});
+			});
+
+			await page.exposeFunction('toggleInjection', () => {
+				disabled = !disabled;
+			});
+		}
+
+		// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
+		loadListener = async () => {
+			try {
+				await page.evaluate((urls) => {
+					window.__testUrls = urls;
+				}, urls);
+
+				if (!isTest) {
+					injectToolbar(page, { ...config, disabled }, wasInitial);
 				}
-			});
 
-			await page.screenshot({
-				fullPage,
-				path: path.join(
-					config.buildDir,
-					`screenshot-${new Date()
-						.toISOString()
-						.replace('T', '-')
-						.replace(/[^0-9-]/g, '')}.png`
-				),
-			});
-
-			await page.evaluate(() => {
-				const toolbar = document.getElementById('a-b-toolbar');
-				if (toolbar) {
-					toolbar.style.display = 'block';
+				if (disabled) {
+					return;
 				}
-			});
-		});
 
-		await page.exposeFunction('toggleInjection', () => {
-			disabled = !disabled;
-		});
-	}
+				// Always listen the history state api
+				if (!isTest && config.historyChanges) {
+					await page.evaluate(
+						(bundle, TEST_ID) => {
+							function _appendVariantScripts() {
+								setTimeout(() => {
+									if (
+										typeof window.isOneOfBuildspecUrls !== 'function' ||
+										!window.isOneOfBuildspecUrls(location.href, window.__testUrls)
+									) {
+										return;
+									}
+									document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
+									const node = document.createElement('script');
+									node.dataset.id = TEST_ID;
+									node.innerHTML = bundle;
+									document.head.appendChild(node);
+								}, 10);
+							}
 
-	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
-	loadListener = async () => {
-		try {
-			await page.evaluate((urls) => {
-				window.__testUrls = urls;
-			}, urls);
+							function newHistoryChange(type) {
+								var orig = history[type];
+								return function () {
+									var rv = orig.apply(this, arguments);
+									var e = new Event('changestate');
+									e.arguments = arguments;
+									e.eventName = type;
+									window.dispatchEvent(e);
+									return rv;
+								};
+							}
 
-			if (!isTest) {
-				injectToolbar(page, { ...config, disabled }, wasInitial);
-			}
+							history.pushState = newHistoryChange('pushState');
+							history.replaceState = newHistoryChange('replaceState');
 
-			if (disabled) {
-				return;
-			}
+							window.addEventListener('popstate', function (e) {
+								_appendVariantScripts();
+							});
+							window.addEventListener('changestate', function (e) {
+								_appendVariantScripts();
+							});
+						},
+						assetBundle.bundle,
+						process.env.TEST_ID
+					);
+				}
 
-			// Always listen the history state api
-			if (!isTest && config.historyChanges) {
-				await page.evaluate(
-					(bundle, TEST_ID) => {
-						function _appendVariantScripts() {
-							setTimeout(() => {
-								if (
-									typeof window.isOneOfBuildspecUrls !== 'function' ||
-									!window.isOneOfBuildspecUrls(location.href, window.__testUrls)
-								) {
-									return;
-								}
+				// Check if the current url matches watched test urls.
+				if (!wasInitial && !isOneOfBuildspecUrls(page.url(), urls)) {
+					return;
+				}
+
+				if (config.activationEvent) {
+					await page.evaluate(
+						(bundle, activationEvent, pageTags, TEST_ID) => {
+							function _appendVariantScripts() {
+								console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
 								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 								const node = document.createElement('script');
 								node.dataset.id = TEST_ID;
 								node.innerHTML = bundle;
 								document.head.appendChild(node);
-							}, 10);
-						}
+							}
 
-						function newHistoryChange(type) {
-							var orig = history[type];
-							return function () {
-								var rv = orig.apply(this, arguments);
-								var e = new Event('changestate');
-								e.arguments = arguments;
-								e.eventName = type;
-								window.dispatchEvent(e);
-								return rv;
-							};
-						}
+							function _alterDataLayer(dataLayer) {
+								console.log('\x1b[92m%s\x1b[0m', 'Added dataLayer listener for', activationEvent);
+								const oldPush = dataLayer.push;
+								dataLayer.push = function (...args) {
+									args.forEach(({ event }) => {
+										if (event === activationEvent) {
+											_appendVariantScripts();
+										}
+									});
+									oldPush.apply(dataLayer, args);
+								};
+							}
 
-						history.pushState = newHistoryChange('pushState');
-						history.replaceState = newHistoryChange('replaceState');
-
-						window.addEventListener('popstate', function (e) {
-							_appendVariantScripts();
-						});
-						window.addEventListener('changestate', function (e) {
-							_appendVariantScripts();
-						});
-					},
-					assetBundle.bundle,
-					process.env.TEST_ID
-				);
-			}
-
-			// Check if the current url matches watched test urls.
-			if (!wasInitial && !isOneOfBuildspecUrls(page.url(), urls)) {
-				return;
-			}
-
-			if (config.activationEvent) {
-				await page.evaluate(
-					(bundle, activationEvent, pageTags, TEST_ID) => {
-						function _appendVariantScripts() {
-							console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
-							document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
-							const node = document.createElement('script');
-							node.dataset.id = TEST_ID;
-							node.innerHTML = bundle;
-							document.head.appendChild(node);
-						}
-
-						function _alterDataLayer(dataLayer) {
-							console.log('\x1b[92m%s\x1b[0m', 'Added dataLayer listener for', activationEvent);
-							const oldPush = dataLayer.push;
-							dataLayer.push = function (...args) {
-								args.forEach(({ event }) => {
+							if (!Array.isArray(window.dataLayer)) {
+								window.dataLayer = [];
+							} else {
+								window.dataLayer.forEach(({ event }) => {
 									if (event === activationEvent) {
 										_appendVariantScripts();
 									}
 								});
-								oldPush.apply(dataLayer, args);
-							};
-						}
+							}
 
-						if (!Array.isArray(window.dataLayer)) {
-							window.dataLayer = [];
-						} else {
-							window.dataLayer.forEach(({ event }) => {
-								if (event === activationEvent) {
-									_appendVariantScripts();
-								}
-							});
-						}
-
-						_alterDataLayer(window.dataLayer);
-					},
-					assetBundle.bundle,
-					config.activationEvent,
-					pageTags,
-					process.env.TEST_ID
-				);
-			} else {
-				try {
-					const scriptTag = await page.addScriptTag({ content: assetBundle.bundle });
-					await page.evaluate(
-						(script, TEST_ID) => {
-							script.dataset.id = TEST_ID;
+							_alterDataLayer(window.dataLayer);
 						},
-						scriptTag,
+						assetBundle.bundle,
+						config.activationEvent,
+						pageTags,
 						process.env.TEST_ID
 					);
-				} catch (error) {
-					console.log(error.message);
+				} else {
+					try {
+						const scriptTag = await page.addScriptTag({ content: assetBundle.bundle });
+						await page.evaluate(
+							(script, TEST_ID) => {
+								script.dataset.id = TEST_ID;
+							},
+							scriptTag,
+							process.env.TEST_ID
+						);
+					} catch (error) {
+						console.log(error.message);
+					}
+					if (!isTest) {
+						await page.evaluate((pageTags) => {
+							console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
+						}, pageTags);
+					}
 				}
-				if (!isTest) {
-					await page.evaluate((pageTags) => {
-						console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
-					}, pageTags);
-				}
-			}
 
-			if (isTest) {
-				page.off('domcontentloaded', loadListener);
-				loadListener = null;
+				if (isTest) {
+					page.off('domcontentloaded', loadListener);
+					loadListener = null;
+				}
+			} catch (error) {
+				console.log(error.message);
 			}
-		} catch (error) {
-			console.log(error.message);
+		};
+
+		page.on('domcontentloaded', loadListener);
+
+		await page.goto(url, { waitUntil: 'networkidle2' });
+
+		if (onLoad) {
+			await onLoad(page);
 		}
-	};
 
-	page.on('domcontentloaded', loadListener);
+		// There might be some redirect/hash/etc
+		urlAfterLoad = page.url();
 
-	await page.goto(url, { waitUntil: 'networkidle2' });
-
-	if (onLoad) {
-		await onLoad(page);
-	}
-
-	// There might be some redirect/hash/etc
-	urlAfterLoad = page.url();
-
-	// Push the changed url to the list of watched urls.
-	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
-		urls.push(urlAfterLoad);
-		// Update the test urls array in window for history statechange event.
-		await page.evaluate((urls) => {
-			window.__testUrls = urls;
-		}, urls);
+		// Push the changed url to the list of watched urls.
+		if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
+			urls.push(urlAfterLoad);
+			// Update the test urls array in window for history statechange event.
+			await page.evaluate((urls) => {
+				window.__testUrls = urls;
+			}, urls);
+		}
+	} catch (error) {
+		console.error('Error while opening page', error);
 	}
 
 	return page;
