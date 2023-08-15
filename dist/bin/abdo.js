@@ -491,9 +491,16 @@ async function openPage(config, singlePage) {
 							};
 						}
 
-						if (!window.dataLayer) {
+						if (!Array.isArray(window.dataLayer)) {
 							window.dataLayer = [];
+						} else {
+							window.dataLayer.forEach(({ event }) => {
+								if (event === activationEvent) {
+									_appendVariantScripts();
+								}
+							});
 						}
+
 						_alterDataLayer(window.dataLayer);
 					},
 					assetBundle.bundle,
