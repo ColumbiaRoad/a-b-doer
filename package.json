@@ -1,6 +1,6 @@
 {
   "name": "a-b-doer",
-  "version": "5.0.0-beta",
+  "version": "5.0.1-beta",
   "description": "Utility library which makes developing of A/B test variants easier (maybe)",
   "main": "./main.js",
   "scripts": {
