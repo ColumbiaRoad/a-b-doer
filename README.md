@@ -683,6 +683,7 @@ Supported plugins for pattern match are currently:
 a-b-doer:preact-debug
 a-b-doer:css-entry-plugin
 a-b-doer:css-modules
+a-b-doer:css-modules-serve
 replace
 replace2
 vite-plugin-svgr

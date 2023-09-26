@@ -804,19 +804,19 @@ function cssEntryPlugin() {
 	};
 }
 
+const cssLangs = `\\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)($|\\?)`;
+const cssLangRE = new RegExp(cssLangs);
+const cssLangModuleRE = new RegExp(`\\.module${cssLangs}`);
+const cssLangGlobalRE = new RegExp(`\\.global${cssLangs}`);
+const isCSSRequest = (request) => cssLangRE.test(request);
+const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
+const isCSSGlobalRequest = (request) => cssLangGlobalRE.test(request);
+
 /**
  * Plugin that enables style modules to all style files if A/B doer configuration setting `modules` is enabled
  */
 function cssModules() {
 	let config;
-
-	const cssLangs = `\\.(css|less|sass|scss|styl|stylus|pcss|postcss|sss)($|\\?)`;
-	const cssLangRE = new RegExp(cssLangs);
-	const cssLangModuleRE = new RegExp(`\\.module${cssLangs}`);
-	const cssLangGlobalRE = new RegExp(`\\.global${cssLangs}`);
-	const isCSSRequest = (request) => cssLangRE.test(request);
-	const isCSSModuleRequest = (request) => cssLangModuleRE.test(request);
-	const isCSSGlobalRequest = (request) => cssLangGlobalRE.test(request);
 
 	return {
 		enforce: 'pre',
@@ -839,6 +839,41 @@ function cssModules() {
 					return `${resolution.id}${resolution.id.includes('?') ? '&' : '?'}.module.${ext}`;
 				}
 			}
+		},
+	};
+}
+
+/**
+ * Plugin that enables HMR for all style modules
+ */
+function cssModulesServe() {
+	let config;
+
+	const isModule = (id) =>
+		(isCSSRequest(id) || isCSSModuleRequest(id)) &&
+		(config?.abConfig?.modules || (typeof config?.abConfig?.modules === 'function' && config.abConfig.modules(id)));
+
+	return {
+		enforce: 'post',
+		name: 'a-b-doer:css-modules-server',
+		configResolved(_config) {
+			config = _config;
+		},
+		apply: 'serve',
+		transform(src, id) {
+			if (isModule(id)) {
+				return {
+					code: `${src}\nimport.meta.hot.accept()`,
+				};
+			}
+		},
+		handleHotUpdate(context) {
+			const { modules } = context;
+			modules.forEach((module) => {
+				if (isModule(module.id)) {
+					module.isSelfAccepting = true;
+				}
+			});
 		},
 	};
 }
@@ -1156,6 +1191,7 @@ function getBundlerConfigs(buildSpecConfig) {
 			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
 			createModifiablePlugin(cssEntryPlugin, { name: 'a-b-doer:css-entry-plugin' }),
 			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
+			createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
 			createModifiablePlugin(replace, {
 				name: 'replace',
 				preventAssignment: true,
