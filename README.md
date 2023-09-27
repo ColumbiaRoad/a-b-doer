@@ -507,7 +507,7 @@ Type `boolean`
 
 Default `false`
 
-Enabled support of manual code splitting and produces chunks in SystemJS format (note, you must provide SystemJS loader by yourself and load the main chunk manually). Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
+Enabled support of manual code splitting and produces chunks in ES module format. Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
 
 ```js
 import { append, pollQuerySelector, waitElement } from 'a-b-doer';
@@ -683,6 +683,7 @@ Supported plugins for pattern match are currently:
 a-b-doer:preact-debug
 a-b-doer:css-entry-plugin
 a-b-doer:css-modules
+a-b-doer:css-modules-serve
 replace
 replace2
 vite-plugin-svgr

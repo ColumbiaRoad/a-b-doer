@@ -78,16 +78,12 @@ describe('Configuration options', () => {
 					}
 				});
 				page.on('domcontentloaded', async () => {
-					const systemJS = fs.readFileSync(path.resolve(__dirname, 's.min.js')).toString();
-					await page.addScriptTag({ content: systemJS });
 					setTimeout(async () => {
 						// Use localhost domain for chunks because current url is data url (see setup.js) and domain would be invalid for chunks
 						await page.addScriptTag({
+							type: 'module',
 							content: `
-						System.constructor.prototype.resolve = function (id) {
-							return \`http://localhost/\${id.replace('./', '')}\`;
-						};
-						System.import("./chunks.js");
+						import "http://localhost/chunks.js";
 						`,
 						});
 					}, 100);

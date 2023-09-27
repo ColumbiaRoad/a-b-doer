@@ -1,3 +1,4 @@
+// @vitest-environment node
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
@@ -21,7 +22,7 @@ export default defineConfig({
 	test: {
 		css: true,
 		globals: true,
-		environment: 'jsdom',
+		environment: 'node',
 		setupFiles: [path.join(rootDir, 'test', 'setup.js')],
 		globalSetup: [path.join(rootDir, 'test', 'global-setup.js')],
 	},
