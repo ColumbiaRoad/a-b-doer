@@ -1172,7 +1172,14 @@ function getBundlerConfigs(buildSpecConfig) {
 				...chunksInputConfig,
 				output: {
 					dir: buildDir,
-					entryFileNames: `[name].${stylesOnly ? 'css' : 'js'}`,
+					entryFileNames: ({ name }) => {
+						name = name.replace('.module', '');
+						const nameParts = name.split('.');
+						if (nameParts.length >= 2) {
+							nameParts.pop();
+						}
+						return `${nameParts.join('.')}.${stylesOnly ? 'css' : 'js'}`;
+					},
 					assetFileNames: '[name].[ext]',
 					exports: 'named',
 					name: path.basename(entryFile).split('.')[0],
