@@ -1097,8 +1097,7 @@ function getBundlerConfigs(buildSpecConfig) {
 
 	const chunksOuputConfig = chunks
 		? {
-				format: 'system',
-				name: '',
+				format: 'es',
 		  }
 		: {
 				format: 'iife',
@@ -1149,12 +1148,7 @@ function getBundlerConfigs(buildSpecConfig) {
 			},
 		},
 		build: {
-			lib: {
-				name: 'entryPart',
-				entry: [entryFile],
-				formats: [chunksOuputConfig.format],
-				fileName: () => getFileAs(path.basename(entryFile), stylesOnly ? 'css' : 'js'),
-			},
+			assetsDir: '',
 			minify: minify ? 'terser' : false,
 			terserOptions: minify
 				? {
@@ -1178,7 +1172,8 @@ function getBundlerConfigs(buildSpecConfig) {
 				...chunksInputConfig,
 				output: {
 					dir: buildDir,
-					assetFileNames: '[name].css',
+					entryFileNames: `[name].${stylesOnly ? 'css' : 'js'}`,
+					assetFileNames: '[name].[ext]',
 					exports: 'named',
 					name: path.basename(entryFile).split('.')[0],
 					intro: minify && !stylesOnly ? 'const window = self; const document = window.document;' : '',
@@ -1385,16 +1380,6 @@ async function bundler(buildSpecConfig) {
 		}
 	}
 	return { ...testConfig, assetBundle, server, bundlerConfig };
-}
-
-/**
- * Returns given entry file path as some other extension.
- * @param {string} entryPart
- * @param {string} ext
- */
-function getFileAs(entryPart, ext) {
-	const entryPathArrWithoutExt = entryPart.split('.').slice(0, -1);
-	return entryPathArrWithoutExt.concat(ext).join('.');
 }
 
 const { cyan, yellow, red } = chalk;
