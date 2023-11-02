@@ -15,6 +15,7 @@ import replace from '@rollup/plugin-replace';
 import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
 import stringHash from 'string-hash';
+import { platform } from 'node:os';
 import { URL as URL$1, fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';
 import prefresh from '@prefresh/vite';
@@ -1362,7 +1363,7 @@ async function bundler(buildSpecConfig) {
 			console.log('');
 		}
 
-		const moduleScripts = [
+		let moduleScripts = [
 			`https://localhost:${port}/@vite/client`,
 			`https://localhost:${port}${entryFile.replace(cwd, '')}`,
 		];
@@ -1371,6 +1372,14 @@ async function bundler(buildSpecConfig) {
 			moduleScripts.push(
 				`https://localhost:${port}/${path.join(rootDir.replace(cwd, ''), 'dist', 'lib', 'pptr-toolbar.js')}`
 			);
+		}
+
+
+		const isWindows = platform() == 'win32';
+		//fix Windows specific filepaths
+		if (isWindows) {
+			// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
+			moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\','/').replaceAll(/(?<!:)\/\//g,'/'));
 		}
 
 		const injection = `!(() => { \ndocument.head.append(${moduleScripts
