@@ -1374,12 +1374,11 @@ async function bundler(buildSpecConfig) {
 			);
 		}
 
-
 		const isWindows = platform() == 'win32';
 		//fix Windows specific filepaths
 		if (isWindows) {
 			// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
-			moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\','/').replaceAll(/(?<!:)\/\//g,'/'));
+			moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\', '/').replaceAll(/(?<!:)\/\//g, '/'));
 		}
 
 		const injection = `!(() => { \ndocument.head.append(${moduleScripts
