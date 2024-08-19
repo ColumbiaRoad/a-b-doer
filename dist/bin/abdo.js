@@ -5,8 +5,6 @@ import minimist from 'minimist';
 import path from 'node:path';
 import { createFilter } from '@rollup/pluginutils';
 import fs, { lstatSync, readFileSync, readdirSync } from 'node:fs';
-import get from 'lodash.get';
-import set from 'lodash.set';
 import { createRequire } from 'node:module';
 import basicSsl, { getCertificate } from '@vitejs/plugin-basic-ssl';
 import puppeteerCore from 'puppeteer-core';
@@ -68,6 +66,53 @@ function convertToEsmPath(path) {
 		return specRequire$1('url').pathToFileURL(path).href;
 	}
 	return path;
+}
+
+/**
+ * Gets the value at path of object. If the resolved value is undefined.
+ * @param {*} value
+ * @param {string|Array<string|number>} path
+ * @param {*} [defaultValue]
+ * @returns {*}
+ */
+function get(value, path, defaultValue) {
+	if (typeof value !== 'object' || value === null) {
+		return defaultValue;
+	}
+	const pathArray = Array.isArray(path) ? path : String(path).split('.');
+	return pathArray.reduce((acc, v) => {
+		try {
+			acc = acc[v] === undefined ? defaultValue : acc[v];
+		} catch (e) {
+			return defaultValue;
+		}
+		return acc;
+	}, value);
+}
+
+/**
+ * Gets the value at path of object. Method modifies the given object.
+ * @param {*} obj
+ * @param {string|Array<string|number>} path
+ * @param {*} value
+ */
+function set(obj, path, value) {
+	if (typeof obj !== 'object' || obj === null) {
+		return;
+	}
+	const pathArray = Array.isArray(path) ? path : String(path).split('.');
+	pathArray.reduce((acc, v, i, arr) => {
+		try {
+			if (i === arr.length - 1) {
+				acc[v] = value;
+			} else if (acc[v] === undefined) {
+				acc[v] = isNaN(+v) ? {} : [];
+			}
+		} catch (e) {
+			// continue regardless of error
+		}
+		return acc[v];
+	}, obj);
 }
 
 // Require is not defined in ES module scope
