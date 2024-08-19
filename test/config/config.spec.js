@@ -52,44 +52,40 @@ describe('Configuration options', () => {
 	};
 
 	it('should create chunked output', async () => {
-		const output = await bundler({
+		await bundler({
 			...config,
 			chunks: true,
 			entry: './chunks.jsx',
 		});
-		page = await openPage({
-			...getPuppeteerConfig(output), // Simulate manual adding of main chunk import
-			onBefore: async (page) => {
-				page.setRequestInterception(true);
-				page.on('request', (req) => {
-					const url = req.url();
-					if (url.includes('http://localhost/')) {
-						const urlPath = url.replace('http://localhost/', '');
-						req.respond({
-							body: fs.readFileSync(path.resolve(__dirname, '.build', urlPath)),
-							// Allow cross domain requests to "localhost", current domain is data url
-							headers: {
-								'Access-Control-Allow-Origin': '*',
-							},
-							contentType: 'application/javascript',
-						});
-					} else {
-						req.continue();
-					}
-				});
-				page.on('domcontentloaded', async () => {
-					setTimeout(async () => {
-						// Use localhost domain for chunks because current url is data url (see setup.js) and domain would be invalid for chunks
-						await page.addScriptTag({
-							type: 'module',
-							content: `
-						import "http://localhost/chunks.js";
-						`,
-						});
-					}, 100);
-				});
+		page = await openPage(
+			{
+				...puppeteerConfig,
+				assetBundle: {
+					...puppeteerConfig.assetBundle,
+					bundle: 'import "http://localhost/chunks.js"',
+				},
+				onBefore: async (page) => {
+					page.setRequestInterception(true);
+					page.on('request', (req) => {
+						const url = req.url();
+						if (url.includes('http://localhost/')) {
+							const urlPath = url.replace('http://localhost/', '');
+							req.respond({
+								body: fs.readFileSync(path.resolve(__dirname, '.build', urlPath)),
+								// Allow cross domain requests to "localhost", current domain is data url
+								headers: {
+									'Access-Control-Allow-Origin': '*',
+								},
+								contentType: 'application/javascript',
+							});
+						} else {
+							req.continue();
+						}
+					});
+				},
 			},
-		});
+			false
+		);
 		const element = await page.$('#chunks');
 		expect(element).toBeTruthy();
 		const content = await page.content();
@@ -99,16 +95,15 @@ describe('Configuration options', () => {
 
 		const files = fs.readdirSync(path.resolve(__dirname, '.build'));
 		expect(files).toContain('chunks.js');
-		expect(files).toMatch(/templates-\w+\.js/);
-		expect(files.some((val) => /^templates-[a-z0-9]+\.js$/.test(val))).toBeTruthy();
+		expect(files.some((val) => /^templates-[a-z0-9]+\.js$/i.test(val))).toBeTruthy();
 	});
 
 	it('should use preact', async () => {
 		const output = await bundler({ ...config, preact: true, entry: './preact.jsx' });
 		page = await openPage(getPuppeteerConfig(output));
 		const element = await page.$('#preact');
-		expect(element).toBeTruthy();
 		const content = await page.content();
+		expect(element).toBeTruthy();
 		expect(content).toMatch(/ValPreact:[\d]/);
 		expect(content).toMatch(`<div>BarPreact</div>`);
 		expect(content).toMatch(`data-o="t-`);
@@ -178,7 +173,7 @@ describe('Configuration options', () => {
 
 	describe('Styles', () => {
 		it('should disable css modules', async () => {
-			const output = await bundler({ ...config, modules: false, entry: './index.jsx' });
+			const output = await bundler({ ...config, modules: false, entry: './styles.jsx' });
 			page = await openPage(getPuppeteerConfig(output));
 			const content = await page.content();
 			expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
@@ -191,7 +186,7 @@ describe('Configuration options', () => {
 		});
 
 		it('should not append styles', async () => {
-			const output = await bundler({ ...config, modules: false, extractCss: true, entry: './index.jsx' });
+			const output = await bundler({ ...config, modules: false, extractCss: true, entry: './styles.jsx' });
 			page = await openPage(getPuppeteerConfig(output));
 			const element = await page.$('#tpl');
 			expect(element).toBeTruthy();
@@ -210,13 +205,13 @@ describe('Configuration options', () => {
 				...config,
 				modules: false,
 				extractCss: true,
-				entry: './index.jsx',
+				entry: './styles.jsx',
 				buildDir: path.join('.build', 'css'),
 			});
 			page = await openPage(getPuppeteerConfig(output));
 			const files = fs.readdirSync(path.resolve(__dirname, '.build', 'css'));
 			expect(files).toContain('style.css');
-			const file = fs.readFileSync(path.resolve(__dirname, '.build', 'css', 'style.css'));
+			const file = fs.readFileSync(path.resolve(__dirname, '.build', 'css', 'style.css'), 'utf-8');
 			expect(file).toMatch(/body{background:(red|#f00)}\.content{background:(blue|#00f)}/);
 		});
 	});

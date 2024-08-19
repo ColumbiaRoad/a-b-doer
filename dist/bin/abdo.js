@@ -318,9 +318,6 @@ async function openPage(config, singlePage) {
 	const wasInitial = !wasInitialMap[urlKey];
 	wasInitialMap[urlKey] = true;
 
-	// Remove previous listeners
-	page.removeAllListeners();
-
 	if (onBefore) {
 		await onBefore(page);
 	}
@@ -476,6 +473,7 @@ async function openPage(config, singlePage) {
 							const node = document.createElement('script');
 							node.dataset.id = TEST_ID;
 							node.innerHTML = bundle;
+							node.type = 'module';
 							document.head.appendChild(node);
 						}
 
@@ -511,7 +509,7 @@ async function openPage(config, singlePage) {
 				);
 			} else {
 				try {
-					const scriptTag = await page.addScriptTag({ content: assetBundle.bundle });
+					const scriptTag = await page.addScriptTag({ content: assetBundle.bundle, type: 'module' });
 					await page.evaluate(
 						(script, TEST_ID) => {
 							script.dataset.id = TEST_ID;
@@ -670,7 +668,7 @@ async function getBrowser(config = {}) {
 	}
 
 	if (!context) {
-		context = await browser.createIncognitoBrowserContext();
+		context = await browser.createBrowserContext();
 	}
 
 	return browser;
@@ -744,20 +742,20 @@ function preactDebug() {
 	};
 }
 
-function cssEntryPlugin() {
+function cssInjectPlugin() {
 	let config;
 
 	return {
 		apply: 'build',
 		enforce: 'post',
-		name: 'a-b-doer:css-entry-plugin',
+		name: 'a-b-doer:css-inject-plugin',
 		configResolved(_config) {
 			config = _config;
 		},
 		async renderChunk(code) {
 			const intro = config.build?.rollupOptions?.output?.intro;
 			const vityStyleVar = 'var __vite_style__';
-			// Manually alter __vite_style__ declaration because it doesn't work well with into.
+			// Manually alter __vite_style__ declaration because it doesn't work well with intro.
 			// Move possible intro to be defined before vite style variable
 			if (intro && code.includes(vityStyleVar)) {
 				code = code.replace(intro, '').replace(vityStyleVar, intro + vityStyleVar);
@@ -775,7 +773,7 @@ function cssEntryPlugin() {
 			const jsAssets = bundleKeys.filter(
 				(i) =>
 					bundle[i].type == 'chunk' &&
-					bundle[i].fileName.match(/.[cm]?js$/) != null &&
+					bundle[i].fileName.match(/\.[cm]?js$/) != null &&
 					!bundle[i].fileName.includes('polyfill')
 			);
 
@@ -837,7 +835,10 @@ function cssModules() {
 				if (resolution?.id) {
 					const parts = resolution.id.split('.');
 					const ext = parts.pop();
-					return `${resolution.id}${resolution.id.includes('?') ? '&' : '?'}.module.${ext}`;
+					return `${resolution.id}${resolution.id.includes('?') ? '&' : '?'}module=${path.basename(
+						resolution.id,
+						ext
+					)}module.${ext}`;
 				}
 			}
 		},
@@ -1092,13 +1093,15 @@ function getBundlerConfigs(buildSpecConfig) {
 	const chunksInputConfig = chunks
 		? {
 				preserveEntrySignatures: 'allow-extension',
-				inlineDynamicImports: false,
 		  }
 		: {};
 
 	const chunksOuputConfig = chunks
 		? {
 				format: 'es',
+				manualChunks(id) {
+					if (id.includes('node_modules') || /^vite\//.test(id)) return 'vendor';
+				},
 		  }
 		: {
 				format: 'iife',
@@ -1192,8 +1195,8 @@ function getBundlerConfigs(buildSpecConfig) {
 		clearScreen: false,
 		plugins: [
 			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
-			createModifiablePlugin(cssEntryPlugin, { name: 'a-b-doer:css-entry-plugin' }),
 			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
+			createModifiablePlugin(cssInjectPlugin, { name: 'a-b-doer:css-inject-plugin' }),
 			createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
 			createModifiablePlugin(replace, {
 				name: 'replace',

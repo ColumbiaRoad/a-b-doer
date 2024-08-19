@@ -21,12 +21,9 @@
 	const isDomFragment = (node) => node && node.nodeType === 11;
 	const getVNodeDom = (vnode, recursive) => vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
 	const getVNodeFirstRenderedDom = (vnode) => {
-	  if (!vnode)
-	    return null;
-	  if (vnode.__dom)
-	    return vnode.__dom;
-	  if (vnode.__result)
-	    return getVNodeDom(vnode.__result);
+	  if (!vnode) return null;
+	  if (vnode.__dom) return vnode.__dom;
+	  if (vnode.__result) return getVNodeDom(vnode.__result);
 	  if (vnode.__children) {
 	    for (const child of vnode.__children) {
 	      const dom = getVNodeDom(child);
@@ -44,16 +41,13 @@
 	  __vnode: null
 	};
 	const isSame = (iter, iter2) => {
-	  if (iter === iter2)
-	    return true;
-	  if (!iter && iter2 || iter && !iter2)
-	    return false;
+	  if (iter === iter2) return true;
+	  if (!iter && iter2 || iter && !iter2) return false;
 	  if (isObject(iter) && isObject(iter2)) {
 	    let same = true;
 	    const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
 	    for (const key of keys) {
-	      if (key === "children")
-	        continue;
+	      if (key === "children") continue;
 	      if (key[0] !== key && iter[key] !== iter2[key]) {
 	        same = isObject(iter[key]) ? isSame(iter[key], iter2[key]) : false;
 	        break;
@@ -84,11 +78,9 @@
 	  }
 	};
 	const getNs = (key) => {
-	  if (!config.namespace)
-	    return null;
+	  if (!config.namespace) return null;
 	  const ns = NAMESPACES[key];
-	  if (!ns)
-	    return null;
+	  if (!ns) return null;
 	  return ns.indexOf("http") !== 0 ? `http://www.w3.org/${ns}` : ns;
 	};
 
@@ -99,14 +91,12 @@
 	const isRenderableElement = (element) => !!element || element === 0;
 	const isSameChild = (vnode, vnode2) => vnode && vnode2 && (vnode === vnode2 || vnode.key === vnode2.key && (vnode.type === vnode2.type || undefined && vnode.__oldType && vnode.__oldType === vnode2.__oldType));
 	const isFragment = (tag) => {
-	  if (isVNode(tag))
-	    tag = tag.type;
+	  if (isVNode(tag)) tag = tag.type;
 	  return tag === Fragment$1;
 	};
 	const copyInternal = (source, target) => {
 	  ["__hooks", "__class"].forEach((a) => {
-	    if (source[a] !== void 0)
-	      target[a] = source[a];
+	    if (source[a] !== void 0) target[a] = source[a];
 	  });
 	};
 	const renderVnode = (vnode, oldVnode) => {
@@ -179,8 +169,7 @@
 	      vnode.__dirty = true;
 	    }
 	    if (!element) {
-	      if (!isString(tag))
-	        return;
+	      if (!isString(tag)) return;
 	      if (!tag) {
 	        element = document.createTextNode(props.text);
 	      } else if (config.extendedVnode && tag[0] === "<") {
@@ -245,10 +234,8 @@
 	  return newChildren;
 	};
 	const getStyleString = (style) => {
-	  if (isString(style))
-	    return style;
-	  if (!isObject(style))
-	    return "";
+	  if (isString(style)) return style;
+	  if (!isObject(style)) return "";
 	  return Object.keys(style).reduce(
 	    (prev, curr) => `${prev += curr.split(/(?=[A-Z])/).join("-").toLowerCase()}:${style[curr]};`,
 	    ""
@@ -333,8 +320,7 @@
 	      for (let name in oldProps) {
 	        if (isSame(oldProps[name], props[name])) {
 	          sameProps[name] = true;
-	        } else
-	          element.removeAttribute(name);
+	        } else element.removeAttribute(name);
 	      }
 	    }
 	    for (let name in props) {
@@ -418,10 +404,8 @@
 	const jsxs = jsx;
 
 	const getChildrenArray = (child) => {
-	  if (isArray(child))
-	    return child;
-	  if (!child)
-	    return [];
+	  if (isArray(child)) return child;
+	  if (!child) return [];
 	  return isDomFragment(child) ? Array.from(child.children) : [child];
 	};
 	const clearPrevious = (child, parent) => {
@@ -481,7 +465,7 @@
 	  if (!hookPointer.__hooks[hookPointer.__current]) {
 	    hookPointer.__hooks[hookPointer.__current] = [defaultValue];
 	  }
-	  hookPointer.__hooks[hookPointer.__current][1] = ((hooks, index, vnode) => (value) => {
+	  hookPointer.__hooks[hookPointer.__current][1] = /* @__PURE__ */ ((hooks, index, vnode) => (value) => {
 	    hooks[index][0] = value;
 	    if (vnode) {
 	      onNextTick(() => {
