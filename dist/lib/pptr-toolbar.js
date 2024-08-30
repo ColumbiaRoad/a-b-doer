@@ -289,7 +289,7 @@
 	  if (isRenderableElement(returnDom)) {
 	    if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
 	      const firstNode = targetDomNode.childNodes[0];
-	      if (prepend && firstNode) {
+	      if ((prepend || firstNode === returnDom) && firstNode) {
 	        domInsertBefore(returnDom, firstNode);
 	      } else if (afterNode) {
 	        afterNode.after(returnDom);
@@ -485,11 +485,11 @@
 
 	var css$1 = ".styles_toolbar__3709c8dc {\n  position: fixed;\n  bottom: 0;\n  left: 0;\n  padding: 15px;\n  z-index: 9999;\n  background: #fff;\n  text-align: left;\n  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);\n  font-size: 14px;\n  transition: transform 0.3s ease-in-out;\n  width: 250px;\n  box-sizing: border-box;\n}\n.styles_toolbar__3709c8dc * {\n  box-sizing: border-box;\n  font: normal 14px/14px arial, sans-serif !important;\n}\n.styles_toolbar__3709c8dc div {\n  text-align: left;\n  word-break: break-all;\n}\n.styles_toolbar__3709c8dc small {\n  font-size: 0.9em !important;\n}\n.styles_toolbar__3709c8dc small label {\n  display: flex !important;\n  align-items: center !important;\n}\n.styles_toolbar__3709c8dc.styles_closed__3709c8dc {\n  transform: translateX(-100%);\n}\n.styles_toolbar__3709c8dc.styles_open__3709c8dc {\n  transform: translateX(0);\n}\n.styles_toolbar__3709c8dc hr {\n  height: 1px;\n  background: #ccc;\n  border: 0;\n  margin: 16px 0;\n}\n.styles_toolbar__3709c8dc a {\n  cursor: pointer;\n  display: inline-block;\n  padding: 5px 10px;\n  line-height: 14px;\n  font-family: arial, sans-serif;\n  border-radius: 4px;\n  transition: all 0.3s ease-out;\n}\n.styles_toolbar__3709c8dc a:hover {\n  background: rgba(0, 0, 0, 0.15);\n}\n.styles_toolbar__3709c8dc img {\n  width: 50px;\n  margin: 0 auto 15px;\n  display: block;\n}\n.styles_toolbar__3709c8dc .styles_previewButton__3709c8dc {\n  display: block;\n  width: 100%;\n  background: #767676;\n  color: #fff;\n  margin: 10px 0 !important;\n  padding: 10px 15px !important;\n  border: 0 !important;\n  border-radius: 4px;\n}\n.styles_toolbar__3709c8dc .styles_previewButton__3709c8dc:hover {\n  background: #5b5b5b;\n}\n.styles_toolbar__3709c8dc .styles_toggle__3709c8dc {\n  position: absolute;\n  right: -40px;\n  bottom: 0;\n  box-shadow: 5px 0 5px rgba(0, 0, 0, 0.5);\n  background: #fff !important;\n  border-radius: 0 5px 0px 0;\n  width: 50px;\n  height: 40px;\n  border: 0 !important;\n  margin: 0 !important;\n  padding: 0 !important;\n  transition: all 0.3s ease-in-out;\n  transform: translate(-26px, 26px);\n  cursor: pointer;\n}\n.styles_toolbar__3709c8dc .styles_toggle__3709c8dc::before, .styles_toolbar__3709c8dc .styles_toggle__3709c8dc::after {\n  content: \"\";\n  width: 14px;\n  height: 1px;\n  background: #000;\n  transform: rotate(45deg);\n  position: absolute;\n  top: 16px;\n  left: 23px;\n  transition: transform 0.15s ease-in-out;\n}\n.styles_toolbar__3709c8dc .styles_toggle__3709c8dc::after {\n  transform: rotate(-45deg);\n  top: 26px;\n}\n.styles_toolbar__3709c8dc.styles_open__3709c8dc .styles_toggle__3709c8dc,\n.styles_toolbar__3709c8dc .styles_toggle__3709c8dc:hover {\n  transform: translate(0, 0);\n}\n.styles_toolbar__3709c8dc.styles_open__3709c8dc .styles_toggle__3709c8dc::before {\n  transform: rotate(-45deg);\n}\n.styles_toolbar__3709c8dc.styles_open__3709c8dc .styles_toggle__3709c8dc::after {\n  transform: rotate(45deg);\n}";
 	var modules_ed59282c$1 = {"toolbar":"styles_toolbar__3709c8dc","closed":"styles_closed__3709c8dc","open":"styles_open__3709c8dc","previewButton":"styles_previewButton__3709c8dc","toggle":"styles_toggle__3709c8dc"};
-	n(css$1,{});
+	n(css$1,{"container":"body","singleTag":true,"prepend":true,"attributes":{"id":"pptr-toolbar-styles"}});
 
 	var css = ".styles_toggle__03861b34 {\n  display: flex;\n  align-items: center;\n}\n.styles_toggle__03861b34 input {\n  display: none !important;\n}\n.styles_toggle__03861b34 input:checked + .styles_icon__03861b34 {\n  border-color: #288fb0;\n}\n.styles_toggle__03861b34 input:checked + .styles_icon__03861b34 span {\n  transform: translateX(16px);\n  background: #288fb0;\n}\n.styles_toggle__03861b34 .styles_icon__03861b34 {\n  border: 2px solid #ccc;\n  width: 40px;\n  height: 22px;\n  border-radius: 12px;\n  position: relative;\n  display: inline-block;\n  cursor: pointer;\n  transition: border 0.3s ease-in-out;\n  margin-right: 13px;\n}\n.styles_toggle__03861b34 .styles_icon__03861b34 span {\n  height: 16px;\n  width: 16px;\n  border-radius: 10px;\n  background: #ccc;\n  transition: all 0.3s ease-in-out;\n  position: absolute;\n  left: 2px;\n  top: 1px;\n}";
 	var modules_ed59282c = {"toggle":"styles_toggle__03861b34","icon":"styles_icon__03861b34"};
-	n(css,{});
+	n(css,{"container":"body","singleTag":true,"prepend":true,"attributes":{"id":"pptr-toolbar-styles"}});
 
 	const Toggle = ({ label, onChange, value = false }) => {
 	  return /* @__PURE__ */ jsxs("label", { class: modules_ed59282c.toggle, children: [
@@ -607,9 +607,15 @@
 	  });
 	}
 
+	const container = document.createElement("div");
+	container.id = "pptr-toolbar";
+	const shadow = container.attachShadow({ mode: "open" });
+	const styles = document.getElementById("pptr-toolbar-styles");
+	shadow.appendChild(styles);
+	document.body.appendChild(container);
 	append(
 	  /* @__PURE__ */ jsx(Toolbar, { testId: window.abPreview.testId, config: window.abPreview.config, testPath: window.abPreview.testPath }),
-	  document.body
+	  shadow
 	);
 
 })();

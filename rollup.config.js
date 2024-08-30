@@ -23,6 +23,7 @@ export default [
 		output: {
 			format: 'iife',
 			file: 'dist/lib/pptr-toolbar.js',
+			sourcemap: 'hidden',
 		},
 		plugins: [
 			alias({
@@ -53,6 +54,10 @@ export default [
 			}),
 			styles({
 				modules: true,
+				mode: [
+					'inject',
+					{ container: 'body', singleTag: true, prepend: true, attributes: { id: 'pptr-toolbar-styles' } },
+				],
 			}),
 		],
 	},
