@@ -15,8 +15,7 @@
     "test:js": "vitest -c ./test/js/vitest.config.js test/js",
     "test:styles": "vitest -c ./test/styles/vitest.config.js  test/styles",
     "test:config": "vitest -c ./test/config/vitest.config.js test/config",
-    "release": "standard-version",
-    "prepare": "husky"
+    "release": "standard-version"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
@@ -85,9 +84,6 @@
     "rollup-plugin-styles": "^4.0.0",
     "standard-version": "^9.5.0",
     "vitest": "^2.0.5"
-  },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.21.0"
   },
   "bin": {
     "abdo": "dist/bin/abdo.js"

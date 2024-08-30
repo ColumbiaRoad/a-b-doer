@@ -1,7 +1,7 @@
 import { expect, describe, vi, it } from 'vitest';
 import { clearAll, unmount } from 'a-b-doer';
 import { useState, useEffect } from 'a-b-doer/hooks';
-import { Simple, RefHook, Hooks, Switch, OrderApp } from './templates';
+import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles } from './templates';
 import { render } from './test-utils';
 import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
 
@@ -232,5 +232,20 @@ describe('JSX', () => {
 		);
 		patchVnodeDom(vnode2, vnode, container);
 		expect(container.innerHTML).toBe('<div><h4>Testing</h4></div>');
+	});
+
+	it('should render looped children correctly after render', () => {
+		const { queryByTestId, queryAllByTestId } = render(<Toggles id="toggles-id" />);
+
+		expect(queryByTestId('toggles')).not.toBeFalsy();
+		expect(queryByTestId('toggles-fragment')).not.toBeFalsy();
+		expect(queryAllByTestId('toggle').length).toBe(4);
+		vi.runAllTimers();
+		const toggles = queryAllByTestId('toggle');
+		for (const toggle of toggles) {
+			expect(toggle.childNodes[0].tagName).toBe('INPUT');
+			expect(toggle.childNodes[1].tagName).toBe('SPAN');
+			expect(toggle.childNodes[2].nodeType).toBe(3);
+		}
 	});
 });

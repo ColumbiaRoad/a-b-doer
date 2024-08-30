@@ -1,4 +1,6 @@
+import { Fragment } from 'a-b-doer';
 import { useRef, useEffect, useState } from 'a-b-doer/hooks';
+import Toggle from './components/toggle';
 import styles from './styles.scss';
 
 export const Simple = (props) => {
@@ -103,6 +105,50 @@ export const OrderApp = ({ id, children }) => {
 	) : (
 		<div id={id} data-test={`order`}>
 			{children}
+		</div>
+	);
+};
+
+export const Toggles = ({ id }) => {
+	const [highlight, setHighlight] = useState(false);
+	const [val, setVal] = useState(0);
+
+	useEffect(() => {
+		console.log('=================');
+		setVal(1);
+	}, []);
+
+	const toggles = [
+		{
+			label: 'Highlight injections',
+			value: highlight,
+			onChange: () => {
+				setHighlight(!highlight);
+			},
+		},
+		{
+			label: 'Disable current injection',
+			value: !highlight,
+			onChange: () => {
+				setHighlight(!highlight);
+			},
+		},
+	];
+
+	return (
+		<div id={id} data-val={val}>
+			<div data-test="toggles">
+				{toggles.map((tgl, index) => (
+					<Toggle key={`toggle${index}`} {...tgl} />
+				))}
+			</div>
+			<div data-test="toggles-fragment">
+				{toggles.map((tgl, index) => (
+					<Fragment key={`toggle${index}`}>
+						<Toggle {...tgl} />
+					</Fragment>
+				))}
+			</div>
 		</div>
 	);
 };

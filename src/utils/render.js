@@ -348,7 +348,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
 	if (isRenderableElement(returnDom)) {
 		if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
 			const firstNode = targetDomNode.childNodes[0];
-			if (prepend && firstNode) {
+			if ((prepend || firstNode === returnDom) && firstNode) {
 				domInsertBefore(returnDom, firstNode);
 			} else if (afterNode) {
 				afterNode.after(returnDom);

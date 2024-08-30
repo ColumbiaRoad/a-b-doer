@@ -10,5 +10,5 @@ beforeAll(async () => {
 
 afterAll(async () => {
 	// close the browser instance
-	await global.__BROWSER__.close();
+	if (global.__BROWSER__) await global.__BROWSER__.close();
 });
