@@ -475,6 +475,14 @@ Default `true`
 
 Should the bundle be minified.
 
+### modules
+
+Type `boolean` (optional)
+
+Default `true`
+
+CSS/SCSS module support.
+
 ### preact
 
 Type `boolean` (optional)
