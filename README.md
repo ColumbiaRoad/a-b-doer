@@ -12,7 +12,7 @@ const Foo = () => {
 append(<Foo />, document.body);
 ```
 
-You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb, the example above is 10.2kb with preact when `append` is replaced with `render`) and it could be an issue (at least in Optimize).
+You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb, the example above is 10.2kb with preact when `append` is replaced with `render`) and it could be an issue if bundle size is very limited
 
 ---
 
