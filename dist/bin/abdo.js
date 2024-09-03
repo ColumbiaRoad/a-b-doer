@@ -13,7 +13,6 @@ import replace from '@rollup/plugin-replace';
 import svgr from 'vite-plugin-svgr';
 import browserslist from 'browserslist';
 import stringHash from 'string-hash';
-import { platform } from 'node:os';
 import { URL as URL$1, fileURLToPath } from 'node:url';
 import { build, createServer } from 'vite';
 import prefresh from '@prefresh/vite';
@@ -956,7 +955,22 @@ function customJsxPrefreshPlugin(options = {}) {
 			const hasReg = /\$RefreshReg\$\(/.test(result.code);
 			const hasSig = /\$RefreshSig\$\(/.test(result.code);
 
-			if (!hasSig && !hasReg) return code;
+			// Check if there are jsx refresh properties made by babel plugin. If not, use manual hmr which just re-injects the code
+			if (!hasSig && !hasReg) {
+				if (config.server?.hmr === false) return code;
+				const entryImportPath = config.abConfig.entryFile.replace(process.cwd(), '');
+				return `${code}
+        if (import.meta.hot) {
+          import.meta.hot.accept(() => {
+            try {
+							console.log("%cReloading A/B injection", "color: cyan; text-shadow: 1px 1px 1px #000", "${entryImportPath}");
+							import('${entryImportPath}?${Date.now()}').then(mod => mod.default());
+            } catch (e) {
+              self.location.reload();
+            }
+          });
+        }`;
+			}
 
 			const prefreshCore = await this.resolve('@prefresh/core', __filename);
 
@@ -1422,12 +1436,8 @@ async function bundler(buildSpecConfig) {
 			);
 		}
 
-		const isWindows = platform() == 'win32';
-		//fix Windows specific filepaths
-		if (isWindows) {
-			// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
-			moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\', '/').replaceAll(/(?<!:)\/\//g, '/'));
-		}
+		// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
+		moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\', '/').replaceAll(/(?<!:)\/\/+/g, '/'));
 
 		const injection = `!(() => { \ndocument.head.append(${moduleScripts
 			.map((script) => `Object.assign(document.createElement('script'), { type: 'module', src: '${script}', })`)
