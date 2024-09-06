@@ -2,17 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [4.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.0.0...v4.1.0) (2022-10-13)
+## [5.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.1.0...v5.0.0) (2024-09-06)
 
+### ⚠ BREAKING CHANGES
+
+Config system has been majorly rewritten and the syntax is now different.
+
+Old bundler system Rollup has been replaced with Vite which means the bundler configuration syntax is not different. Vite also uses Rollup on build releases so some of possible old Rollup configuration could be possible to use in `build.rollupOptions` property.
+
+- Dev toolbar is now inside of a shadow dom
 
 ### Features
 
-* New utils and tweaks ([#32](https://github.com/ColumbiaRoad/a-b-doer/issues/32)) ([768a97b](https://github.com/ColumbiaRoad/a-b-doer/commit/768a97b8b507650e064806e62bc6ca441345aaeb))
+- Vite as bundler
 
+## [4.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.0.0...v4.1.0) (2022-10-13)
+
+### Features
+
+- New utils and tweaks ([#32](https://github.com/ColumbiaRoad/a-b-doer/issues/32)) ([768a97b](https://github.com/ColumbiaRoad/a-b-doer/commit/768a97b8b507650e064806e62bc6ca441345aaeb))
 
 ### Bug Fixes
 
-* Upgraded deps ([e15677a](https://github.com/ColumbiaRoad/a-b-doer/commit/e15677a277e5be9956e2af7254f22ef0d1174e49))
+- Upgraded deps ([e15677a](https://github.com/ColumbiaRoad/a-b-doer/commit/e15677a277e5be9956e2af7254f22ef0d1174e49))
 
 ## [4.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v3.1.2...v4.0.0) (2022-06-16)
 
