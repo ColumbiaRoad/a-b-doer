@@ -456,8 +456,7 @@ async function openPage(config, singlePage) {
 				return;
 			}
 
-			// Always listen the history state api
-			if (enableHistoryChanges) {
+			if (enableHistoryChanges && !config.activationEvent) {
 				await page.evaluate(
 					(bundle, TEST_ID) => {
 						function _appendVariantScripts() {
@@ -471,7 +470,8 @@ async function openPage(config, singlePage) {
 								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 								const node = document.createElement('script');
 								node.dataset.id = TEST_ID;
-								node.innerHTML = bundle;
+								const entryFile = window.abPreview.config.assetBundle.entryFile;
+								node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 								document.head.appendChild(node);
 							}, 10);
 						}
@@ -516,7 +516,8 @@ async function openPage(config, singlePage) {
 							document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 							const node = document.createElement('script');
 							node.dataset.id = TEST_ID;
-							node.innerHTML = bundle;
+							const entryFile = window.abPreview.config.assetBundle.entryFile;
+							node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 							node.type = 'module';
 							document.head.appendChild(node);
 						}
@@ -595,10 +596,16 @@ async function openPage(config, singlePage) {
 	// Push the changed url to the list of watched urls.
 	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
 		urls.push(urlAfterLoad);
-		// Update the test urls array in window for history statechange event.
-		await page.evaluate((urls) => {
-			window.__testUrls = urls;
-		}, urls);
+		try {
+			// Update the test urls array in window for history statechange event.
+			await page.evaluate((urls) => {
+				window.__testUrls = urls;
+			}, urls);
+		} catch (e) {
+			if (!e.message.includes('most likely because of a navigation')) {
+				console.log('ERR:', e);
+			}
+		}
 	}
 
 	return page;
@@ -1444,7 +1451,12 @@ async function bundler(buildSpecConfig) {
 			.join(', ')}); \n})();
 		`;
 
-		assetBundle = { js: true, bundle: injection };
+		assetBundle = {
+			js: true,
+			bundle: injection,
+			// Expose entry file for page events so it can be used when inserting
+			entryFile: entryFile.replace(process.cwd(), ''),
+		};
 
 		try {
 			await openPage({ ...testConfig, assetBundle, bundlerConfig }, true);
