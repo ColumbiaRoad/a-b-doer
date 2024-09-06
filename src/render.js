@@ -1,26 +1,24 @@
 import { append } from './utils/dom';
-import {
-	patchVnodeDom,
-	renderVnode,
-	Fragment as _Fragment,
-	getTestID as _getTestID,
-	getVNodeDom,
-} from './utils/render';
+import { patchVnodeDom, renderVnode, Fragment as _Fragment, getTestID as _getTestID } from './utils/render';
+import { getVNodeDom, onNextTick } from './utils/internal';
 
 /**
  * Super simple class abstract for class like components.
  */
 export class Component {
-	_v;
 	state = {};
 	constructor(props) {
 		this.props = props;
 	}
 	setState(newState) {
-		Object.assign(this.state, newState);
-		const old = { ...this._v };
-		this._v = renderVnode(this._v, old);
-		patchVnodeDom(this._v, old);
+		const vnode = this.__vnode;
+		const old = { ...vnode };
+		this.__state = { ...this.state };
+		onNextTick(() => {
+			Object.assign(this.state, newState);
+			this.__vnode = renderVnode(vnode, old);
+			patchVnodeDom(vnode, old);
+		});
 	}
 }
 

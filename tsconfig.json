@@ -12,6 +12,7 @@
     "paths": {
       "@/*": ["./*"]
     },
+    "types": ["vite/client"]
   },
   "exclude": ["node_modules",  ".git", "**/.build/*", "**/node_modules/*"]
 }

@@ -4,7 +4,7 @@ export const Simple = (props) => {
 	const { id, className, ...rest } = props;
 
 	return (
-		<div id={id} data-o={'t-temp-' + id} class={['simple', className].filter(Boolean).join(' ')}>
+		<div id={id} data-o={`t-temp-${id}`} class={['simple', 'content', className].filter(Boolean).join(' ')}>
 			JSX Template {JSON.stringify(rest)}
 		</div>
 	);
@@ -23,8 +23,8 @@ export const RefHook = (props) => {
 	const node = useRef();
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
-			<div ref={node}></div>
+		<div id={id} data-o={`t-temp-${id}`}>
+			<div ref={node} />
 			<SubTemplate sibling={node} />
 		</div>
 	);
@@ -55,9 +55,9 @@ export const Hooks = (props) => {
 	}, []);
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
+		<div id={id} data-o={`t-temp-${id}`}>
 			<div ref={node}>
-				<div id={id + 'click'} onClick={() => setVal(val + 1)}>
+				<div id={`${id}click`} onClick={() => setVal(val + 1)}>
 					Val:{val}
 				</div>
 				<HookSubTemplate parent={node} />
@@ -74,7 +74,7 @@ export const Switch = ({ id }) => {
 	}, []);
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
+		<div id={id} data-o={`t-temp-${id}`}>
 			<div>First</div>
 			{!val ? <div>Val:{val}</div> : <p>ValP:{val}</p>}
 			<div>Last</div>

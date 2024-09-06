@@ -3,10 +3,8 @@
  * @property {*|null} current
  */
 
-import { config, hooks, isSame, onNextTick } from './utils/internal';
+import { hookPointer, isSame, onNextTick } from './utils/internal';
 import { renderVnode, patchVnodeDom } from './utils/render';
-
-config.h = true;
 
 /**
  * Initializes the reference object.
@@ -14,60 +12,52 @@ config.h = true;
  * @returns {Ref}
  */
 export const useRef = (current = null) => {
-	if (!hooks.h[hooks.c]) {
-		hooks.h[hooks.c] = { current };
+	if (!hookPointer.__hooks[hookPointer.__current]) {
+		hookPointer.__hooks[hookPointer.__current] = { current };
 	}
-	const ret = hooks.h[hooks.c];
-	hooks.c++;
+	const ret = hookPointer.__hooks[hookPointer.__current];
+	hookPointer.__current++;
 	return ret;
 };
 
-/**
- * Runs given function in the next tick.
- * @param {Function} cb
- */
-export const useHook = (cb) => {
-	onNextTick(cb);
-};
-
 export const useEffect = (cb, deps) => {
-	const oldDeps = hooks.h[hooks.c]?.[1];
+	const oldDeps = hookPointer.__hooks[hookPointer.__current]?.[1];
 	let shouldCall = !oldDeps || !deps;
 	if (!shouldCall && deps) {
 		shouldCall = !isSame(deps, oldDeps || []);
 	}
 	if (shouldCall) {
-		if (oldDeps && hooks.h[hooks.c][2]) {
-			hooks.h[hooks.c][2]();
+		if (oldDeps && hookPointer.__hooks[hookPointer.__current][2]) {
+			hookPointer.__hooks[hookPointer.__current][2]();
 		}
-		hooks.h[hooks.c] = ['e', deps, null];
+		hookPointer.__hooks[hookPointer.__current] = ['e', deps, null];
 		((hooks, index) => {
 			onNextTick(() => {
 				hooks[index][2] = cb();
 			});
-		})(hooks.h, hooks.c);
+		})(hookPointer.__hooks, hookPointer.__current);
 	}
-	hooks.c++;
+	hookPointer.__current++;
 };
 
 export const useState = (defaultValue) => {
-	if (!hooks.h[hooks.c]) {
-		hooks.h[hooks.c] = [defaultValue];
+	if (!hookPointer.__hooks[hookPointer.__current]) {
+		hookPointer.__hooks[hookPointer.__current] = [defaultValue];
 	}
 
-	hooks.h[hooks.c][1] = ((hooks, index, vnode) => (value) => {
+	hookPointer.__hooks[hookPointer.__current][1] = ((hooks, index, vnode) => (value) => {
 		hooks[index][0] = value;
 		if (vnode) {
 			onNextTick(() => {
 				const old = { ...vnode };
-				vnode._h = hooks;
+				vnode.__hooks = hooks;
 				vnode = renderVnode(vnode, old);
 				patchVnodeDom(vnode, old);
 			});
 		}
-	})(hooks.h, hooks.c, hooks.v);
+	})(hookPointer.__hooks, hookPointer.__current, hookPointer.__vnode);
 
-	const state = hooks.h[hooks.c];
-	hooks.c++;
+	const state = hookPointer.__hooks[hookPointer.__current];
+	hookPointer.__current++;
 	return state;
 };

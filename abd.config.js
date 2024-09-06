@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { extendConfig } from './bundler.js';
 
 config();
 
@@ -14,20 +15,16 @@ if (!process.env.BROWSER_PATH) {
 export default {
 	browser: process.env.BROWSER_PATH,
 	bundler: {
-		plugins: [
-			// Add extra entry to alias plugin config
-			[
-				'alias',
-				(options) => ({
-					...options,
-					entries: [
-						...options.entries,
-						{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
-						{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
-					],
-				}),
+		// Add extra entry to alias config
+		resolve: extendConfig((config = {}) => ({
+			...config,
+			alias: [
+				{ find: 'a-b-doer/hooks', replacement: path.join(__dirname, 'hooks') },
+				{ find: 'a-b-doer/internal', replacement: path.join(__dirname, 'internal') },
+				{ find: 'a-b-doer', replacement: path.join(__dirname, 'main') },
+				...(config.alias || []),
 			],
-		],
+		})),
 	},
 	screenshot: {
 		onBefore: (page) => {

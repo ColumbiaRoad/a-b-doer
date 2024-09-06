@@ -1,6 +1,6 @@
 ![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
 
-Utility library which makes developing of A/B test variants easier (maybe) and also tries to solve some Google Optimize and Tag Manager related issues. One reason for this is also that you don't have to use any online editors to create those variants. Other reason is that at least Google Optimize limits javascript size to 20kb / script. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.3kb without class component and namespace support (see option `features`):
+Utility library which makes developing of A/B test variants easier (maybe) and you don't have to use any online editors to create those variants. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.1kb without class component, namespace, class + className prop, extended types support (see option `features`):
 
 ```js
 import { append } from 'a-b-doer';
@@ -12,7 +12,7 @@ const Foo = () => {
 append(<Foo />, document.body);
 ```
 
-You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb, the example above is 10.2kb with preact when `append` is replaced with `render`) and it could be an issue (at least in Optimize).
+You can enable preact for more advanced tests, but those tests outputs a little bit larger bundles (adds at least ~5kb, the example above is 10.2kb with preact when `append` is replaced with `render`) and it could be an issue if bundle size is very limited
 
 ---
 
@@ -28,7 +28,7 @@ yarn add a-b-doer --dev
 
 # Prerequisites
 
-Create config.json (or config.js) to project root with the following minimum settings:
+Create abd.config.json (or abd.config.js) to project root with the following minimum settings:
 
 ```json
 {
@@ -94,11 +94,11 @@ tests/
 
 ## Test files
 
-In JS files ES6, imports, etc are supported and also Rollup will bundle and minify them. Styles can be created with SCSS/SASS/CSS/LESS (imports are supported as well). If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Rollup will handle it.
+In JS files ES6, imports, etc are supported and also Vite will bundle and minify them. By default styles can be created with SCSS/SASS/CSS (imports are supported as well). Vite supports other formats as well, but you must add required modules/config for them. If js file is the bundle entry, then styles should be imported in that file `import "./styles.scss"` and Vite will handle it.
 
 By default, JS supports nullish coalescing and optional chaining.
 
-If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import { SVGIcon } from '@/icons/FooIcon.svg';`.
+If you're more familiar with path aliases in import calls, there is path alias for `@/*` which points to root so it can be used like this `import SVGIcon from '@/icons/FooIcon.svg';`.
 
 ## Usage examples, jsx templates
 
@@ -208,8 +208,8 @@ Supported attribute namespaces by default are these:
 ```js
 {
   svg: '2000/svg',
-	xlink: '1999/xlink',
-	xmlns: '2000/xmlns/',
+  xlink: '1999/xlink',
+  xmlns: '2000/xmlns/',
 }
 ```
 
@@ -219,7 +219,7 @@ If namespace doesn't start with http, it will be prefixed with `http://www.w3.or
 
 This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
 
-## Utility functions
+## DOM Utilities for queries
 
 ### pollQuerySelector
 
@@ -341,6 +341,28 @@ Type `(timeout: number) => void`
 
 Sets the default delay between polls for all poll/wait dom utilities (default delay is 100 ms)
 
+## DOM Utilities for adding an element
+
+The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
+
+### append
+
+Inserts JSX or DOM node after the last child of given parent DOM node
+
+### prepend
+
+Inserts JSX or DOM node before the first child given parent DOM node
+
+### insertBefore
+
+Inserts JSX or DOM node in the children list of given target's parent, just before the target
+
+### insertAfter
+
+Inserts JSX or DOM node in the children list of given target's parent, just after the target
+
+## Hooks
+
 ### useRef
 
 Type `() => { current: null }`
@@ -415,36 +437,6 @@ append(
 );
 ```
 
-### useHook (deprecated)
-
-useHook function is only a shorthand for `setTimeout(() => {...}, 0)`. Without a timeout, the reference prop would be empty because all child elements are rendered before the parent element.
-
-```js
-import { append } from 'a-b-doer';
-import { useRef, useHook } from 'a-b-doer/hooks';
-
-const node = useRef();
-append(
-  <div ref={node}>
-    <Sub node={node} />
-  </div>,
-  document.body
-);
-
-const Sub = (props) => {
-  // node.current is null here
-  const { node } = props;
-
-  // Same as setTimeout without the timeout
-  useHook(() => {
-    // Do something with the node
-    console.log(node.current); // HTMLDivElement
-  });
-
-  return <span>Something</span>;
-};
-```
-
 ## buildspec.json usage
 
 These settings can also be used to override settings from global config.
@@ -459,7 +451,7 @@ Web page url(s) for the test. If this is an array, the first proper url will be 
 
 Type `string` (optional)
 
-Entry file for Rollup. Can be at least js or scss file.
+Entry file for Vite. Can be at least js or scss file.
 
 ### buildDir
 
@@ -467,13 +459,13 @@ Type `string` (optional)
 
 Default `.build`
 
-Output directory for Rollup.
+Output directory for Vite.
 
 ### entry
 
 Type `string` (optional)
 
-Entry file for Rollup. Can be at least js or scss file.
+Entry file for Vite. Can be at least js or scss file.
 
 ### minify
 
@@ -523,7 +515,7 @@ Type `boolean`
 
 Default `false`
 
-Enabled support of manual code splitting and produces chunks in SystemJS format (note, you must provide SystemJS loader by yourself and load the main chunk manually). Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
+Enabled support of manual code splitting and produces chunks in ES module format. Following example creates two chunks where there's the lib code in one chunk and all component code in another. Note, chunking requires an export for the main code. It can be default or named. If there's both, the default export will be used otherwise the first named export.
 
 ```js
 import { append, pollQuerySelector, waitElement } from 'a-b-doer';
@@ -542,14 +534,6 @@ export default async () => {
   append(<TestComponent />, target);
 };
 ```
-
-### chunkImages
-
-Type `boolean | number | { size: number, include: Array<string | RegExp> | string | RegExp, exclude: Array<string | RegExp> | string | RegExp }` (optional)
-
-Default `false` (true=150)
-
-Splits imported base64 image strings into specific sized chunks which will be concatenated to one string. GTM has this limit for too long contiguous non-whitespace characters.
 
 ### id
 
@@ -583,14 +567,6 @@ Default `false`
 
 Adds some extra logging for debug
 
-### appendStyles
-
-Type `Boolean` (optional)
-
-Default `true`
-
-Should bundle file append styles to head automatically. If `false` styles can be added manually by calling `window._addStyles()`
-
 ### features
 
 Type `Object` (optional)
@@ -602,6 +578,7 @@ Default `{ classes: true, className: true, namespaces: true, jsx: 'auto', hooks:
 - namespaces: Support namespace attributes and elements. Some namespaces are defined by default
 - jsx: Support jsx syntax
 - hooks: Support functional component hooks, e.g. useState
+- extendedVnodes: Support custom types for JSX VNodes, those are DOM Element and HTML string
 
 You can manually control which parts of the code should be left out by terser on minification. Supported options are listed above, but only `jsx` and `hooks` supports also `auto` mode which means that their values are determined by the usage. Setting some feature to `false` will tell to terser that those code blocks are dead and can be dropped. Setting some feature to `true` will always include those codes to the bundle.
 
@@ -616,7 +593,7 @@ You can manually control which parts of the code should be left out by terser on
 }
 ```
 
-## config.json usage
+## abd.config.json usage
 
 Global config file for all tests. This is a great place to configure all global buildspec options.
 
@@ -678,7 +655,15 @@ Default `true`
 
 Inlines source maps to the bundle with local file urls. This works only in watch mode.
 
-### Example config.json
+### browserArgs
+
+Type `string[]` (optional)
+
+Default `[]`
+
+Extra browser args for Puppeteer
+
+### Example abd.config.json
 
 ```json
 {
@@ -687,52 +672,62 @@ Inlines source maps to the bundle with local file urls. This works only in watch
 }
 ```
 
+### modules
+
+Type `boolean | (id: string) => boolean` (optional)
+
+Default `true`
+
+Load style files as modules. When enabled, all style files with `global.` in filename will be loaded as "global" (without hashed properties)
+
 ### Advanced example config.js with custom bundler options
 
 ```js
-import fooPlugin from 'rollup-foo-plugin';
+import fooPlugin from 'vite-foo-plugin';
+import { extendConfig, PluginsPattern } from 'a-b-doer/bundler';
 
 /*
-Supported plugins for array format are currently.
-Note, changing the configuration for these plugins might break something.
+Supported plugins for pattern match are currently:
+a-b-doer:preact-debug
+a-b-doer:css-entry-plugin
+a-b-doer:css-modules
+a-b-doer:css-modules-serve
+replace
+replace2
+vite-plugin-svgr
 
-alias,
-esbuild,
-babel,
-commonjs,
-image,
-inline-svg,
-node-resolve,
-replace,
-styles,
-svg-hyperscript,
-preact-debug
+Note, changing the configuration for these plugins might break something.
 */
 
 export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   exclude: ['**/components/**/*', '**/src/**/*'],
+  // Override vite config
   bundler: {
-    plugins: [
-      // Add extra entry to alias plugin configuration
-      [
-        'alias',
-        (options) => ({
-          ...options,
-          entries: [...options.entries, { find: 'something', replacement: '@/foo' }],
-        }),
-      ],
-      // Override rollup image plugin configuration
-      [
-        'image',
-        {
-          exclude: ['**/*.svg', '**/*.png'],
-        },
-      ],
-      // Add extra input plugin to rollup configuration
-      fooPlugin({ foo: 1 }),
-    ],
+    // Add extra entry to alias config
+    resolve: extendConfig((config = {}) => ({
+      ...config,
+      alias: [{ find: 'some-library', replacement: 'some-other-library' }, ...(config.alias || [])],
+    })),
+    plugins: extendConfig((plugins) =>
+      new PluginsPattern(plugins) // or PluginsPattern.create(plugins)
+        // Add extra entries to replace plugin
+        .match({ name: 'replace' }, ({ plugin, options }) =>
+          plugin({
+            ...options,
+            values: {
+              ...options.values,
+              'process.env.SOME': 2,
+              '##OTHER##': '2',
+            },
+          })
+        )
+        // Remove a default plugin
+        .match({ name: 'preact-debug' }, () => null),
+        // Add extra input plugin to Vite configuration
+        .concat(fooPlugin({ foo: 1 }))
+    ),
     output: {
       // Some super options for bundler output
     },
@@ -745,46 +740,6 @@ export default {
 You can turn on hashed file names by setting bundler option `{ output: { entryFileNames: "[name].[hash].js" } }`. `assetFileNames` option will be same as `entryFileNames` if not explicitly set to something else so both js and css file names will be in the format set by `entryFileNames`.
 
 If A/B Doer finds entryFileNames option with a hash tag, it will clear the build directory before each build.
-
-## EJS support (removed from default config)
-
-EJS is no longer supported by default because the used ejs library is not actively maintained anymore, but you can add it easily to your config if needed.
-
-run `npm install rollup-plugin-ejs --save-dev`
-
-Update config.js:
-
-```js
-import ejs from 'rollup-plugin-ejs';
-
-export default {
-  // ...
-  bundler: {
-    plugins: [
-      // ...
-      ejs({
-        include: ['**/*.ejs'],
-      }),
-    ],
-  },
-};
-```
-
-```js
-import tpl from './template.ejs'; // ./template.html is also okay
-
-const domNode = document.createElement('div');
-
-domNode.innerHTML = tpl({ text: 'Hello World' });
-```
-
-template.ejs content:
-
-```html
-<p><%= locals.text %></p>
-```
-
-The lib exports some helpers for adding the created element to dom. Those helpers tries to make sure that there would not be duplicate elements with same data-o attribute (created from test path or can be provided in buildspec file with id property)
 
 ## Events
 
@@ -902,9 +857,9 @@ Extra onLoad event for screenshots. Will be runned after the main onLoad
 ### Example buildspec.js with screenshot options
 
 ```js
-const gobalConfig = require('../config.js');
+import gobalConfig from '../abd.config.js';
 
-module.exports = {
+export default {
   browser: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   userDataDir: './puppeteer',
   onLoad: async (page) => {

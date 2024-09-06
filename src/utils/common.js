@@ -30,6 +30,7 @@ export const debounce = (func, wait, immediate) => {
 	let timeout;
 	return function () {
 		const context = this;
+		// eslint-disable-next-line prefer-rest-params
 		const args = arguments;
 		const later = function () {
 			timeout = null;

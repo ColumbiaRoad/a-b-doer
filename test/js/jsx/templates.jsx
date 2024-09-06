@@ -1,10 +1,13 @@
+import { Fragment } from 'a-b-doer';
 import { useRef, useEffect, useState } from 'a-b-doer/hooks';
+import Toggle from './components/toggle';
+import styles from './styles.scss';
 
 export const Simple = (props) => {
 	const { id, className = 'simple', ...rest } = props;
 
 	return (
-		<div id={id} data-o={'t-temp-' + id} class={className}>
+		<div id={id} data-test={`simple-${id}`} data-o={`t-temp-${id}`} class={`${className} ${styles.simple}`}>
 			JSX Template {JSON.stringify(rest)}
 		</div>
 	);
@@ -23,8 +26,8 @@ export const RefHook = (props) => {
 	const node = useRef();
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
-			<div ref={node}></div>
+		<div id={id} data-o={`t-temp-${id}`}>
+			<div ref={node} />
 			<SubTemplate sibling={node} />
 		</div>
 	);
@@ -36,7 +39,7 @@ const HookSubTemplate = (props) => {
 		if (parent.current) {
 			parent.current.style.background = 'blue';
 		}
-	}, []);
+	}, [parent]);
 	return <div>Bar</div>;
 };
 
@@ -48,16 +51,14 @@ export const Hooks = (props) => {
 	useEffect(() => {
 		setVal(2);
 		return () => {
-			// We're running these tests with jest puppeteer so we should use something serializeable when checking
-			// if some method has been called in window scope.
 			window.effectCb = true;
 		};
 	}, []);
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
-			<div ref={node}>
-				<div id={id + 'click'} onClick={() => setVal(val + 1)}>
+		<div id={id} data-o={`t-temp-${id}`}>
+			<div ref={node} id="ref-node">
+				<div data-test="click-node" onClick={() => setVal(val + 1)}>
 					Val:{val}
 				</div>
 				<HookSubTemplate parent={node} />
@@ -74,10 +75,10 @@ export const Switch = ({ id }) => {
 	}, []);
 
 	return (
-		<div id={id} data-o={'t-temp-' + id}>
-			<div>First</div>
-			{!val ? <div>Val:{val}</div> : <p>ValP:{val}</p>}
-			<div>Last</div>
+		<div id={id} data-o={`t-temp-${id}`}>
+			<div data-test="first">First</div>
+			{!val ? <div data-test="second">Val:{val}</div> : <p data-test="second">ValP:{val}</p>}
+			<div data-test="last">Last</div>
 		</div>
 	);
 };
@@ -102,8 +103,52 @@ export const OrderApp = ({ id, children }) => {
 	return loading ? (
 		<Loading num="1" />
 	) : (
-		<div id={id} data-o={'t-temp-' + id}>
+		<div id={id} data-test={`order`}>
 			{children}
+		</div>
+	);
+};
+
+export const Toggles = ({ id }) => {
+	const [highlight, setHighlight] = useState(false);
+	const [val, setVal] = useState(0);
+
+	useEffect(() => {
+		console.log('=================');
+		setVal(1);
+	}, []);
+
+	const toggles = [
+		{
+			label: 'Highlight injections',
+			value: highlight,
+			onChange: () => {
+				setHighlight(!highlight);
+			},
+		},
+		{
+			label: 'Disable current injection',
+			value: !highlight,
+			onChange: () => {
+				setHighlight(!highlight);
+			},
+		},
+	];
+
+	return (
+		<div id={id} data-val={val}>
+			<div data-test="toggles">
+				{toggles.map((tgl, index) => (
+					<Toggle key={`toggle${index}`} {...tgl} />
+				))}
+			</div>
+			<div data-test="toggles-fragment">
+				{toggles.map((tgl, index) => (
+					<Fragment key={`toggle${index}`}>
+						<Toggle {...tgl} />
+					</Fragment>
+				))}
+			</div>
 		</div>
 	);
 };

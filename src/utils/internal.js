@@ -3,7 +3,7 @@ export const domAppend = (parent, child) => {
 	parent.append(child);
 };
 
-const getParent = (node) => node?.parentElement;
+export const getParent = (node) => node?.parentElement;
 
 export const domInsertBefore = (child, target) => {
 	const parent = getParent(target);
@@ -26,54 +26,122 @@ export const isString = (str) => typeof str === 'string';
 
 export const isArray = (arr) => Array.isArray(arr);
 
+export const isObject = (obj) => obj && typeof obj === 'object';
+
 export const createDocumentFragment = () => document.createDocumentFragment();
 
-// Internal object for storing details of current output/etc
+export const isDomFragment = (node) => node && node.nodeType === 11;
+
 /**
- * @prop {boolean} j Internal jsx support flag
- * @prop {boolean} c Internal class component support flag
- * @prop {boolean} h Internal hooks support flag
- * @prop {boolean} n Internal namespace tag/attribute support flag
- * @prop {boolean} x Internal class as className props support flag
+ * @param {VNode} vnode
+ * @param {boolean} recursive
+ * @returns {Element|null}
  */
-export const config = {
-	c: true, // Classes. Helps terser to detect if class component support should be bundled
-	h: false, // Hooks. Helps terser to detect if hook related code should be bundled
-	j: false, // JSX. Helps terser to detect if jsx support should be bundled
-	n: true, // Namespaces. Helps terser to detect if namespace tag/attribute support should be bundled.
+export const getVNodeDom = (vnode, recursive) =>
+	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
+
+/**
+ * Helper function to get first rendered DOM node. Is used by components that has a fragment as root
+ * @param {VNode} vnode
+ * @returns {Element|null}
+ */
+export const getVNodeFirstRenderedDom = (vnode) => {
+	if (!vnode) return null;
+	if (vnode.__dom) return vnode.__dom;
+	if (vnode.__result) return getVNodeDom(vnode.__result);
+	if (vnode.__children) {
+		for (const child of vnode.__children) {
+			const dom = getVNodeDom(child);
+			if (dom && dom.nodeType < 4) {
+				return dom;
+			}
+		}
+	}
+	return null;
 };
 
-// Internal object for storing details of currently rendered component's hooks
-export const hooks = {
-	c: 0,
-	h: [],
-	v: null,
+// Internal object for storing details of current output/etc
+// This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
+/**
+ * @prop {boolean} jsx Internal jsx support flag
+ * @prop {boolean} classComponent Internal class component support flag
+ * @prop {boolean} hooks Internal hooks support flag
+ * @prop {boolean} namespace Internal namespace tag/attribute support flag
+ * @prop {boolean} className Internal class as className props support flag
+ * @prop {boolean} extendedVnode Internal extended VNode type support (DOM element & HTML string)
+ */
+export const config = {};
+
+/**
+ * Internal object for storing details of currently rendered component's hooks.
+ * Hook pointer properties:
+ * @prop {boolean} __current Currently processed hook index
+ * @prop {boolean} __hooks Array pointer to current VNode's hooks
+ * @prop {boolean} __vnode Current VNode
+ */
+export const hookPointer = {
+	__current: 0,
+	__hooks: [],
+	__vnode: null,
 };
 
 export const isSame = (iter, iter2) => {
 	if (iter === iter2) return true;
-	if (iter && typeof iter === 'object') {
+	if ((!iter && iter2) || (iter && !iter2)) return false;
+	if (isObject(iter) && isObject(iter2)) {
 		let same = true;
-		for (const key of Object.keys(iter)) {
-			if (iter[key] !== iter2?.[key]) {
-				same = key === 'props' ? isSame(iter[key], iter2?.[key]) : false;
+		const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
+		for (const key of keys) {
+			if (key === 'children') continue;
+			if (key[0] !== key && iter[key] !== iter2[key]) {
+				same = isObject(iter[key]) ? isSame(iter[key], iter2[key]) : false;
 				break;
 			}
 		}
 		return same;
-	} else {
-		return false;
 	}
+	return false;
 };
 
 export const onNextTick = (callback) => {
-	setTimeout(callback, 0);
+	setTimeout(callback);
 };
 
 export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
 		props,
-		key: props.key || props['data-o'] || process.env.TEST_ID,
+		key: props.key,
 	};
+};
+
+let NAMESPACES;
+
+export const initNs = () => {
+	if (!NAMESPACES) {
+		NAMESPACES = {
+			svg: '2000/svg',
+			xlink: '1999/xlink',
+			xmlns: '2000/xmlns/',
+		};
+	}
+};
+
+export const getNs = (key) => {
+	if (!config.jsx || !config.namespace) return null;
+	const ns = NAMESPACES[key];
+	if (!ns) return null;
+	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
+};
+
+export const addNs = (ns, url) => {
+	NAMESPACES = NAMESPACES || {};
+	NAMESPACES[ns] = url;
+};
+
+export const options = {
+	// eslint-disable-next-line no-unused-vars
+	vnode: (vnode) => {},
+	// eslint-disable-next-line no-unused-vars
+	unmount: (vnode) => {},
 };

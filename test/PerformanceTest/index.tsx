@@ -58,6 +58,8 @@ const TestComponent = () => {
 pollQuerySelector('#app', (target) => {
 	init();
 	console.time();
-	render(<TestComponent />, target);
+	const a = <TestComponent />;
+	render(a, target);
+	// console.log(a);
 	console.timeEnd();
 });
