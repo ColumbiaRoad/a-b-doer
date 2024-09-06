@@ -458,7 +458,7 @@ async function openPage(config, singlePage) {
 
 			if (enableHistoryChanges && !config.activationEvent) {
 				await page.evaluate(
-					(bundle, TEST_ID) => {
+					(bundle, TEST_ID, entryFile) => {
 						function _appendVariantScripts() {
 							setTimeout(() => {
 								if (
@@ -470,7 +470,6 @@ async function openPage(config, singlePage) {
 								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 								const node = document.createElement('script');
 								node.dataset.id = TEST_ID;
-								const entryFile = window.abPreview.config.assetBundle.entryFile;
 								node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 								document.head.appendChild(node);
 							}, 10);
@@ -499,7 +498,8 @@ async function openPage(config, singlePage) {
 						});
 					},
 					assetBundle.bundle,
-					process.env.TEST_ID
+					process.env.TEST_ID,
+					assetBundle.entryFile
 				);
 			}
 
@@ -510,13 +510,12 @@ async function openPage(config, singlePage) {
 
 			if (config.activationEvent) {
 				await page.evaluate(
-					(bundle, activationEvent, pageTags, TEST_ID) => {
+					(bundle, activationEvent, pageTags, TEST_ID, entryFile) => {
 						function _appendVariantScripts() {
 							console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
 							document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 							const node = document.createElement('script');
 							node.dataset.id = TEST_ID;
-							const entryFile = window.abPreview.config.assetBundle.entryFile;
 							node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 							node.type = 'module';
 							document.head.appendChild(node);
@@ -550,7 +549,8 @@ async function openPage(config, singlePage) {
 					assetBundle.bundle,
 					config.activationEvent,
 					pageTags,
-					process.env.TEST_ID
+					process.env.TEST_ID,
+					assetBundle.entryFile
 				);
 			} else {
 				try {
