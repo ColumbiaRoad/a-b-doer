@@ -1173,7 +1173,7 @@ function getBundlerConfigs(buildSpecConfig) {
 		css: {
 			modules: modules && {
 				generateScopedName: (name, file, css) => {
-					const hash = stringHash(unifyPath(file + css))
+					const hash = (watch ? stringHash(unifyPath(file)) : stringHash(unifyPath(file + css)))
 						.toString(36)
 						.substring(0, 5);
 					if (minify) {
