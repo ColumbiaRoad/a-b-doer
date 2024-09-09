@@ -899,41 +899,6 @@ function cssModules() {
 	};
 }
 
-/**
- * Plugin that enables HMR for all style modules
- */
-function cssModulesServe() {
-	let config;
-
-	const isModule = (id) =>
-		(isCSSRequest(id) || isCSSModuleRequest(id)) &&
-		(config?.abConfig?.modules || (typeof config?.abConfig?.modules === 'function' && config.abConfig.modules(id)));
-
-	return {
-		enforce: 'post',
-		name: 'a-b-doer:css-modules-server',
-		configResolved(_config) {
-			config = _config;
-		},
-		apply: 'serve',
-		transform(src, id) {
-			if (isModule(id)) {
-				return {
-					code: `${src}\nimport.meta.hot.accept()`,
-				};
-			}
-		},
-		handleHotUpdate(context) {
-			const { modules } = context;
-			modules.forEach((module) => {
-				if (isModule(module.id)) {
-					module.isSelfAccepting = true;
-				}
-			});
-		},
-	};
-}
-
 /** @returns {import('vite').Plugin} */
 function customJsxPrefreshPlugin(options = {}) {
 	const __filename = new URL$1('', import.meta.url).pathname;
@@ -1266,7 +1231,7 @@ function getBundlerConfigs(buildSpecConfig) {
 			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
 			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
 			createModifiablePlugin(cssInjectPlugin, { name: 'a-b-doer:css-inject-plugin' }),
-			createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
+			// createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
 			createModifiablePlugin(replace, {
 				name: 'replace',
 				preventAssignment: true,
