@@ -437,6 +437,8 @@ async function openPage(config, singlePage) {
 				window.__testUrls = urls;
 			}, urls);
 
+			config.disabled = disabled;
+
 			if (!isTest) {
 				await page.evaluate(
 					(TEST_ID, testPath, config) => {
@@ -453,12 +455,14 @@ async function openPage(config, singlePage) {
 			}
 
 			if (disabled) {
+				await page.addScriptTag({ content: assetBundle.toolbarBundle, type: 'module' });
 				return;
 			}
 
 			if (enableHistoryChanges && !config.activationEvent) {
 				await page.evaluate(
-					(bundle, TEST_ID, entryFile) => {
+					(assetBundle, TEST_ID) => {
+						const { bundle, entryFile } = assetBundle;
 						function _appendVariantScripts() {
 							setTimeout(() => {
 								if (
@@ -497,9 +501,8 @@ async function openPage(config, singlePage) {
 							_appendVariantScripts();
 						});
 					},
-					assetBundle.bundle,
-					process.env.TEST_ID,
-					assetBundle.entryFile
+					assetBundle,
+					process.env.TEST_ID
 				);
 			}
 
@@ -510,7 +513,8 @@ async function openPage(config, singlePage) {
 
 			if (config.activationEvent) {
 				await page.evaluate(
-					(bundle, activationEvent, pageTags, TEST_ID, entryFile) => {
+					(assetBundle, activationEvent, pageTags, TEST_ID) => {
+						const { bundle, entryFile } = assetBundle;
 						function _appendVariantScripts() {
 							console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
 							document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
@@ -546,11 +550,10 @@ async function openPage(config, singlePage) {
 
 						_alterDataLayer(window.dataLayer);
 					},
-					assetBundle.bundle,
+					assetBundle,
 					config.activationEvent,
 					pageTags,
-					process.env.TEST_ID,
-					assetBundle.entryFile
+					process.env.TEST_ID
 				);
 			} else {
 				try {
@@ -1432,10 +1435,9 @@ async function bundler(buildSpecConfig) {
 			console.log('');
 		}
 
-		let moduleScripts = [
-			`https://localhost:${port}/@vite/client`,
-			`https://localhost:${port}${entryFile.replace(cwd, '')}`,
-		];
+		const entryScript = `https://localhost:${port}${entryFile.replace(cwd, '')}`;
+
+		let moduleScripts = [`https://localhost:${port}/@vite/client`, entryScript];
 
 		if (testConfig.toolbar) {
 			moduleScripts.push(
@@ -1446,16 +1448,19 @@ async function bundler(buildSpecConfig) {
 		// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
 		moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\', '/').replaceAll(/(?<!:)\/\/+/g, '/'));
 
-		const injection = `!(() => { \ndocument.head.append(${moduleScripts
+		const makeInjection = (moduleScripts) => `!(() => { \ndocument.head.append(${moduleScripts
 			.map((script) => `Object.assign(document.createElement('script'), { type: 'module', src: '${script}', })`)
 			.join(', ')}); \n})();
 		`;
 
 		assetBundle = {
 			js: true,
-			bundle: injection,
 			// Expose entry file for page events so it can be used when inserting
 			entryFile: entryFile.replace(process.cwd(), ''),
+			bundle: makeInjection(moduleScripts),
+			toolbarBundle: testConfig.toolbar
+				? makeInjection(moduleScripts.filter((script) => script !== entryScript))
+				: undefined,
 		};
 
 		try {
