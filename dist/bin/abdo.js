@@ -1176,7 +1176,7 @@ function getBundlerConfigs(buildSpecConfig) {
 					const hash = (watch ? stringHash(unifyPath(file)) : stringHash(unifyPath(file + css)))
 						.toString(36)
 						.substring(0, 5);
-					if (minify) {
+					if (minify && !watch) {
 						return `t${hash}-${name}`;
 					}
 					const folder = path.basename(path.dirname(file));
