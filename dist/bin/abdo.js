@@ -784,7 +784,7 @@ function preactDebug() {
 		},
 		async resolveId(source, importer, options) {
 			const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
-			if (!resolution.id) return;
+			if (!resolution?.id) return;
 			const id = resolution.id.split('?').at(0);
 			if (!entry && config?.abConfig?.entryFile === id) {
 				entry = id;
