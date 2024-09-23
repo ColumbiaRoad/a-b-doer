@@ -437,6 +437,8 @@ async function openPage(config, singlePage) {
 				window.__testUrls = urls;
 			}, urls);
 
+			config.disabled = disabled;
+
 			if (!isTest) {
 				await page.evaluate(
 					(TEST_ID, testPath, config) => {
@@ -453,13 +455,14 @@ async function openPage(config, singlePage) {
 			}
 
 			if (disabled) {
+				await page.addScriptTag({ content: assetBundle.toolbarBundle, type: 'module' });
 				return;
 			}
 
-			// Always listen the history state api
-			if (enableHistoryChanges) {
+			if (enableHistoryChanges && !config.activationEvent) {
 				await page.evaluate(
-					(bundle, TEST_ID) => {
+					(assetBundle, TEST_ID) => {
+						const { bundle, entryFile } = assetBundle;
 						function _appendVariantScripts() {
 							setTimeout(() => {
 								if (
@@ -471,7 +474,7 @@ async function openPage(config, singlePage) {
 								document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 								const node = document.createElement('script');
 								node.dataset.id = TEST_ID;
-								node.innerHTML = bundle;
+								node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 								document.head.appendChild(node);
 							}, 10);
 						}
@@ -498,7 +501,7 @@ async function openPage(config, singlePage) {
 							_appendVariantScripts();
 						});
 					},
-					assetBundle.bundle,
+					assetBundle,
 					process.env.TEST_ID
 				);
 			}
@@ -510,13 +513,14 @@ async function openPage(config, singlePage) {
 
 			if (config.activationEvent) {
 				await page.evaluate(
-					(bundle, activationEvent, pageTags, TEST_ID) => {
+					(assetBundle, activationEvent, pageTags, TEST_ID) => {
+						const { bundle, entryFile } = assetBundle;
 						function _appendVariantScripts() {
 							console.log('\x1b[92m%s\x1b[0m', 'AB test loaded.\nInserted following assets:', pageTags.join(', '));
 							document.head.querySelectorAll(`[data-id="${TEST_ID}"]`).forEach((node) => node.remove());
 							const node = document.createElement('script');
 							node.dataset.id = TEST_ID;
-							node.innerHTML = bundle;
+							node.innerHTML = bundle.replace(entryFile, `${entryFile}?t=${Date.now()}`); // Force module reload with cache buster
 							node.type = 'module';
 							document.head.appendChild(node);
 						}
@@ -546,7 +550,7 @@ async function openPage(config, singlePage) {
 
 						_alterDataLayer(window.dataLayer);
 					},
-					assetBundle.bundle,
+					assetBundle,
 					config.activationEvent,
 					pageTags,
 					process.env.TEST_ID
@@ -595,10 +599,16 @@ async function openPage(config, singlePage) {
 	// Push the changed url to the list of watched urls.
 	if (!isOneOfBuildspecUrls(urlAfterLoad, urls)) {
 		urls.push(urlAfterLoad);
-		// Update the test urls array in window for history statechange event.
-		await page.evaluate((urls) => {
-			window.__testUrls = urls;
-		}, urls);
+		try {
+			// Update the test urls array in window for history statechange event.
+			await page.evaluate((urls) => {
+				window.__testUrls = urls;
+			}, urls);
+		} catch (e) {
+			if (!e.message.includes('most likely because of a navigation')) {
+				console.log('ERR:', e);
+			}
+		}
 	}
 
 	return page;
@@ -772,8 +782,11 @@ function preactDebug() {
 		configResolved(resolvedConfig) {
 			config = resolvedConfig;
 		},
-		resolveId(id, importer) {
-			if (!importer && !entry) {
+		async resolveId(source, importer, options) {
+			const resolution = await this.resolve(source, importer, { skipSelf: true, ...options });
+			if (!resolution?.id) return;
+			const id = resolution.id.split('?').at(0);
+			if (!entry && config?.abConfig?.entryFile === id) {
 				entry = id;
 			}
 		},
@@ -885,41 +898,6 @@ function cssModules() {
 					)}module.${ext}`;
 				}
 			}
-		},
-	};
-}
-
-/**
- * Plugin that enables HMR for all style modules
- */
-function cssModulesServe() {
-	let config;
-
-	const isModule = (id) =>
-		(isCSSRequest(id) || isCSSModuleRequest(id)) &&
-		(config?.abConfig?.modules || (typeof config?.abConfig?.modules === 'function' && config.abConfig.modules(id)));
-
-	return {
-		enforce: 'post',
-		name: 'a-b-doer:css-modules-server',
-		configResolved(_config) {
-			config = _config;
-		},
-		apply: 'serve',
-		transform(src, id) {
-			if (isModule(id)) {
-				return {
-					code: `${src}\nimport.meta.hot.accept()`,
-				};
-			}
-		},
-		handleHotUpdate(context) {
-			const { modules } = context;
-			modules.forEach((module) => {
-				if (isModule(module.id)) {
-					module.isSelfAccepting = true;
-				}
-			});
 		},
 	};
 }
@@ -1198,10 +1176,10 @@ function getBundlerConfigs(buildSpecConfig) {
 		css: {
 			modules: modules && {
 				generateScopedName: (name, file, css) => {
-					const hash = stringHash(unifyPath(file + css))
+					const hash = (watch ? stringHash(unifyPath(file)) : stringHash(unifyPath(file + css)))
 						.toString(36)
 						.substring(0, 5);
-					if (minify) {
+					if (minify && !watch) {
 						return `t${hash}-${name}`;
 					}
 					const folder = path.basename(path.dirname(file));
@@ -1256,7 +1234,7 @@ function getBundlerConfigs(buildSpecConfig) {
 			!TEST_ENV && createModifiablePlugin(preactDebug, { name: 'a-b-doer:preact-debug' }),
 			createModifiablePlugin(cssModules, { name: 'a-b-doer:css-modules' }),
 			createModifiablePlugin(cssInjectPlugin, { name: 'a-b-doer:css-inject-plugin' }),
-			createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
+			// createModifiablePlugin(cssModulesServe, { name: 'a-b-doer:css-modules-serve' }),
 			createModifiablePlugin(replace, {
 				name: 'replace',
 				preventAssignment: true,
@@ -1396,6 +1374,7 @@ async function bundler(buildSpecConfig) {
 				watch: {
 					ignored: [path.join(testConfig.buildDir, '**')],
 				},
+				origin: `https://localhost:${port}`,
 				...serverConfig,
 			},
 			...bundlerConfig,
@@ -1425,10 +1404,9 @@ async function bundler(buildSpecConfig) {
 			console.log('');
 		}
 
-		let moduleScripts = [
-			`https://localhost:${port}/@vite/client`,
-			`https://localhost:${port}${entryFile.replace(cwd, '')}`,
-		];
+		const entryScript = `https://localhost:${port}${entryFile.replace(cwd, '')}`;
+
+		let moduleScripts = [`https://localhost:${port}/@vite/client`, entryScript];
 
 		if (testConfig.toolbar) {
 			moduleScripts.push(
@@ -1439,12 +1417,20 @@ async function bundler(buildSpecConfig) {
 		// turns '\\' -> '/' and '//' -> '/' but not '://' into '/'
 		moduleScripts = moduleScripts.map((scriptUrl) => scriptUrl.replaceAll('\\', '/').replaceAll(/(?<!:)\/\/+/g, '/'));
 
-		const injection = `!(() => { \ndocument.head.append(${moduleScripts
+		const makeInjection = (moduleScripts) => `!(() => { \ndocument.head.append(${moduleScripts
 			.map((script) => `Object.assign(document.createElement('script'), { type: 'module', src: '${script}', })`)
 			.join(', ')}); \n})();
 		`;
 
-		assetBundle = { js: true, bundle: injection };
+		assetBundle = {
+			js: true,
+			// Expose entry file for page events so it can be used when inserting
+			entryFile: entryFile.replace(process.cwd(), ''),
+			bundle: makeInjection(moduleScripts),
+			toolbarBundle: testConfig.toolbar
+				? makeInjection(moduleScripts.filter((script) => script !== entryScript))
+				: undefined,
+		};
 
 		try {
 			await openPage({ ...testConfig, assetBundle, bundlerConfig }, true);

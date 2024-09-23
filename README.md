@@ -1,4 +1,4 @@
-![A/B doer](https://github.com/ColumbiaRoad/a-b-doer/blob/master/ab-doer.png?raw=true)
+![A/B doer](https://raw.githubusercontent.com/ColumbiaRoad/a-b-doer/main/ab-doer.png)
 
 Utility library which makes developing of A/B test variants easier (maybe) and you don't have to use any online editors to create those variants. The lib supports JSX templates with custom JSX parser. Output size is tried to be minimal, e.g. following test is just 5.1kb when minified, and 4.1kb without class component, namespace, class + className prop, extended types support (see option `features`):
 
