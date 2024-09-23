@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [5.0.1](https://github.com/ColumbiaRoad/a-b-doer/compare/v5.0.0...v5.0.1) (2024-09-23)
 
+Misc smaller bug fixes
+
 ## [5.0.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v4.1.0...v5.0.0) (2024-09-06)
 
 ### ⚠ BREAKING CHANGES
