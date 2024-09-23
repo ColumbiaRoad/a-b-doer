@@ -1374,6 +1374,7 @@ async function bundler(buildSpecConfig) {
 				watch: {
 					ignored: [path.join(testConfig.buildDir, '**')],
 				},
+				origin: `https://localhost:${port}`,
 				...serverConfig,
 			},
 			...bundlerConfig,
