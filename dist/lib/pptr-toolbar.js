@@ -48,7 +48,7 @@
 	    const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
 	    for (const key of keys) {
 	      if (key === "children") continue;
-	      if (key[0] !== key && iter[key] !== iter2[key]) {
+	      if (iter[key] !== iter2[key]) {
 	        same = isObject(iter[key]) ? isSame(iter[key], iter2[key]) : false;
 	        break;
 	      }
@@ -117,26 +117,26 @@
 	    let ref = vnode;
 	    let newVNode;
 	    if (config.classComponent && tag.prototype && tag.prototype.render) {
-	      let comp = vnode.__class;
-	      const cb = [];
-	      if (!comp) {
-	        vnode.__class = comp = new tag(props);
-	        comp.__vnode = vnode;
-	        if (comp.componentDidMount) {
-	          cb.push(() => comp.componentDidMount());
+	      let componentInstance = vnode.__class;
+	      const lifeCycleCallbacks = [];
+	      if (!componentInstance) {
+	        vnode.__class = componentInstance = new tag(props);
+	        componentInstance.__vnode = vnode;
+	        if (componentInstance.componentDidMount) {
+	          lifeCycleCallbacks.push(() => componentInstance.componentDidMount());
 	        }
 	      } else {
 	        vnode.__class.props = props;
-	        if (comp.componentDidUpdate) {
+	        if (componentInstance.componentDidUpdate) {
 	          const oldState = vnode.__class.__state;
-	          cb.push(() => comp.componentDidUpdate(oldProps, oldState));
+	          lifeCycleCallbacks.push(() => componentInstance.componentDidUpdate(oldProps, oldState));
 	        }
 	      }
-	      newVNode = comp.render();
+	      newVNode = componentInstance.render();
 	      if (!isVNode(newVNode)) {
 	        return newVNode;
 	      }
-	      cb.forEach((c) => onNextTick(c()));
+	      lifeCycleCallbacks.forEach((c) => onNextTick(c()));
 	    } else {
 	      vnode.__hooks = vnode.__hooks || [];
 	      hookPointer.__hooks = vnode.__hooks;
