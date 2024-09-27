@@ -339,7 +339,23 @@ let browser, context;
 let aboutpage = null;
 let disabled = false;
 
-const wasInitialMap = {};
+const pageInitiaLoadUrls = new WeakMap();
+const pageUrlHasBeenLoaded = {
+	get(page, url) {
+		if (!pageInitiaLoadUrls.has(page)) {
+			pageInitiaLoadUrls.set(page, {});
+		}
+		const map = pageInitiaLoadUrls.get(page);
+		return map[url] || false;
+	},
+	set(page, url, value) {
+		if (!pageInitiaLoadUrls.has(page)) {
+			pageInitiaLoadUrls.set(page, {});
+		}
+		const map = pageInitiaLoadUrls.get(page);
+		map[url] = value;
+	},
+};
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -359,7 +375,7 @@ async function openPage(config, singlePage) {
 	const urlObject = new URL(url);
 	const urlKey = urlObject.origin + urlObject.pathname;
 
-	const wasInitial = !wasInitialMap[urlKey];
+	const wasInitial = !pageUrlHasBeenLoaded.get(page, urlKey);
 
 	if (onBefore) {
 		await onBefore(page);
@@ -431,8 +447,8 @@ async function openPage(config, singlePage) {
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
-		const wasInitial = !wasInitialMap[urlKey];
-		wasInitialMap[urlKey] = true;
+		const wasInitial = !pageUrlHasBeenLoaded.get(page, urlKey);
+		pageUrlHasBeenLoaded.set(page, urlKey, true);
 
 		try {
 			await page.evaluate((urls) => {
