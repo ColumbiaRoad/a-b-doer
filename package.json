@@ -15,7 +15,8 @@
     "test:js": "vitest -c ./test/js/vitest.config.js test/js",
     "test:styles": "vitest -c ./test/styles/vitest.config.js  test/styles",
     "test:config": "vitest -c ./test/config/vitest.config.js test/config",
-    "release": "standard-version"
+    "release": "standard-version",
+    "pre-release": "standard-version --prerelease --skip.tag --skip.changelog"
   },
   "author": "Timo Partti <timo.partti@columbiaroad.com>",
   "license": "MIT",
