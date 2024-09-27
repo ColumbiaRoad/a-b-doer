@@ -3,6 +3,7 @@ import { append } from 'a-b-doer';
 
 const container = document.createElement('div');
 container.id = 'pptr-toolbar';
+container.style.all = 'unset';
 const shadow = container.attachShadow({ mode: 'open' });
 const styles = document.getElementById('pptr-toolbar-styles');
 shadow.appendChild(styles);
