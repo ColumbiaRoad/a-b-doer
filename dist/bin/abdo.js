@@ -360,7 +360,6 @@ async function openPage(config, singlePage) {
 	const urlKey = urlObject.origin + urlObject.pathname;
 
 	const wasInitial = !wasInitialMap[urlKey];
-	wasInitialMap[urlKey] = true;
 
 	if (onBefore) {
 		await onBefore(page);
@@ -432,6 +431,9 @@ async function openPage(config, singlePage) {
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
+		const wasInitial = !wasInitialMap[urlKey];
+		wasInitialMap[urlKey] = true;
+
 		try {
 			await page.evaluate((urls) => {
 				window.__testUrls = urls;
