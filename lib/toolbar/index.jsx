@@ -1,5 +1,5 @@
-import { unmount, Fragment } from 'a-b-doer';
-import { useState, useRef } from 'a-b-doer/hooks';
+import { Fragment } from 'a-b-doer';
+import { useState, useRef, useEffect } from 'a-b-doer/hooks';
 import styles from './styles.scss';
 import Toggle from './toggle';
 
@@ -8,10 +8,19 @@ const logo =
 
 const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 	const [open, setOpen] = useState(false);
+	const [visible, setVisible] = useState(true);
 	const [highlight, setHighlight] = useState(false);
 	const [disabled, setDisable] = useState(config.disabled);
 	const [fullscreen, setFullscreen] = useState(true);
 	const ref = useRef();
+
+	useEffect(() => {
+		window.addEventListener('keyup', (evt) => {
+			if (!visible && evt.key === 'Escape') {
+				setVisible(true);
+			}
+		});
+	}, [visible]);
 
 	const toggles = [
 		{
@@ -38,7 +47,12 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 	];
 
 	return (
-		<div id="a-b-toolbar" class={`${styles.toolbar} ${open ? styles.open : styles.closed}`} ref={ref}>
+		<div
+			id="a-b-toolbar"
+			class={`${styles.toolbar} ${open ? styles.open : styles.closed}`}
+			ref={ref}
+			style={{ display: visible ? 'block' : 'none' }}
+		>
 			<img src={logo} />
 			{toggles.map((tgl, index) => (
 				<Fragment key={`toggle${index}`}>
@@ -49,8 +63,55 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 			<div>
 				In preview: <small>{testPath}</small>
 			</div>
-			<button class={styles.previewButton} onClick={() => window.takeScreenshot(fullscreen)}>
+			<button
+				class={styles.previewButton}
+				onClick={() => {
+					setVisible(false);
+					window.takeScreenshot(fullscreen);
+					setTimeout(() => {
+						setVisible(true);
+					}, 2000);
+				}}
+			>
 				Take screenshot
+			</button>
+			<button
+				class={styles.previewButton}
+				onClick={async () => {
+					setVisible(false);
+					const imageStr = await window.takeScreenshot(fullscreen, true);
+					const imageBase64 = `data:image/png;base64,${imageStr}`;
+
+					const image = new Image();
+					image.style.display = 'none';
+
+					image.addEventListener('load', () => {
+						const canvas = document.createElement('canvas');
+						const ctx = canvas.getContext('2d');
+						canvas.width = image.naturalWidth;
+						canvas.height = image.naturalHeight;
+						ctx.drawImage(image, 0, 0);
+
+						canvas.toBlob(async (blob) => {
+							setVisible(true);
+
+							if (!blob) {
+								console.log('Failed to add the screenshot to clipboard.');
+								return;
+							}
+							await navigator.clipboard.write([
+								new ClipboardItem({
+									[blob.type]: blob,
+								}),
+							]);
+						});
+						console.log('Screenshot copied to clipboard.');
+					});
+
+					image.src = imageBase64;
+				}}
+			>
+				Take screenshot (clipboard)
 			</button>
 			<div>
 				<small>
@@ -89,11 +150,13 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 			<a
 				onClick={() => {
 					hideInjectionBorders();
-					unmount(ref.current);
+					setHighlight(false);
+					setVisible(false);
 				}}
 			>
 				Remove toolbar DOM
 			</a>
+			<div style={{ fontSize: '12px !important', padding: '5px 10px' }}>(Press esc to display it again)</div>
 			<button class={styles.toggle} onClick={() => setOpen(!open)} title="Toggle A/B test toolbar" />
 		</div>
 	);

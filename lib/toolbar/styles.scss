@@ -31,9 +31,8 @@
 		}
 	}
 
-
 	&.closed {
-		transform: translateX(-100%);
+		transform: translateX(calc(-100% - 15px));
 	}
 	&.open {
 		transform: translateX(0);
@@ -92,7 +91,7 @@
 		margin: 0 !important;
 		padding: 0 !important;
 		transition: all 0.3s ease-in-out;
-		transform: translate(-26px, 26px);
+		transform: translate(-11px, 26px);
 		cursor: pointer;
 
 		&::before,
@@ -113,8 +112,11 @@
 		}
 	}
 
-	&.open .toggle,
 	.toggle:hover {
+		transform: translate(15px, 0);
+	}
+
+	&.open .toggle {
 		transform: translate(0, 0);
 	}
 
