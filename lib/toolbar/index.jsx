@@ -76,6 +76,7 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 					await window.takeScreenshot(fullscreen);
 					setVisible(true);
 					setScreenshotLoading(false);
+					console.log(`Screenshot created to project build folder "${testPath}"`);
 				}}
 			>
 				Take screenshot
@@ -104,18 +105,25 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 							setVisible(true);
 
 							if (!blob) {
-								console.log('Failed to add the screenshot to clipboard.');
+								console.log('Failed to create the screenshot.');
+								setScreenshotCbLoading(false);
 								return;
 							}
-							await navigator.clipboard.write([
-								new ClipboardItem({
-									[blob.type]: blob,
-								}),
-							]);
+
+							try {
+								await navigator.clipboard.write([
+									new ClipboardItem({
+										[blob.type]: blob,
+									}),
+								]);
+								console.log('Screenshot copied to clipboard.');
+							} catch (error) {
+								console.log('Failed to add the screenshot to clipboard.');
+								console.error(error);
+							}
 
 							setScreenshotCbLoading(false);
 						});
-						console.log('Screenshot copied to clipboard.');
 					});
 
 					image.src = imageBase64;

@@ -609,6 +609,7 @@
 	              await window.takeScreenshot(fullscreen);
 	              setVisible(true);
 	              setScreenshotLoading(false);
+	              console.log("Screenshot create to project build folder", testPath);
 	            },
 	            children: "Take screenshot"
 	          }
@@ -634,17 +635,23 @@
 	                canvas.toBlob(async (blob) => {
 	                  setVisible(true);
 	                  if (!blob) {
-	                    console.log("Failed to add the screenshot to clipboard.");
+	                    console.log("Failed to create the screenshot.");
+	                    setScreenshotCbLoading(false);
 	                    return;
 	                  }
-	                  await navigator.clipboard.write([
-	                    new ClipboardItem({
-	                      [blob.type]: blob
-	                    })
-	                  ]);
+	                  try {
+	                    await navigator.clipboard.write([
+	                      new ClipboardItem({
+	                        [blob.type]: blob
+	                      })
+	                    ]);
+	                    console.log("Screenshot copied to clipboard.");
+	                  } catch (error) {
+	                    console.log("Failed to add the screenshot to clipboard.");
+	                    console.error(error);
+	                  }
 	                  setScreenshotCbLoading(false);
 	                });
-	                console.log("Screenshot copied to clipboard.");
 	              });
 	              image.src = imageBase64;
 	            },
