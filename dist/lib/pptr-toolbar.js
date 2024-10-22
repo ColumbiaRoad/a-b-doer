@@ -525,7 +525,6 @@
 	var modules_ed59282c$1 = {"button":"styles_button__32337c40","loading":"styles_loading__32337c40","compact":"styles_compact__32337c40"};
 	n(css$1,{"container":"body","singleTag":true,"prepend":true,"attributes":{"id":"pptr-toolbar-styles"}});
 
-	console.log(modules_ed59282c$1);
 	const Button = (props) => {
 	  const { loading, children, compact, ...restProps } = props;
 	  return /* @__PURE__ */ jsx(

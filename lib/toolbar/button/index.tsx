@@ -3,8 +3,6 @@ import styles from './styles.scss';
 
 type Props = HTMLButtonElement & { loading?: boolean; compact?: boolean };
 
-console.log(styles);
-
 const Button = (props: Props) => {
 	const { loading, children, compact, ...restProps } = props;
 	return (
