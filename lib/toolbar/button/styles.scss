@@ -1,0 +1,30 @@
+.button {
+	display: block;
+	width: 100%;
+	background: #767676;
+	color: #fff;
+	margin: 10px 0 !important;
+	padding: 10px 15px !important;
+	border: 0 !important;
+	border-radius: 4px;
+	transition: all 0.3s ease-in-out;
+	position: relative;
+
+	&:hover {
+		background: #5b5b5b;
+	}
+
+	:global(.pptr-toolbar-spinner) {
+		position: absolute;
+		left: 2px;
+		top: 2px;
+	}
+}
+
+.loading {
+	margin: 10px auto !important;
+	width: 34px;
+	height: 34px;
+	padding: 0 !important;
+	border-radius: 17px;
+}

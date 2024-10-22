@@ -64,20 +64,6 @@
 		display: block;
 	}
 
-	.previewButton {
-		display: block;
-		width: 100%;
-		background: #767676;
-		color: #fff;
-		margin: 10px 0 !important;
-		padding: 10px 15px !important;
-		border: 0 !important;
-		border-radius: 4px;
-
-		&:hover {
-			background: #5b5b5b;
-		}
-	}
 	.toggle {
 		position: absolute;
 		right: -40px;
