@@ -3,9 +3,9 @@
 	width: 100%;
 	background: #767676;
 	color: #fff;
-	margin: 10px 0 !important;
-	padding: 10px 15px !important;
-	border: 0 !important;
+	margin: 10px 0;
+	padding: 10px 15px;
+	border: 0;
 	border-radius: 4px;
 	transition: all 0.3s ease-in-out;
 	position: relative;
@@ -22,9 +22,13 @@
 }
 
 .loading {
-	margin: 10px auto !important;
+	margin: 10px auto;
 	width: 34px;
 	height: 34px;
-	padding: 0 !important;
+	padding: 0;
 	border-radius: 17px;
+}
+
+.compact {
+	padding: 5px 15px;
 }

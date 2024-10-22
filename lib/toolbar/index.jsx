@@ -143,8 +143,7 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 				</small>
 			</div>
 			<hr />
-			<button
-				class={styles.previewButton}
+			<Button
 				onClick={() => {
 					console.log(
 						'%c A/B Doer test config\n',
@@ -154,10 +153,12 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 				}}
 			>
 				Print generated config
-			</button>
+			</Button>
 			<hr />
 			{customToolbar && <section dangerouslySetInnerHTML={{ __html: customToolbar }} />}
-			<a
+			<Button
+				compact
+				style={{ opacity: 0.7 }}
 				onClick={() => {
 					hideInjectionBorders();
 					setHighlight(false);
@@ -165,8 +166,10 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 				}}
 			>
 				Remove toolbar DOM
-			</a>
-			<div style={{ fontSize: '12px !important', padding: '5px 10px' }}>(Press esc to display it again)</div>
+			</Button>
+			<div style={{ fontSize: '12px !important', padding: '5px 0', textAlign: 'center' }}>
+				(Press esc to display it again)
+			</div>
 			<button class={styles.toggle} onClick={() => setOpen(!open)} title="Toggle A/B test toolbar" />
 		</div>
 	);
