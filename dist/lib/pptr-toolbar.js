@@ -505,7 +505,6 @@
 	  const [screenshotLoading, setScreenshotLoading] = useState(false);
 	  const [screenshotCbLoading, setScreenshotCbLoading] = useState(false);
 	  const ref = useRef();
-	  console.log(config);
 	  const validUrls = [
 	    ...new Set(
 	      (Array.isArray(config.url) ? config.url : [config.url]).map((url) => {
