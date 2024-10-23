@@ -659,7 +659,7 @@ function isOneOfBuildspecUrls(url, urls = []) {
 				return true;
 			}
 			if (typeof cur === 'string' && cur[0] === '/' && cur[cur.length - 1] === '/') {
-				const re = new RegExp(cur.substring(1, cur.length - 2));
+				const re = new RegExp(cur.substring(1, cur.length - 1));
 				return re.test(url);
 			}
 			return false;
