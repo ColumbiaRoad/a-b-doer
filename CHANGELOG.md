@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.1.0](https://github.com/ColumbiaRoad/a-b-doer/compare/v5.0.2...v5.1.0) (2024-10-23)
+
+
+### Features
+
+* show select for supported urls and add fn to update config props ([1f85404](https://github.com/ColumbiaRoad/a-b-doer/commit/1f85404ebc963abf4d171591277ed3d9d9e79096))
+
+
+### Bug Fixes
+
+* catch screenshot errors and log statuses ([d252f51](https://github.com/ColumbiaRoad/a-b-doer/commit/d252f511992d114eab37f2e3e2339772e09be27f))
+* check initial load status from the object ([3e0ca38](https://github.com/ColumbiaRoad/a-b-doer/commit/3e0ca38144b83db485c76df4a2b2530d661e9063))
+* check page initial load status using page instance to tackle multi-page issues ([b7f6155](https://github.com/ColumbiaRoad/a-b-doer/commit/b7f6155eb982a5940d90b596d1cd8cddc907127b))
+* hide toolbar when button is clicked and add support clipboard screenshots ([4d44311](https://github.com/ColumbiaRoad/a-b-doer/commit/4d44311fe9cdcd2c9f4b72f84a2184509ea6d87d))
+* remove extra console.log ([7568683](https://github.com/ColumbiaRoad/a-b-doer/commit/7568683e9e646042eb860eb3f237036f48e0316d))
+* remove unnecessary check that could cause issues with single letter props ([cafd1c0](https://github.com/ColumbiaRoad/a-b-doer/commit/cafd1c0cd78e0d87ec03d6c31f7b5a8330ea790e))
+* reset toolbar wrapper styles ([1eddd7f](https://github.com/ColumbiaRoad/a-b-doer/commit/1eddd7fc3638dec915aab0e4247161862bc9fb89))
+* show loading indicators for screenshots ([f2fa204](https://github.com/ColumbiaRoad/a-b-doer/commit/f2fa2043cbe1e8d122c82d22cdeb40ad0c6e0c21))
+* tweak ui ([5e199ea](https://github.com/ColumbiaRoad/a-b-doer/commit/5e199ea5d2aa9e17325021b935d4b9fd3ebc2d7e))
+* use correct length of string in url regex ([370e522](https://github.com/ColumbiaRoad/a-b-doer/commit/370e5228ee0e237ef994968c970d34032370ee5d))
+
 ### [5.0.2](https://github.com/ColumbiaRoad/a-b-doer/compare/v5.0.1...v5.0.2) (2024-09-24)
 
 Upgraded dependencies
