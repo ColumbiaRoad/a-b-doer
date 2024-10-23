@@ -1,4 +1,3 @@
-import { Fragment } from 'a-b-doer';
 import { useState, useRef, useEffect } from 'a-b-doer/hooks';
 import { wait } from './utils';
 import Toggle from './toggle';
@@ -13,10 +12,26 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 	const [visible, setVisible] = useState(true);
 	const [highlight, setHighlight] = useState(false);
 	const [disabled, setDisable] = useState(config.disabled);
-	const [fullscreen, setFullscreen] = useState(true);
+	const [fullscreen, setFullscreen] = useState(config.fullscreen ?? true);
 	const [screenshotLoading, setScreenshotLoading] = useState(false);
 	const [screenshotCbLoading, setScreenshotCbLoading] = useState(false);
 	const ref = useRef();
+
+	const validUrls = [
+		...new Set(
+			(Array.isArray(config.url) ? config.url : [config.url])
+				.map((url) => {
+					try {
+						new URL(url);
+						// Remove possible trailing slash
+						return url.replace(/\/$/, '');
+					} catch (error) {
+						return null;
+					}
+				})
+				.filter(Boolean)
+		),
+	];
 
 	useEffect(() => {
 		window.addEventListener('keyup', (evt) => {
@@ -44,11 +59,16 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 			value: disabled,
 			onChange: () => {
 				setDisable(!disabled);
-				window.toggleInjection();
+				window.setConfigValue('disabled', !disabled);
 				location.reload();
 			},
 		},
 	];
+
+	const currentUrl = window.location.href.replace(/\/$/, '');
+
+	// Regex could match many different urls, so we need to show something if it does
+	const hasCurrentUrl = validUrls.includes(currentUrl);
 
 	return (
 		<div
@@ -59,11 +79,30 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 		>
 			<img src={logo} />
 			{toggles.map((tgl, index) => (
-				<Fragment key={`toggle${index}`}>
-					<Toggle {...tgl} />
-					<hr />
-				</Fragment>
+				<Toggle key={`toggle${index}`} {...tgl} />
 			))}
+			<hr />
+			{validUrls.length > 1 && (
+				<div>
+					<div>Preview url</div>
+					<select
+						onChange={(evt) => {
+							const newUrl = evt.currentTarget?.value;
+							if (newUrl) {
+								window.location.href = newUrl;
+							}
+						}}
+					>
+						{!hasCurrentUrl && <option selected>{currentUrl}</option>}
+						{validUrls.map((url) => (
+							<option key={url} value={url} selected={url === currentUrl}>
+								{url}
+							</option>
+						))}
+					</select>
+					<hr />
+				</div>
+			)}
 			<div>
 				In preview: <small>{testPath}</small>
 			</div>
@@ -137,7 +176,11 @@ const Toolbar = ({ config, testPath, testId, customToolbar }) => {
 						<input
 							type="checkbox"
 							checked={fullscreen}
-							onChange={() => setFullscreen(!fullscreen)}
+							onChange={() => {
+								const newValue = !fullscreen;
+								setFullscreen(newValue);
+								window.setConfigValue('fullscreen', newValue);
+							}}
 							style={{
 								display: 'inline',
 								width: 'auto',

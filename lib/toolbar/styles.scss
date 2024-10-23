@@ -26,8 +26,9 @@
 		font-size: 0.9em !important;
 
 		label {
-			display: flex !important;
-			align-items: center !important;
+			display: flex;
+			align-items: center;
+			justify-content: center;
 		}
 	}
 
@@ -113,5 +114,20 @@
 		&::after {
 			transform: rotate(45deg);
 		}
+	}
+
+	select {
+		appearance: none;
+		width: 100%;
+		margin-top: 5px;
+		font-size: 12px;
+		padding: 7px 20px 7px 7px;
+		border: 1px solid #caced1;
+		border-radius: 0.25rem;
+		color: #000;
+		cursor: pointer;
+		background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAcwAAAHMBY8FD/gAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAC0SURBVDiNrZMhDgIxEEXfLAHHBZAoggDOgsNgOAAWwWk4CwaH4ghcgASxKz4CmpSy03SzTPJNO/93On/GJOGFmZ2AMbCWlyipFcAO0Ad7N88hT4FHJPAEZkUCQAWcI3LABRiUCBxayAHHrACwAOqMQA0sY06V9HQFDF1b3nfzL6dSd8xsAowcgVrSPT5IK+geSQ+2+P8P2OR6cAWazHsNcHMr6G3jXwap9yh3XaafOYijZJ1f0M1a/LHaGy4AAAAASUVORK5CYII=')
+			#fff no-repeat calc(100% - 5px) center;
+		background-size: 10px;
 	}
 }

@@ -343,7 +343,6 @@ let context;
 let page;
 /** @type import("puppeteer").Page | null */
 let aboutpage = null;
-let disabled = false;
 
 const pageInitiaLoadUrls = new WeakMap();
 const pageUrlHasBeenLoaded = {
@@ -450,8 +449,8 @@ async function openPage(config, singlePage) {
 			});
 		});
 
-		await page.exposeFunction('toggleInjection', () => {
-			disabled = !disabled;
+		await page.exposeFunction('setConfigValue', (key, value) => {
+			config[key] = value;
 		});
 	}
 
@@ -464,8 +463,6 @@ async function openPage(config, singlePage) {
 			await page.evaluate((urls) => {
 				window.__testUrls = urls;
 			}, urls);
-
-			config.disabled = disabled;
 
 			if (!isTest) {
 				await page.evaluate(
@@ -482,7 +479,7 @@ async function openPage(config, singlePage) {
 				);
 			}
 
-			if (disabled) {
+			if (config.disabled) {
 				await page.addScriptTag({ content: assetBundle.toolbarBundle, type: 'module' });
 				return;
 			}
