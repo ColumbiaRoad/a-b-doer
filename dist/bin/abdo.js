@@ -335,11 +335,42 @@ const { yellow: yellow$1, green } = chalk;
 const isTest = getFlagEnv('VITEST');
 let counter = 0;
 let loadListener = null;
-let browser, context;
+/** @type import("puppeteer").Browser | undefined */
+let browser;
+/** @type import("puppeteer").BrowserContext | undefined */
+let context;
+/** @type import("puppeteer").Page | undefined */
+let page;
+/** @type import("puppeteer").Page | null */
 let aboutpage = null;
-let disabled = false;
 
-const wasInitialMap = {};
+const pageInitiaLoadUrls = new WeakMap();
+const pageUrlHasBeenLoaded = {
+	/**
+	 * @param {import("puppeteer").Page} page
+	 * @param {string} url
+	 * @returns {boolean}
+	 */
+	get(page, url) {
+		if (!pageInitiaLoadUrls.has(page)) {
+			pageInitiaLoadUrls.set(page, {});
+		}
+		const map = pageInitiaLoadUrls.get(page);
+		return map[url] || false;
+	},
+	/**
+	 * @param {import("puppeteer").Page} page
+	 * @param {string} url
+	 * @param {string} value
+	 */
+	set(page, url, value) {
+		if (!pageInitiaLoadUrls.has(page)) {
+			pageInitiaLoadUrls.set(page, {});
+		}
+		const map = pageInitiaLoadUrls.get(page);
+		map[url] = value;
+	},
+};
 
 /**
  * Opens a browser tab and injects all required styles and scripts to the DOM
@@ -354,13 +385,14 @@ async function openPage(config, singlePage) {
 	const page = await getPage(config, singlePage);
 	if (isOneOfBuildspecUrls(page.url(), urls)) {
 		url = page.url();
+
+		await context.overridePermissions(url, ['clipboard-read', 'clipboard-write', 'clipboard-sanitized-write']);
 	}
 
 	const urlObject = new URL(url);
 	const urlKey = urlObject.origin + urlObject.pathname;
 
-	const wasInitial = !wasInitialMap[urlKey];
-	wasInitialMap[urlKey] = true;
+	const wasInitial = !pageUrlHasBeenLoaded.get(page, urlKey);
 
 	if (onBefore) {
 		await onBefore(page);
@@ -398,15 +430,14 @@ async function openPage(config, singlePage) {
 	if (wasInitial) {
 		await page.exposeFunction('isOneOfBuildspecUrls', isOneOfBuildspecUrls);
 
-		await page.exposeFunction('takeScreenshot', async (fullPage = true) => {
-			await page.evaluate(() => {
-				const toolbar = document.getElementById('a-b-toolbar');
-				if (toolbar) {
-					toolbar.style.display = 'none';
-				}
-			});
-
-			await page.screenshot({
+		await page.exposeFunction('takeScreenshot', async (fullPage = true, returnOnly = false) => {
+			if (returnOnly) {
+				return await page.screenshot({
+					fullPage,
+					encoding: 'base64',
+				});
+			}
+			return await page.screenshot({
 				fullPage,
 				path: path.join(
 					config.buildDir,
@@ -416,28 +447,22 @@ async function openPage(config, singlePage) {
 						.replace(/[^0-9-]/g, '')}.png`
 				),
 			});
-
-			await page.evaluate(() => {
-				const toolbar = document.getElementById('a-b-toolbar');
-				if (toolbar) {
-					toolbar.style.display = 'block';
-				}
-			});
 		});
 
-		await page.exposeFunction('toggleInjection', () => {
-			disabled = !disabled;
+		await page.exposeFunction('setConfigValue', (key, value) => {
+			config[key] = value;
 		});
 	}
 
 	// Add listener for load event. Using event makes it possible to refresh the page and keep these updates.
 	loadListener = async () => {
+		const wasInitial = !pageUrlHasBeenLoaded.get(page, urlKey);
+		pageUrlHasBeenLoaded.set(page, urlKey, true);
+
 		try {
 			await page.evaluate((urls) => {
 				window.__testUrls = urls;
 			}, urls);
-
-			config.disabled = disabled;
 
 			if (!isTest) {
 				await page.evaluate(
@@ -454,7 +479,7 @@ async function openPage(config, singlePage) {
 				);
 			}
 
-			if (disabled) {
+			if (config.disabled) {
 				await page.addScriptTag({ content: assetBundle.toolbarBundle, type: 'module' });
 				return;
 			}
@@ -634,7 +659,7 @@ function isOneOfBuildspecUrls(url, urls = []) {
 				return true;
 			}
 			if (typeof cur === 'string' && cur[0] === '/' && cur[cur.length - 1] === '/') {
-				const re = new RegExp(cur.substring(1, cur.length - 2));
+				const re = new RegExp(cur.substring(1, cur.length - 1));
 				return re.test(url);
 			}
 			return false;
@@ -728,8 +753,6 @@ async function getBrowser(config = {}) {
 	return browser;
 }
 
-let page;
-
 /**
  * Return a puppeteer page. If there's no page created then this also creates the page.
  * @param {Object} config
@@ -743,7 +766,7 @@ async function getPage(config, singlePage) {
 
 	const browser = await getBrowser(config);
 
-	/** @type {Promise<import("puppeteer").Page>}*/
+	/** @type {import("puppeteer").Page}*/
 	let newPage;
 	if (singlePage) {
 		page = newPage = (await browser.pages())[0];
@@ -763,7 +786,7 @@ async function getPage(config, singlePage) {
 		console.error(pageerr);
 	});
 
-	await newPage.setDefaultNavigationTimeout(0);
+	newPage.setDefaultNavigationTimeout(0);
 
 	return newPage;
 }
@@ -1185,6 +1208,11 @@ function getBundlerConfigs(buildSpecConfig) {
 					const folder = path.basename(path.dirname(file));
 					const fileNameParts = path.basename(file).split('.');
 					return `t_${folder}_${fileNameParts.at(0)}__${name}--${hash}`;
+				},
+			},
+			preprocessorOptions: {
+				scss: {
+					silenceDeprecations: ['legacy-js-api'],
 				},
 			},
 		},

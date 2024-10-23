@@ -93,7 +93,7 @@ export const isSame = (iter, iter2) => {
 		const keys = [...new Set(Object.keys(iter), Object.keys(iter2))];
 		for (const key of keys) {
 			if (key === 'children') continue;
-			if (key[0] !== key && iter[key] !== iter2[key]) {
+			if (iter[key] !== iter2[key]) {
 				same = isObject(iter[key]) ? isSame(iter[key], iter2[key]) : false;
 				break;
 			}

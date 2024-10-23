@@ -1,6 +1,7 @@
 .toggle {
 	display: flex;
 	align-items: center;
+	padding: 5px 0;
 
 	input {
 		display: none !important;
@@ -22,7 +23,7 @@
 		position: relative;
 		display: inline-block;
 		cursor: pointer;
-		transition: border 0.3s ease-in-out;
+		transition: border 0.2s ease-in-out;
 		margin-right: 13px;
 	}
 	.icon span {
@@ -30,7 +31,7 @@
 		width: 16px;
 		border-radius: 10px;
 		background: #ccc;
-		transition: all 0.3s ease-in-out;
+		transition: all 0.2s ease-in-out;
 		position: absolute;
 		left: 2px;
 		top: 1px;

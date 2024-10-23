@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { expect, describe, it } from 'vitest';
 import { config as defaultConfig } from '../../lib/buildspec';
+import { setTimeout } from 'node:timers/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, '..', '..');
@@ -130,18 +131,24 @@ describe('Configuration options', () => {
 			const output = await bundler({ ...config, entry: './index.jsx' });
 			const pptrConfig = getPuppeteerConfig(output);
 			const url = pptrConfig.url[0];
-			pptrConfig.url = ['about:blank', `${url}#test`];
+			pptrConfig.url = [`${url}#start`, `${url}#test`];
 			page = await openPage({ ...pptrConfig, historyChanges: true, testHistoryChanges: true });
+			await page.goto(url, { waitUntil: 'networkidle0' });
+			await setTimeout(50);
 			const element = await page.$('#tpl');
 			expect(element).not.toBeTruthy();
-			await page.goto(url);
 			await page.evaluate((url) => {
 				window.history.pushState({}, '', `${url}#test`);
+			}, url);
+			await setTimeout(50);
+			await page.evaluate((url) => {
 				window.history.pushState({}, '', `${url}#ignored`);
 			}, url);
+			await setTimeout(50);
 			await page.goBack();
-			const element2 = await page.$('#tpl');
-			expect(element2).toBeTruthy();
+			await setTimeout(50);
+			const injectionCalls = await page.evaluate(() => window.injectionCalled);
+			expect(injectionCalls).toBe(3);
 			const content = await page.content();
 			expect(content).toMatch(/<style[^>]*>body{background:(red|#f00)}\.\w+-content{background:(blue|#00f)}/);
 			expect(content).toMatch(/simple content/);
@@ -152,22 +159,22 @@ describe('Configuration options', () => {
 			const output = await bundler({ ...config, entry: './index.jsx' });
 			const pptrConfig = getPuppeteerConfig(output);
 			const url = pptrConfig.url[0];
-			pptrConfig.url = ['about:blank', `${url}#test2`];
+			pptrConfig.url = [`${url}#start`, `${url}#test2`];
 			page = await openPage({ ...pptrConfig, historyChanges: false });
-			const element = await page.$('#tpl');
-			expect(element).not.toBeTruthy();
-			await page.goto(url);
+			await page.goto(pptrConfig.url[0], { waitUntil: 'networkidle0' });
+			await setTimeout(50);
 			await page.evaluate((url) => {
-				window.history.pushState({}, undefined, `${url}#test2`);
+				window.history.pushState({}, '', `${url}#test2`);
+			}, url);
+			await setTimeout(50);
+			await page.evaluate((url) => {
 				window.history.pushState({}, '', `${url}#ignored`);
 			}, url);
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await setTimeout(50);
 			await page.goBack();
-			const element2 = await page.$('#tpl');
-			const content = await page.content();
-			expect(element2).not.toBeTruthy();
-			expect(content).not.toMatch(/<style[^>]*>body{background:(red|#f00)}\.\w+-content{background:(blue|#00f)}/);
-			expect(content).not.toMatch(/simple content/);
+			await setTimeout(50);
+			const injectionCalls = await page.evaluate(() => window.injectionCalled);
+			expect(injectionCalls).toBe(1);
 		});
 	});
 
