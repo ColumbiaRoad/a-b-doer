@@ -129,7 +129,7 @@ export const initNs = () => {
 
 export const getNs = (key) => {
 	if (!config.jsx || !config.namespace) return null;
-	const ns = NAMESPACES[key];
+	const ns = NAMESPACES?.[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
 };

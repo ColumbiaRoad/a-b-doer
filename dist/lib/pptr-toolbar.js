@@ -79,7 +79,7 @@
 	};
 	const getNs = (key) => {
 	  if (!config.namespace) return null;
-	  const ns = NAMESPACES[key];
+	  const ns = NAMESPACES?.[key];
 	  if (!ns) return null;
 	  return ns.indexOf("http") !== 0 ? `http://www.w3.org/${ns}` : ns;
 	};

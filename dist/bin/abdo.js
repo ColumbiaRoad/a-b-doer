@@ -965,7 +965,7 @@ function customJsxPrefreshPlugin(options = {}) {
           import.meta.hot.accept(() => {
             try {
 							console.log("%cReloading A/B injection", "color: cyan; text-shadow: 1px 1px 1px #000", "${entryImportPath}");
-							import('${entryImportPath}?${Date.now()}').then(mod => mod.default());
+							import('${entryImportPath}?${Date.now()}').then(mod => mod?.default?.());
             } catch (e) {
               self.location.reload();
             }
