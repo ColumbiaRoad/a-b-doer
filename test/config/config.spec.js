@@ -96,7 +96,7 @@ describe('Configuration options', () => {
 
 		const files = fs.readdirSync(path.resolve(__dirname, '.build'));
 		expect(files).toContain('chunks.js');
-		expect(files.some((val) => /^templates-[a-z0-9]+\.js$/i.test(val))).toBeTruthy();
+		expect(files.some((val) => /^templates-[a-z0-9_-]+\.js$/i.test(val))).toBeTruthy();
 	});
 
 	it('should use preact', async () => {
