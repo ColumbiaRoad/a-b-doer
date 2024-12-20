@@ -38,27 +38,7 @@ export const isDomFragment = (node) => node && node.nodeType === 11;
  * @returns {Element|null}
  */
 export const getVNodeDom = (vnode, recursive) =>
-	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
-
-/**
- * Helper function to get first rendered DOM node. Is used by components that has a fragment as root
- * @param {VNode} vnode
- * @returns {Element|null}
- */
-export const getVNodeFirstRenderedDom = (vnode) => {
-	if (!vnode) return null;
-	if (vnode.__dom) return vnode.__dom;
-	if (vnode.__result) return getVNodeDom(vnode.__result);
-	if (vnode.__children) {
-		for (const child of vnode.__children) {
-			const dom = getVNodeDom(child);
-			if (dom && dom.nodeType < 4) {
-				return dom;
-			}
-		}
-	}
-	return null;
-};
+	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result, recursive) : vnode.__result?.__dom) : null;
 
 // Internal object for storing details of current output/etc
 // This is just a placeholder object, all properties will be replaced to booleans with replace plugin.

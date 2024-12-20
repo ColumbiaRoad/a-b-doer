@@ -222,7 +222,8 @@ describe('JSX', () => {
 				<h1>Testing</h1>
 			</div>
 		);
-		patchVnodeDom(vnode, null, container);
+		container.append(vnode.__dom);
+		patchVnodeDom(vnode, null);
 		expect(container.innerHTML).toBe('<div><h1>Testing</h1></div>');
 		const vnode2 = renderVnode(
 			<div>
@@ -230,7 +231,7 @@ describe('JSX', () => {
 			</div>,
 			vnode
 		);
-		patchVnodeDom(vnode2, vnode, container);
+		patchVnodeDom(vnode2, vnode);
 		expect(container.innerHTML).toBe('<div><h4>Testing</h4></div>');
 	});
 

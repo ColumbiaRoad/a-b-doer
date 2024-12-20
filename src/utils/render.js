@@ -7,16 +7,11 @@ import {
 	createVNode,
 	domRemove,
 	isArray,
-	domAppend,
-	createDocumentFragment,
 	isSame,
 	options,
 	getNs,
 	getVNodeDom,
-	getVNodeFirstRenderedDom,
-	getParent,
 	isObject,
-	domInsertBefore,
 	isDomFragment,
 } from './internal';
 
@@ -31,7 +26,7 @@ import {
  * @prop {HTMLElement} [__dom] Rendered DOM node
  * @prop {VNode} [__result] Rendered VNode of custom component
  * @prop {VNode[]} [__children] Children where all renderable elements has been converted to VNodes
- * @prop {boolean} [__dirty] VNode marked as dirty and the DOM should be updated
+ * @prop {HTMLElement} [__parent] Parent DOM node
  */
 
 export const Fragment = (props) => props.children;
@@ -70,7 +65,7 @@ const isFragment = (tag) => {
  * @param {VNode2} source
  */
 const copyInternal = (source, target) => {
-	['__hooks', '__class'].forEach((a) => {
+	['__hooks', '__class', '__parent'].forEach((a) => {
 		if (source[a] !== undefined) target[a] = source[a];
 	});
 };
@@ -91,8 +86,6 @@ export const renderVnode = (vnode, oldVnode) => {
 	const oldProps = oldVnode ? oldVnode.props : undefined;
 	if (oldVnode) {
 		copyInternal(oldVnode, vnode);
-	} else {
-		vnode.__dirty = true;
 	}
 
 	const { type: tag, props = {}, svg } = vnode;
@@ -168,8 +161,6 @@ export const renderVnode = (vnode, oldVnode) => {
 		const vnodeDom = getVNodeDom(oldVnode);
 		if (!element && vnodeDom && isSameChild(oldVnode, vnode)) {
 			element = vnodeDom;
-		} else {
-			vnode.__dirty = true;
 		}
 
 		if (!element) {
@@ -191,7 +182,6 @@ export const renderVnode = (vnode, oldVnode) => {
 
 		if (!isSame(props, oldProps)) {
 			setElementAttributes(element, props, oldProps);
-			vnode.__dirty = true;
 		}
 
 		vnode.__dom = element;
@@ -249,7 +239,7 @@ const renderVnodeChildren = (vnode, children, oldChildren) => {
 
 			const newVnode = renderVnode(child, oldChild);
 
-			if (getVNodeDom(newVnode, true) && isVNode(oldChild)) {
+			if ((getVNodeDom(newVnode, true) || isFragment(newVnode)) && isVNode(oldChild)) {
 				childrenMap && childrenMap.delete(oldChild.key);
 			}
 		}
@@ -290,75 +280,67 @@ const getStyleString = (style) => {
  * Replaces the targeted DOM element with rendered VNode element's DOM node or appends the rendered VNode into the DOM node.
  * @param {VNode} vnode
  * @param {VNode} [prevVnode]
- * @param {HTMLElement} [targetDomNode]
- * @param {HTMLElement} [afterNode]
  * @returns {HTMLElement|null} Rendered DOM tree
  */
-export const patchVnodeDom = (vnode, prevVnode, targetDomNode, afterNode) => {
-	let prepend = false;
-
-	// Get targeted domNode from the old rendered vnode.
-	// This also handles the case where Fragment or similar is a root of updated top level component
-	if ((!targetDomNode || isDomFragment(targetDomNode)) && prevVnode) {
-		const someDom = getVNodeFirstRenderedDom(prevVnode);
-		if (someDom) {
-			targetDomNode = getParent(someDom);
-			afterNode = someDom.previousSibling;
-			if (!afterNode) {
-				prepend = true;
-			}
-		}
-	}
+export const patchVnodeDom = (vnode, prevVnode) => {
 	const prevDom = prevVnode && getVNodeDom(prevVnode, true);
 	if (!isRenderableElement(vnode)) {
 		if (prevVnode) {
-			domRemove(prevDom);
+			if (isFragment(prevVnode) && prevVnode.__children) {
+				prevVnode.__children.forEach((child) => domRemove(getVNodeDom(child, true)));
+			} else {
+				domRemove(prevDom);
+			}
 		}
 		return vnode;
 	}
+	// Remove previous dom element if it has been inserter to some other parent node which could happen when prefresh is trying to patch changes
 	const isVnodeSame = isSameChild(vnode, prevVnode);
-	if (prevDom && getVNodeDom(vnode) !== prevDom) {
+	const newDom = getVNodeDom(vnode);
+	if (prevDom && newDom !== prevDom) {
 		domRemove(prevDom);
 	}
-	let returnDom = vnode.__dom || createDocumentFragment();
+	const returnDom = vnode.__dom;
+	const appendToDom = returnDom || vnode.__parent;
+
 	// VNode is a component, try to insert the rendered component
 	if (vnode.__result) {
-		return patchVnodeDom(
-			vnode.__result,
-			isVnodeSame ? prevVnode?.__result || prevVnode : undefined,
-			targetDomNode,
-			afterNode
-		);
+		vnode.__result.__parent = vnode.__parent;
+		return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result || prevVnode : undefined);
 	}
 	const oldChildren = prevVnode && prevVnode.__children;
 	const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	const vnodeChildren = vnode.__children;
-	const childCount = (vnodeChildren && vnodeChildren.length) || 0;
+	const childCount = Math.max((vnodeChildren && vnodeChildren.length) || 0, (oldChildren && oldChildren.length) || 0);
+	const childDomNodes = [];
+
 	// Loop though all children and try to patch/remove them as well.
-	let prevNode;
 	for (let index = 0; index < childCount; index++) {
 		let child = vnodeChildren[index];
-		const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
-		const patchedDomNode = patchVnodeDom(child, (!child || isVnodeSame) && oldChildVnode, returnDom, prevNode);
-		if (isRenderableElement(patchedDomNode)) {
-			prevNode = isDomFragment(patchedDomNode) ? patchedDomNode.lastChild : patchedDomNode;
+		if (child) {
+			child.__parent = appendToDom;
 		}
+		const oldChildVnode = oldChildren && ((child && oldChildrenMap.get(child.key)) || oldChildren[index]);
+		const childDomNode = patchVnodeDom(child, oldChildVnode);
+		if (isRenderableElement(childDomNode)) childDomNodes.push(childDomNode);
 	}
 
-	if (isRenderableElement(returnDom)) {
-		if ((vnode.__dirty || isFragment(vnode)) && targetDomNode) {
-			const firstNode = targetDomNode.childNodes[0];
-			if ((prepend || firstNode === returnDom) && firstNode) {
-				domInsertBefore(returnDom, firstNode);
-			} else if (afterNode) {
-				afterNode.after(returnDom);
-			} else {
-				domAppend(targetDomNode, returnDom);
+	if ((isDomNode(appendToDom) || isDomFragment(appendToDom)) && childDomNodes.length) {
+		const existingChildren = appendToDom.childNodes;
+		for (let index = 0; index < childDomNodes.length; index++) {
+			const domNode = childDomNodes[index];
+			if (domNode !== existingChildren[index]) {
+				appendToDom.append(domNode);
 			}
 		}
-		vnode.__dirty = undefined;
+	}
+	if (isRenderableElement(returnDom)) {
+		if (vnode.__parent && !returnDom.parentNode) {
+			vnode.__parent.append(returnDom);
+		}
 		return returnDom;
 	}
+
 	return null;
 };
 

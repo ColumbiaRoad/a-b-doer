@@ -185,6 +185,7 @@ const createMutation = (child) => {
  * @returns {HTMLElement|VNode} Rendered element
  */
 export const append = (vnode, parent, clearPrev = true) => {
+	vnode.__parent = parent;
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
@@ -200,6 +201,7 @@ export const append = (vnode, parent, clearPrev = true) => {
  * @returns {HTMLElement|VNode} Rendered element
  */
 export const prepend = (vnode, parent, clearPrev = true) => {
+	vnode.__parent = parent;
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parent);
@@ -219,6 +221,7 @@ export const prepend = (vnode, parent, clearPrev = true) => {
  * @returns {HTMLElement|VNode} Rendered element
  */
 export const insertBefore = (vnode, before, clearPrev = true) => {
+	vnode.__parent = before.parentNode;
 	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, before.parentNode);
@@ -234,8 +237,9 @@ export const insertBefore = (vnode, before, clearPrev = true) => {
  * @returns {HTMLElement|VNode} Rendered element
  */
 export const insertAfter = (vnode, after, clearPrev = true) => {
-	const child = createMutation(vnode);
 	const parentNode = after.parentNode;
+	vnode.__parent = parentNode;
+	const child = createMutation(vnode);
 	if (clearPrev) {
 		clearPrevious(child, parentNode);
 	}

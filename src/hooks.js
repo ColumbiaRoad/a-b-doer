@@ -46,6 +46,7 @@ export const useState = (defaultValue) => {
 	}
 
 	hookPointer.__hooks[hookPointer.__current][1] = ((hooks, index, vnode) => (value) => {
+		if (hooks[index][0] === value) return;
 		hooks[index][0] = value;
 		if (vnode) {
 			onNextTick(() => {
