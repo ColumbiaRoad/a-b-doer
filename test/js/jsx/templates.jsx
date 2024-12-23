@@ -83,9 +83,9 @@ export const Switch = ({ id }) => {
 	);
 };
 
-const Loading = ({ num }) => {
+export const Loading = ({ num }) => {
 	return (
-		<div>
+		<div data-test="loading">
 			<h1>Loading... {num}</h1>
 		</div>
 	);

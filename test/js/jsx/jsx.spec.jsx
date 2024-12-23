@@ -1,7 +1,7 @@
 import { expect, describe, vi, it } from 'vitest';
 import { clearAll, unmount } from 'a-b-doer';
 import { useState, useEffect } from 'a-b-doer/hooks';
-import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles } from './templates';
+import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles, Loading } from './templates';
 import { render } from './test-utils';
 import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
 
@@ -118,8 +118,13 @@ describe('JSX', () => {
 					setLoading(false);
 				}, 50);
 			}, []);
-			if (loading) return <div data-test="loading">Loading</div>;
-			return <div data-test="app">{children}</div>;
+			if (loading) return <Loading />;
+			return (
+				<div data-test="app">
+					{children}
+					<div data-test="bottom-element">Bottom</div>
+				</div>
+			);
 		};
 
 		const Tpl = (props) => {
@@ -137,19 +142,20 @@ describe('JSX', () => {
 				<Tpl test="3" />
 			</App>
 		);
-
 		expect(queryByTestId('app')).toBeFalsy();
 		expect(queryByTestId('loading')).toBeTruthy();
 		vi.runAllTimers();
-		expect(queryByTestId('app')).toBeTruthy();
 
 		const children = queryByTestId('app').children;
-		expect(children.length).toBe(3);
+		expect(children.length).toBe(4);
 
 		const tpl = queryAllByTestId('tpl');
 		expect(tpl.length).toBe(3);
 
-		for (let i = 0; i < children.length; i++) {
+		const bottom = queryByTestId('bottom-element');
+		expect(children[3]).toBe(bottom);
+
+		for (let i = 0; i < 3; i++) {
 			expect(children[i].innerHTML).toBe(`<h3>tpl test ${i + 1}</h3>`);
 		}
 	});
