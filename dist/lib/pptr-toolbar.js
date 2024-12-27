@@ -55,7 +55,7 @@
 	};
 	let NAMESPACES;
 	const initNs = () => {
-	  if (!NAMESPACES) {
+	  if (typeof NAMESPACES === "undefined") {
 	    NAMESPACES = {
 	      svg: "2000/svg",
 	      xlink: "1999/xlink",
@@ -325,7 +325,8 @@
 	          const [ns, nsName] = name.split(":");
 	          element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 	        } else {
-	          element.setAttribute(name, value);
+	          const lcName = name !== "viewBox" ? name.replace(/([a-z]+)([A-Z])/g, "$1-$2").toLowerCase() : name;
+	          element.setAttribute(lcName, value);
 	        }
 	      }
 	    }

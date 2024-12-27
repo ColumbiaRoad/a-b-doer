@@ -173,10 +173,7 @@ export const renderVnode = (vnode, oldVnode) => {
 
 			if (!tag) {
 				element = document.createTextNode(props.text);
-			}
-			// Mainly for imported svg strings. Svg element as string is much smaller than transpiled jsx result.
-			// At least in Google Optimize there's quite small size limit for assets.
-			else if (config.extendedVnode && tag[0] === '<') {
+			} else if (config.extendedVnode && tag[0] === '<') {
 				renderer.innerHTML = tag;
 				element = renderer.firstElementChild.cloneNode(true);
 				renderer.innerHTML = '';
@@ -414,7 +411,8 @@ const setElementAttributes = (element, props, oldProps) => {
 					const [ns, nsName] = name.split(':');
 					element.setAttributeNS(getNs(nsName) || getNs(ns), name, value);
 				} else {
-					element.setAttribute(name, value);
+					const lcName = name !== 'viewBox' ? name.replace(/([a-z]+)([A-Z])/g, '$1-$2').toLowerCase() : name;
+					element.setAttribute(lcName, value);
 				}
 			}
 		}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'a-b-doer/hooks';
 import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles, Loading } from './templates';
 import { render } from './test-utils';
 import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
+import Checked from './components/Checked.svg';
 
 describe('JSX', () => {
 	vi.useFakeTimers();
@@ -254,5 +255,16 @@ describe('JSX', () => {
 			expect(toggle.childNodes[1].tagName).toBe('SPAN');
 			expect(toggle.childNodes[2].nodeType).toBe(3);
 		}
+	});
+
+	it('should render svg correctly', () => {
+		const { queryByTestId } = render(<Checked width="24" height="24" />);
+		const svg = queryByTestId('svg');
+		expect(svg).toBeTruthy();
+		expect(svg.outerHTML).toMatch('viewBox="0 0 154 154"');
+		expect(svg.outerHTML).toMatch('width="24"');
+		expect(svg.outerHTML).toMatch('height="24"');
+		expect(svg.querySelector('g').outerHTML).toMatch('stroke-width="2"');
+		expect(svg.querySelector('polyline').outerHTML).toMatch('stroke-width="10"');
 	});
 });
