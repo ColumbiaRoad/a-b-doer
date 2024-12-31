@@ -82,7 +82,7 @@
 	  return tag === Fragment;
 	};
 	const copyInternal = (source, target) => {
-	  ["__hooks", "__class", "__parent", "__after"].forEach((a) => {
+	  ["__hooks", "__class", "__parent"].forEach((a) => {
 	    if (source[a] !== void 0) target[a] = source[a];
 	  });
 	};
