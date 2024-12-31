@@ -3,21 +3,21 @@ export const domAppend = (parent, child) => {
 	parent.append(child);
 };
 
-export const getParent = (node) => node?.parentElement;
+export const getParent = (node) => node?.parentNode;
 
 export const domInsertBefore = (child, target) => {
-	const parent = getParent(target);
-	parent && parent.insertBefore(child, target);
+	getParent(target)?.insertBefore(child, target);
 };
 
 export const domRemove = (node) => {
-	const parent = getParent(node);
-	parent && parent.removeChild(node);
+	getParent(node)?.removeChild(node);
 };
 
 export const domReplaceWith = (oldNode, newNode) => {
 	const parent = getParent(oldNode);
-	parent && parent.replaceChild(newNode, oldNode);
+	if (!parent) return;
+	domInsertBefore(newNode, oldNode);
+	domRemove(oldNode);
 };
 
 export const isFunction = (fn) => typeof fn === 'function';
@@ -55,13 +55,9 @@ export const config = {};
 /**
  * Internal object for storing details of currently rendered component's hooks.
  * Hook pointer properties:
- * @prop {boolean} __current Currently processed hook index
- * @prop {boolean} __hooks Array pointer to current VNode's hooks
  * @prop {boolean} __vnode Current VNode
  */
 export const hookPointer = {
-	__current: 0,
-	__hooks: [],
 	__vnode: null,
 };
 
@@ -83,10 +79,6 @@ export const isSame = (iter, iter2) => {
 	return false;
 };
 
-export const onNextTick = (callback) => {
-	setTimeout(callback);
-};
-
 export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
@@ -95,28 +87,26 @@ export const createVNode = (tag = '', props) => {
 	};
 };
 
-let NAMESPACES;
+const abdNsKey = '_abNS';
 
 export const initNs = () => {
-	if (!NAMESPACES) {
-		NAMESPACES = {
-			svg: '2000/svg',
-			xlink: '1999/xlink',
-			xmlns: '2000/xmlns/',
-		};
-	}
+	window[abdNsKey] = window[abdNsKey] || {};
+	Object.assign(window[abdNsKey], {
+		svg: '2000/svg',
+		xlink: '1999/xlink',
+		xmlns: '2000/xmlns/',
+	});
 };
 
 export const getNs = (key) => {
 	if (!config.jsx || !config.namespace) return null;
-	const ns = NAMESPACES?.[key];
+	const ns = window[abdNsKey]?.[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
 };
 
 export const addNs = (ns, url) => {
-	NAMESPACES = NAMESPACES || {};
-	NAMESPACES[ns] = url;
+	window[abdNsKey][ns] = url;
 };
 
 export const options = {

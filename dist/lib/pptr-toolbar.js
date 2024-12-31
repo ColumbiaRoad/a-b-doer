@@ -4,14 +4,18 @@
 	const domAppend = (parent, child) => {
 	  parent.append(child);
 	};
-	const getParent = (node) => node?.parentElement;
+	const getParent = (node) => node?.parentNode;
+	const domInsertBefore = (child, target) => {
+	  getParent(target)?.insertBefore(child, target);
+	};
 	const domRemove = (node) => {
-	  const parent = getParent(node);
-	  parent && parent.removeChild(node);
+	  getParent(node)?.removeChild(node);
 	};
 	const domReplaceWith = (oldNode, newNode) => {
 	  const parent = getParent(oldNode);
-	  parent && parent.replaceChild(newNode, oldNode);
+	  if (!parent) return;
+	  domInsertBefore(newNode, oldNode);
+	  domRemove(oldNode);
 	};
 	const isFunction = (fn) => typeof fn === "function";
 	const isString = (str) => typeof str === "string";
@@ -22,8 +26,6 @@
 	const getVNodeDom = (vnode, recursive) => vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result, recursive) : vnode.__result?.__dom) : null;
 	const config = {};
 	const hookPointer = {
-	  __current: 0,
-	  __hooks: [],
 	  __vnode: null
 	};
 	const isSame = (iter, iter2) => {
@@ -43,9 +45,6 @@
 	  }
 	  return false;
 	};
-	const onNextTick = (callback) => {
-	  setTimeout(callback);
-	};
 	const createVNode = (tag = "", props) => {
 	  return {
 	    type: tag,
@@ -53,19 +52,18 @@
 	    key: props.key
 	  };
 	};
-	let NAMESPACES;
+	const abdNsKey = "_abNS";
 	const initNs = () => {
-	  if (typeof NAMESPACES === "undefined") {
-	    NAMESPACES = {
-	      svg: "2000/svg",
-	      xlink: "1999/xlink",
-	      xmlns: "2000/xmlns/"
-	    };
-	  }
+	  window[abdNsKey] = window[abdNsKey] || {};
+	  Object.assign(window[abdNsKey], {
+	    svg: "2000/svg",
+	    xlink: "1999/xlink",
+	    xmlns: "2000/xmlns/"
+	  });
 	};
 	const getNs = (key) => {
 	  if (!config.namespace) return null;
-	  const ns = NAMESPACES?.[key];
+	  const ns = window[abdNsKey]?.[key];
 	  if (!ns) return null;
 	  return ns.indexOf("http") !== 0 ? `http://www.w3.org/${ns}` : ns;
 	};
@@ -76,16 +74,15 @@
 	const isVNode = (vnode) => !!vnode && !!vnode.props;
 	const isRenderableElement = (element) => !!element || element === 0;
 	const isSameChild = (vnode, vnode2) => Boolean(
-	  vnode && vnode2 && (vnode === vnode2 || vnode.key === vnode2.key && (vnode.type === vnode2.type && // Check text vnodes
-	  (!vnode.type ? vnode.props.text === vnode2.props.text : true) || // Check if type has changed in hot replacement
-	  undefined && vnode.__oldType && vnode.__oldType === vnode2.__oldType))
+	  vnode && vnode2 && (vnode === vnode2 || vnode.key === vnode2.key && vnode.type === vnode2.type && // Check if type has changed in hot replacement
+	  (undefined && vnode.__oldType ? vnode.__oldType === vnode2.__oldType : true))
 	);
 	const isFragment = (tag) => {
 	  if (isVNode(tag)) tag = tag.type;
 	  return tag === Fragment;
 	};
 	const copyInternal = (source, target) => {
-	  ["__hooks", "__class", "__parent"].forEach((a) => {
+	  ["__hooks", "__class", "__parent", "__after"].forEach((a) => {
 	    if (source[a] !== void 0) target[a] = source[a];
 	  });
 	};
@@ -124,11 +121,13 @@
 	      if (!isVNode(newVNode)) {
 	        return newVNode;
 	      }
-	      lifeCycleCallbacks.forEach((c) => onNextTick(c()));
+	      if (lifeCycleCallbacks.length) {
+	        vnode.__dirty = true;
+	      }
+	      lifeCycleCallbacks.forEach((c) => onNextTick(vnode, c()));
 	    } else {
 	      vnode.__hooks = vnode.__hooks || [];
-	      hookPointer.__hooks = vnode.__hooks;
-	      hookPointer.__current = 0;
+	      vnode.__hookIndex = 0;
 	      hookPointer.__vnode = vnode;
 	      newVNode = tag(props);
 	      if (!isVNode(newVNode)) {
@@ -170,6 +169,8 @@
 	      setElementAttributes(element, props, oldProps);
 	    }
 	    vnode.__dom = element;
+	  } else {
+	    vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode("");
 	  }
 	  if (children) {
 	    vnode.__children = renderVnodeChildren(vnode, children, oldVnode && oldVnode.__children);
@@ -189,7 +190,7 @@
 	};
 	const renderVnodeChildren = (vnode, children, oldChildren) => {
 	  const childrenMap = oldChildren && createChildrenMap(oldChildren);
-	  const newChildren = children.flatMap((child) => isFragment(child) ? child.props.children : child).map((child, index) => {
+	  const newChildren = children.flat().map((child, index) => {
 	    let oldChild;
 	    if (isRenderableElement(child)) {
 	      if (!isVNode(child)) {
@@ -224,57 +225,67 @@
 	    ""
 	  );
 	};
-	const patchVnodeDom = (vnode, prevVnode) => {
-	  const prevDom = prevVnode && getVNodeDom(prevVnode, true);
+	const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
+	  const isVnodeSame = isSameChild(vnode, prevVnode);
+	  const prevVnodeDom = getVNodeDom(prevVnode, true);
 	  if (!isRenderableElement(vnode)) {
 	    if (prevVnode) {
 	      if (isFragment(prevVnode) && prevVnode.__children) {
 	        prevVnode.__children.forEach((child) => domRemove(getVNodeDom(child, true)));
 	      } else {
-	        domRemove(prevDom);
+	        domRemove(prevVnodeDom);
 	      }
 	    }
 	    return vnode;
 	  }
-	  const isVnodeSame = isSameChild(vnode, prevVnode);
 	  let returnDom = vnode.__dom;
-	  const appendToDom = returnDom || vnode.__parent;
 	  if (vnode.__result) {
 	    vnode.__result.__parent = vnode.__parent;
-	    return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result || prevVnode : void 0);
+	    return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode, targetNode);
 	  }
-	  const oldChildren = prevVnode && prevVnode.__children;
-	  const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	  const vnodeChildren = vnode.__children;
+	  const oldChildren = prevVnode ? prevVnode.__children : null;
+	  const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	  const childCount = vnodeChildren ? vnodeChildren.length : 0;
+	  const vnodeIsFragment = isFragment(vnode);
+	  const childrenParentNode = vnodeIsFragment ? createDocumentFragment() : returnDom;
+	  let afterSibling = null;
 	  for (let index = 0; index < childCount; index++) {
-	    const child = vnodeChildren[index];
-	    if (child) {
-	      child.__parent = appendToDom;
+	    const childVnode = vnodeChildren[index];
+	    if (childVnode) {
+	      childVnode.__parent = childrenParentNode;
 	    }
-	    const oldChildVnode = oldChildren && oldChildrenMap.get(child ? child.key : `#${index}`);
-	    if (oldChildVnode) {
-	      oldChildrenMap.delete(child.key);
+	    const oldChildVnodeCandidate = oldChildrenMap && childVnode.key && oldChildrenMap.get(childVnode.key);
+	    const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
+	    if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
+	      oldChildrenMap.delete(childVnode.key);
 	    }
-	    const childNode = patchVnodeDom(child, oldChildVnode);
-	    if (isRenderableElement(childNode)) {
-	      appendToDom.append(childNode);
+	    const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling);
+	    if (isRenderableElement(childVnodeDom)) {
+	      afterSibling = childVnodeDom;
 	    }
+	  }
+	  if (isRenderableElement(returnDom)) {
+	    if (prevVnodeDom && prevVnodeDom !== returnDom) {
+	      domReplaceWith(prevVnodeDom, returnDom);
+	    } else if (targetNode && targetNode.nextSibling) {
+	      if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
+	    } else if (prepend) {
+	      if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
+	    } else if (vnode.__parent.lastChild !== returnDom) {
+	      domAppend(vnode.__parent, returnDom);
+	    }
+	  }
+	  if (vnodeIsFragment) {
+	    domInsertBefore(childrenParentNode, returnDom);
 	  }
 	  oldChildrenMap?.forEach((child) => {
-	    getVNodeDom(child, true)?.remove();
-	  });
-	  if (isRenderableElement(returnDom)) {
-	    const domToReplace = !isVnodeSame && getVNodeDom(prevVnode, true);
-	    if (domToReplace && domToReplace !== returnDom) {
-	      domReplaceWith(domToReplace, returnDom);
+	    if (isFragment(child)) {
+	      child.props.children.forEach((c) => getVNodeDom(c, true)?.remove());
+	    } else {
+	      getVNodeDom(child, true)?.remove();
 	    }
-	  } else {
-	    returnDom = null;
-	  }
-	  if (prevDom && returnDom !== prevDom) {
-	    domRemove(prevDom);
-	  }
+	  });
 	  return returnDom;
 	};
 	const renderer = config.extendedVnode && document.createElement("div");
@@ -295,7 +306,9 @@
 	      for (let name in oldProps) {
 	        if (isSame(oldProps[name], props[name])) {
 	          sameProps[name] = true;
-	        } else element.removeAttribute(name);
+	        } else {
+	          element.removeAttribute(name);
+	        }
 	      }
 	    }
 	    for (let name in props) {
@@ -350,6 +363,22 @@
 	    }
 	  }
 	};
+	const cbQueue = [];
+	const onNextTick = (vnode, callback) => {
+	  if (callback) cbQueue.push(callback);
+	  setTimeout(() => {
+	    while (cbQueue.length) {
+	      const cb = cbQueue.shift();
+	      cb();
+	    }
+	    if (vnode.__dirty) {
+	      const old = { ...vnode };
+	      vnode = renderVnode(vnode, old);
+	      patchVnodeDom(vnode, old);
+	      vnode.__dirty = false;
+	    }
+	  });
+	};
 
 	if (config.namespace) {
 	  initNs();
@@ -380,50 +409,52 @@
 	const jsxs = jsx;
 
 	const useRef = (current = null) => {
-	  if (!hookPointer.__hooks[hookPointer.__current]) {
-	    hookPointer.__hooks[hookPointer.__current] = { current };
+	  const vnode = hookPointer.__vnode;
+	  if (!vnode.__hooks[vnode.__hookIndex]) {
+	    vnode.__hooks[vnode.__hookIndex] = { current };
 	  }
-	  const ret = hookPointer.__hooks[hookPointer.__current];
-	  hookPointer.__current++;
+	  const ret = vnode.__hooks[vnode.__hookIndex];
+	  vnode.__hookIndex++;
 	  return ret;
 	};
 	const useEffect = (cb, deps) => {
-	  const oldDeps = hookPointer.__hooks[hookPointer.__current]?.[1];
+	  const vnode = hookPointer.__vnode;
+	  let index = vnode.__hookIndex;
+	  const oldDeps = vnode.__hooks[index]?.[1];
 	  let shouldCall = !oldDeps || !deps;
 	  if (!shouldCall && deps) {
 	    shouldCall = !isSame(deps, oldDeps || []);
 	  }
 	  if (shouldCall) {
-	    if (oldDeps && hookPointer.__hooks[hookPointer.__current][2]) {
-	      hookPointer.__hooks[hookPointer.__current][2]();
+	    if (oldDeps && vnode.__hooks[index][2]) {
+	      vnode.__hooks[index][2]();
 	    }
-	    hookPointer.__hooks[hookPointer.__current] = ["e", deps, null];
-	    ((hooks, index) => {
-	      onNextTick(() => {
-	        hooks[index][2] = cb();
+	    vnode.__hooks[index] = ["e", deps, null];
+	    ((vnode2, index2) => {
+	      onNextTick(vnode2, () => {
+	        vnode2.__hooks[index2][2] = cb();
 	      });
-	    })(hookPointer.__hooks, hookPointer.__current);
+	    })(vnode, index);
 	  }
-	  hookPointer.__current++;
+	  vnode.__hookIndex = index + 1;
 	};
 	const useState = (defaultValue) => {
-	  if (!hookPointer.__hooks[hookPointer.__current]) {
-	    hookPointer.__hooks[hookPointer.__current] = [defaultValue];
+	  const vnode = hookPointer.__vnode;
+	  if (!vnode.__hooks[vnode.__hookIndex]) {
+	    vnode.__hooks[vnode.__hookIndex] = [defaultValue];
 	  }
-	  hookPointer.__hooks[hookPointer.__current][1] = /* @__PURE__ */ ((hooks, index, vnode) => (value) => {
+	  vnode.__hooks[vnode.__hookIndex][1] = /* @__PURE__ */ ((vnode2, index) => (value) => {
+	    const hooks = vnode2.__hooks;
+	    if (!hooks[index]) return;
 	    if (hooks[index][0] === value) return;
 	    hooks[index][0] = value;
-	    if (vnode) {
-	      onNextTick(() => {
-	        const old = { ...vnode };
-	        vnode.__hooks = hooks;
-	        vnode = renderVnode(vnode, old);
-	        patchVnodeDom(vnode, old);
-	      });
+	    if (vnode2) {
+	      vnode2.__dirty = true;
+	      onNextTick(vnode2);
 	    }
-	  })(hookPointer.__hooks, hookPointer.__current, hookPointer.__vnode);
-	  const state = hookPointer.__hooks[hookPointer.__current];
-	  hookPointer.__current++;
+	  })(vnode, vnode.__hookIndex);
+	  const state = vnode.__hooks[vnode.__hookIndex];
+	  vnode.__hookIndex++;
 	  return state;
 	};
 
@@ -722,7 +753,7 @@
 	const createMutation = (child) => {
 	  let node = child;
 	  if (isVNode(child)) {
-	    node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
+	    node = patchVnodeDom(renderVnode(child), null) || createDocumentFragment();
 	  }
 	  getChildrenArray(node).forEach((c) => {
 	    if (c.dataset && !c.dataset.o) {

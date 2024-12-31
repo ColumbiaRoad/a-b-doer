@@ -1,6 +1,6 @@
 import { append } from './utils/dom';
-import { patchVnodeDom, renderVnode, Fragment as _Fragment, getTestID as _getTestID } from './utils/render';
-import { getVNodeDom, onNextTick } from './utils/internal';
+import { renderVnode, Fragment as _Fragment, getTestID as _getTestID, onNextTick } from './utils/render';
+import { getVNodeDom } from './utils/internal';
 
 /**
  * Super simple class abstract for class like components.
@@ -12,13 +12,9 @@ export class Component {
 	}
 	setState(newState) {
 		const vnode = this.__vnode;
-		const old = { ...vnode };
-		this.__state = { ...this.state };
-		onNextTick(() => {
-			Object.assign(this.state, newState);
-			this.__vnode = renderVnode(vnode, old);
-			patchVnodeDom(vnode, old);
-		});
+		Object.assign(this.state, newState);
+		vnode.__dirty = true;
+		onNextTick(vnode);
 	}
 }
 

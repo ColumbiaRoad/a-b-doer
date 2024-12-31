@@ -571,11 +571,11 @@ Adds some extra logging for debug
 
 Type `Object` (optional)
 
-Default `{ classes: true, className: true, namespaces: true, jsx: 'auto', hooks: 'auto' }`
+Default `{ classes: true, className: true, namespace: true, jsx: 'auto', hooks: 'auto' }`
 
 - classes: Support class component syntax
 - className: Populate className with class prop and class prop with className
-- namespaces: Support namespace attributes and elements. Some namespaces are defined by default
+- namespace: Support namespace attributes and elements. Some namespaces are defined by default
 - jsx: Support jsx syntax
 - hooks: Support functional component hooks, e.g. useState
 - extendedVnodes: Support custom types for JSX VNodes, those are DOM Element and HTML string

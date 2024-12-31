@@ -166,7 +166,7 @@ const createMutation = (child) => {
 	// If there's no jsx at all, do not add MutationObserver.
 	let node = child;
 	if (!process.env.preact && config.jsx && isVNode(child)) {
-		node = patchVnodeDom(renderVnode(child)) || createDocumentFragment();
+		node = patchVnodeDom(renderVnode(child), null) || createDocumentFragment();
 	}
 
 	getChildrenArray(node).forEach((c) => {

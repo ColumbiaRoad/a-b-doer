@@ -1086,7 +1086,8 @@ const minifiedProperties = {
 	__children: 'a',
 	__result: 'r',
 	__dom: 'e',
-	__delete: 'x',
+	__hookIndex: 'x',
+	__parent: 'p',
 };
 
 /**
