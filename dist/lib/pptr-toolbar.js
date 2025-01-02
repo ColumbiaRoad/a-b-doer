@@ -225,7 +225,7 @@
 	    ""
 	  );
 	};
-	const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
+	const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 	  const isVnodeSame = isSameChild(vnode, prevVnode);
 	  const prevVnodeDom = getVNodeDom(prevVnode, true);
 	  if (!isRenderableElement(vnode)) {
@@ -241,7 +241,12 @@
 	  let returnDom = vnode.__dom;
 	  if (vnode.__result) {
 	    vnode.__result.__parent = vnode.__parent;
-	    return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode, targetNode);
+	    return patchVnodeDom(
+	      vnode.__result,
+	      isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode,
+	      targetNode,
+	      changeType
+	    );
 	  }
 	  const vnodeChildren = vnode.__children;
 	  const oldChildren = prevVnode ? prevVnode.__children : null;
@@ -260,7 +265,7 @@
 	    if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
 	      oldChildrenMap.delete(childVnode.key);
 	    }
-	    const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling);
+	    const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling ? "prepend" : "append");
 	    if (isRenderableElement(childVnodeDom)) {
 	      afterSibling = childVnodeDom;
 	    }
@@ -268,12 +273,14 @@
 	  if (isRenderableElement(returnDom)) {
 	    if (prevVnodeDom && prevVnodeDom !== returnDom) {
 	      domReplaceWith(prevVnodeDom, returnDom);
-	    } else if (targetNode && targetNode.nextSibling) {
-	      if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
-	    } else if (prepend) {
-	      if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
-	    } else if (vnode.__parent.lastChild !== returnDom) {
-	      domAppend(vnode.__parent, returnDom);
+	    } else if (changeType !== "same") {
+	      if (targetNode && targetNode.nextSibling) {
+	        if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
+	      } else if (changeType === "prepend") {
+	        if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
+	      } else if (vnode.__parent.lastChild !== returnDom) {
+	        domAppend(vnode.__parent, returnDom);
+	      }
 	    }
 	  }
 	  if (vnodeIsFragment) {
@@ -374,7 +381,7 @@
 	    if (vnode.__dirty) {
 	      const old = { ...vnode };
 	      vnode = renderVnode(vnode, old);
-	      patchVnodeDom(vnode, old);
+	      patchVnodeDom(vnode, old, null, "same");
 	      vnode.__dirty = false;
 	    }
 	  });

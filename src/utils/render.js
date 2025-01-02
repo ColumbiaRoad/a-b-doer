@@ -193,7 +193,8 @@ export const renderVnode = (vnode, oldVnode) => {
 		vnode.__dom = element;
 	} else {
 		// Create a dom node for fragments so we can follow the point in dom where elements should be inserted
-		vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode('');
+		vnode.__dom =
+			getVNodeDom(oldVnode) || document.createTextNode(process.env.TEST_ENV ? options.visibleFragment || '' : '');
 	}
 
 	if (children) {
@@ -288,9 +289,10 @@ const getStyleString = (style) => {
  * @param {VNode} vnode
  * @param {VNode} [prevVnode]
  * @param {HTMLElement} [targetNode]
+ * @param {String} [changeType]
  * @returns {HTMLElement|null} Rendered DOM tree
  */
-export const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
+export const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 	const isVnodeSame = isSameChild(vnode, prevVnode);
 	const prevVnodeDom = getVNodeDom(prevVnode, true);
 
@@ -309,7 +311,12 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
 
 	if (vnode.__result) {
 		vnode.__result.__parent = vnode.__parent;
-		return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode, targetNode);
+		return patchVnodeDom(
+			vnode.__result,
+			isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode,
+			targetNode,
+			changeType
+		);
 	}
 	const vnodeChildren = vnode.__children;
 
@@ -332,7 +339,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
 		if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
 			oldChildrenMap.delete(childVnode.key);
 		}
-		const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling);
+		const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling ? 'prepend' : 'append');
 		if (isRenderableElement(childVnodeDom)) {
 			afterSibling = childVnodeDom;
 		}
@@ -341,12 +348,14 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
 	if (isRenderableElement(returnDom)) {
 		if (prevVnodeDom && prevVnodeDom !== returnDom) {
 			domReplaceWith(prevVnodeDom, returnDom);
-		} else if (targetNode && targetNode.nextSibling) {
-			if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
-		} else if (prepend) {
-			if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
-		} else if (vnode.__parent.lastChild !== returnDom) {
-			domAppend(vnode.__parent, returnDom);
+		} else if (changeType !== 'same') {
+			if (targetNode && targetNode.nextSibling) {
+				if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
+			} else if (changeType === 'prepend') {
+				if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
+			} else if (vnode.__parent.lastChild !== returnDom) {
+				domAppend(vnode.__parent, returnDom);
+			}
 		}
 	}
 
@@ -476,7 +485,7 @@ export const onNextTick = (vnode, callback) => {
 		if (vnode.__dirty) {
 			const old = { ...vnode };
 			vnode = renderVnode(vnode, old);
-			patchVnodeDom(vnode, old);
+			patchVnodeDom(vnode, old, null, 'same');
 			vnode.__dirty = false;
 		}
 	});

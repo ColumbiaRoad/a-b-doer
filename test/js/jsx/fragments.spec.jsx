@@ -1,12 +1,15 @@
 import { expect, describe, vi, it, beforeEach } from 'vitest';
-import { clearAll } from 'a-b-doer';
+import { clearAll, Fragment } from 'a-b-doer';
 import { Simple } from './templates';
-import { render } from './test-utils';
+import { minify, render } from './test-utils';
+import { useEffect, useState } from '../../../hooks';
+import { options } from '../../../internal';
 
 describe('JSX: Fragments', () => {
 	vi.useFakeTimers();
 
 	beforeEach(() => {
+		options.visibleFragment = '';
 		clearAll();
 	});
 
@@ -223,6 +226,215 @@ describe('JSX: Fragments', () => {
 		);
 		expect(renderResult.container.innerHTML).toBe(
 			'<div>Text<div data-test="subrow">Some other element</div><div data-test="subrow"><h1>Bar</h1>Foo<div data-test="subrow">Some other element</div><div data-test="subrow"><h2>Sub2</h2>Foo2</div></div>TextBelow</div>'
+		);
+	});
+
+	it('should patch correctly custom component with fragments', () => {
+		const frag = '__FRAG__';
+		options.visibleFragment = frag;
+		const FragComponent = ({ children, rows = 2 }) => (
+			<>
+				{rows >= 1 && <div data-test="subrow">Some other element</div>}
+				{rows >= 2 && <div data-test="subrow">{children}</div>}
+			</>
+		);
+		let renderResult = render(
+			<div>
+				Text
+				<FragComponent rows={1}>Foo</FragComponent>
+				<div>Bottom</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			`<div>Text<div data-test="subrow">Some other element</div>${frag}<div>Bottom</div></div>`
+		);
+
+		renderResult = renderResult.rerender(
+			<div>
+				Text
+				<FragComponent rows={2}>Foo</FragComponent>
+				<div>Bottom</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			`<div>Text<div data-test="subrow">Some other element</div><div data-test="subrow">Foo</div>${frag}<div>Bottom</div></div>`
+		);
+
+		renderResult = renderResult.rerender(
+			<div>
+				Text
+				<FragComponent rows={1}>Foo</FragComponent>
+				<FragComponent rows={2}>Foo</FragComponent>
+				<div>Bottom</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			`<div>Text<div data-test="subrow">Some other element</div>${frag}<div data-test="subrow">Some other element</div><div data-test="subrow">Foo</div>${frag}<div>Bottom</div></div>`
+		);
+	});
+
+	it('should render correctly table with many custom tr components', () => {
+		const frag = '__FRAG__';
+		options.visibleFragment = frag;
+
+		const Trs = ({ testId }) => {
+			const [rows, setRows] = useState(1);
+			useEffect(() => {
+				if (testId === 'rows2') setRows(3);
+			}, []);
+			return (
+				<>
+					{rows >= 1 && (
+						<tr>
+							<td>{testId} cell1</td>
+						</tr>
+					)}
+					{rows >= 2 && (
+						<tr>
+							<td>{testId} cell2</td>
+						</tr>
+					)}
+					{rows >= 3 && (
+						<tr>
+							<td>{testId} cell3</td>
+						</tr>
+					)}
+				</>
+			);
+		};
+
+		const Table = () => (
+			<table>
+				<tbody>
+					<Trs testId="rows1" />
+					<Trs testId="rows2" />
+					<Trs testId="rows3" />
+				</tbody>
+			</table>
+		);
+
+		const { container } = render(
+			<div>
+				<div>Top</div>
+				<Table />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe(
+			minify(`<div>
+				<div>Top</div>
+				<table>
+					<tbody>
+						<tr><td>rows1 cell1</td></tr>
+						${frag}
+						<tr><td>rows2 cell1</td></tr>
+						${frag}
+						<tr><td>rows3 cell1</td></tr>
+						${frag}
+					</tbody>
+				</table>
+				<div>Bottom</div>
+			</div>`)
+		);
+
+		vi.runAllTimers();
+		expect(container.innerHTML).toBe(
+			minify(`<div>
+				<div>Top</div>
+				<table>
+					<tbody>
+						<tr><td>rows1 cell1</td></tr>
+						${frag}
+						<tr><td>rows2 cell1</td></tr>
+						<tr><td>rows2 cell2</td></tr>
+						<tr><td>rows2 cell3</td></tr>
+						${frag}
+						<tr><td>rows3 cell1</td></tr>
+						${frag}
+					</tbody>
+				</table>
+				<div>Bottom</div>
+			</div>`)
+		);
+	});
+
+	it('should render correctly table with many custom tr components in array map', () => {
+		const Trs = ({ testId }) => {
+			const [rows, setRows] = useState(1);
+			useEffect(() => {
+				if (testId === 'rows2') setRows(3);
+			}, []);
+			return (
+				<>
+					{rows >= 1 && (
+						<tr>
+							<td>{testId} cell1</td>
+						</tr>
+					)}
+					{rows >= 2 && (
+						<tr>
+							<td>{testId} cell2</td>
+						</tr>
+					)}
+					{rows >= 3 && (
+						<tr>
+							<td>{testId} cell3</td>
+						</tr>
+					)}
+				</>
+			);
+		};
+
+		const Table = () => (
+			<table>
+				<tbody>
+					<tr>
+						<td>heading</td>
+					</tr>
+					{['rows1', 'rows2', 'rows3'].map((testId) => (
+						<Trs key={testId} testId={testId} />
+					))}
+				</tbody>
+			</table>
+		);
+
+		const { container } = render(
+			<div>
+				<div>Top</div>
+				<Table />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe(
+			minify(`<div>
+				<div>Top</div>
+				<table>
+					<tbody>
+						<tr><td>heading</td></tr>
+						<tr><td>rows1 cell1</td></tr>
+						<tr><td>rows2 cell1</td></tr>
+						<tr><td>rows3 cell1</td></tr>
+					</tbody>
+				</table>
+				<div>Bottom</div>
+			</div>`)
+		);
+		vi.runAllTimers();
+		expect(container.innerHTML).toBe(
+			minify(`<div>
+				<div>Top</div>
+				<table>
+					<tbody>
+						<tr><td>heading</td></tr>
+						<tr><td>rows1 cell1</td></tr>
+						<tr><td>rows2 cell1</td></tr>
+						<tr><td>rows2 cell2</td></tr>
+						<tr><td>rows2 cell3</td></tr>
+						<tr><td>rows3 cell1</td></tr>
+					</tbody>
+				</table>
+				<div>Bottom</div>
+			</div>`)
 		);
 	});
 });

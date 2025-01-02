@@ -25,6 +25,8 @@ options.unmount = (vnode) => {
 
 export const waitFor = (number) => new Promise((resolve) => setTimeout(resolve, number));
 
+export const minify = (str) => str.replace(/[\t\r\n]/g, '').replace(/\s+/, ' ');
+
 /**
  * @typedef RenderResult
  * @prop {VNode} vnode Rendered VNode
@@ -84,7 +86,7 @@ export const render = (vnode, parentElement = document.body) => {
 
 	const createRerenderer = (oldVnode) => (newVnode) => {
 		const renderedVnode = renderVnode(newVnode, oldVnode);
-		patchVnodeDom(renderedVnode, oldVnode);
+		patchVnodeDom(renderedVnode, oldVnode, null, 'same');
 		return {
 			...sharedProperties,
 			vnode: renderedVnode,
