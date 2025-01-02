@@ -3,10 +3,9 @@ import { clearAll, unmount } from 'a-b-doer';
 import { useState, useEffect } from 'a-b-doer/hooks';
 import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles, Loading } from './templates';
 import { render } from './test-utils';
-import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
 import Checked from './components/Checked.svg';
 
-describe('JSX', () => {
+describe('JSX: Common', () => {
 	vi.useFakeTimers();
 
 	beforeEach(() => {
@@ -17,17 +16,6 @@ describe('JSX', () => {
 		render(<Simple id="tpl1" foo="0" />);
 		expect(document.head.innerHTML).toMatch(/body\s*{\s*background:\s*red;\s*}/s);
 		expect(document.head.innerHTML).toMatch(/\..*simple.*\s*{\s*background:\s*blue;\s*}/s);
-	});
-
-	it('should add proper amount of elements', () => {
-		const { container } = render(
-			<>
-				<Simple id="tpl1" foo="0" />
-				<Simple id="tpl2" foo="1" />
-				<Simple id="tpl3" foo="2" bar="1" />
-			</>
-		);
-		expect(container.querySelectorAll('.simple').length).toBe(3);
 	});
 
 	it('should pass props correctly', () => {
@@ -183,200 +171,26 @@ describe('JSX', () => {
 		}
 	});
 
-	it('should render correctly mapped array children with fragments', () => {
-		const FragComponent = ({ children }) => (
-			<>
-				<>
-					<div data-test="row">Some element</div>
-					<div data-test="row">{children}</div>
-				</>
-			</>
-		);
-
-		const FragComponent2 = ({ children }) => (
-			<>
-				<div data-test="subrow">Some other element</div>
-				<div data-test="subrow">{children}</div>
-			</>
-		);
-
-		const { queryByTestId, queryAllByTestId } = render(
-			<div data-test="container">
-				{[0, 1, 2].map((i) => (
-					<FragComponent key={`i${i}`}>
-						<FragComponent2>Item {i}</FragComponent2>
-					</FragComponent>
-				))}
-				<div data-test="bottom-element">Bottom</div>
-			</div>
-		);
-
-		const container = queryByTestId('container');
-		expect(container.children.length).toBe(7);
-		const bottom = queryByTestId('bottom-element');
-		expect(container.lastChild).toBe(bottom);
-		const rows = queryAllByTestId('row');
-
-		for (let i = 0; i < container.children.length - 1; i++) {
-			expect(container.children[i]).toBe(rows[i]);
-		}
-	});
-
 	it('should patch correctly if vnode type changes', () => {
-		const container = document.createElement('div');
-		const vnode = renderVnode(
+		let renderResult = render(
 			<div>
 				Text
 				<h1>Testing</h1>
 			</div>
 		);
-		vnode.__parent = container;
-		container.append(vnode.__dom);
-		patchVnodeDom(vnode, null);
-		expect(container.innerHTML).toBe('<div>Text<h1>Testing</h1></div>');
-		const vnode2 = renderVnode(
+		expect(renderResult.container.innerHTML).toBe('<div>Text<h1>Testing</h1></div>');
+
+		renderResult = renderResult.rerender(
 			<div>
 				Text
 				<h4>Testing</h4>
-			</div>,
-			vnode
-		);
-		patchVnodeDom(vnode2, vnode);
-		expect(container.innerHTML).toBe('<div>Text<h4>Testing</h4></div>');
-	});
-
-	it('should patch correctly vnode with fragments', () => {
-		const container = document.createElement('div');
-		const vnode = renderVnode(
-			<div>
-				<h1>Testing</h1>
 			</div>
 		);
-		vnode.__parent = container;
-		container.append(vnode.__dom);
-		patchVnodeDom(vnode, null);
-		expect(container.innerHTML).toBe('<div><h1>Testing</h1></div>');
-
-		const vnode2 = renderVnode(
-			<div>
-				Text
-				<>
-					<div>row1</div>
-					<div>row2</div>
-				</>
-				<h1>Testing</h1>
-			</div>,
-			vnode
-		);
-		patchVnodeDom(vnode2, vnode);
-		expect(container.innerHTML).toBe('<div>Text<div>row1</div><div>row2</div><h1>Testing</h1></div>');
-
-		const vnode3 = renderVnode(
-			<div>
-				Text
-				<h2>Testing</h2>
-			</div>,
-			vnode
-		);
-		patchVnodeDom(vnode3, vnode2);
-		expect(container.innerHTML).toBe('<div>Text<h2>Testing</h2></div>');
-
-		const vnode4 = renderVnode(
-			<div>
-				<>
-					<div>row1</div>
-					<>
-						<div>row2</div>
-						<div>row3</div>
-					</>
-				</>
-				Text
-				<h2>Testing</h2>
-			</div>,
-			vnode
-		);
-		patchVnodeDom(vnode4, vnode3);
-		expect(container.innerHTML).toBe('<div><div>row1</div><div>row2</div><div>row3</div>Text<h2>Testing</h2></div>');
-	});
-
-	it('should patch correctly vnode with fragments, case rerender', () => {
-		const container = document.createElement('div');
-		const vnode = renderVnode(
-			<div>
-				<label>
-					<input type="checkbox" />
-					Vaihda
-				</label>
-				<div>
-					<div>foo1</div>
-					<div>foo2</div>
-				</div>
-			</div>
-		);
-		vnode.__parent = container;
-		container.append(vnode.__dom);
-		patchVnodeDom(vnode, null);
-		expect(container.innerHTML).toBe(
-			'<div><label><input type="checkbox">Vaihda</label><div><div>foo1</div><div>foo2</div></div></div>'
-		);
-
-		const vnode2 = renderVnode(
-			<div>
-				<>
-					<div>First</div>
-					<div>FOO</div>
-					<div>BAR</div>
-					<>
-						<div>FOO2</div>
-						<div>BAR2</div>
-						<div>BAZ2</div>
-					</>
-					<div>BAZ</div>
-				</>
-				<label>
-					<input type="checkbox" />
-					Vaihda
-				</label>
-				<div>
-					<div>foo1</div>
-					<div>foo2</div>
-				</div>
-			</div>,
-			vnode
-		);
-		patchVnodeDom(vnode2, vnode);
-		expect(container.innerHTML).toBe(
-			'<div><div>First</div><div>FOO</div><div>BAR</div><div>FOO2</div><div>BAR2</div><div>BAZ2</div><div>BAZ</div><label><input type="checkbox">Vaihda</label><div><div>foo1</div><div>foo2</div></div></div>'
-		);
-
-		const vnode3 = { ...vnode2 };
-		patchVnodeDom(vnode3, vnode2);
-		expect(container.innerHTML).toBe(
-			'<div><div>First</div><div>FOO</div><div>BAR</div><div>FOO2</div><div>BAR2</div><div>BAZ2</div><div>BAZ</div><label><input type="checkbox">Vaihda</label><div><div>foo1</div><div>foo2</div></div></div>'
-		);
-
-		const vnode4 = renderVnode(
-			<div>
-				<label>
-					<input type="checkbox" />
-					Vaihda
-				</label>
-				<div>
-					<div>foo1</div>
-					<div>foo2</div>
-				</div>
-			</div>,
-			vnode2
-		);
-		patchVnodeDom(vnode4, vnode2);
-		expect(container.innerHTML).toBe(
-			'<div><label><input type="checkbox">Vaihda</label><div><div>foo1</div><div>foo2</div></div></div>'
-		);
+		expect(renderResult.container.innerHTML).toBe('<div>Text<h4>Testing</h4></div>');
 	});
 
 	it('should handle keyed element reordering', () => {
-		const container = document.createElement('div');
-		const vnode = renderVnode(
+		let renderResult = render(
 			<div>
 				<div key="k1">Testing 1</div>
 				<div key="k2">Testing 2</div>
@@ -384,39 +198,32 @@ describe('JSX', () => {
 				<div key="k4">Testing 4</div>
 			</div>
 		);
-		vnode.__parent = container;
-		container.append(vnode.__dom);
-		patchVnodeDom(vnode, null);
-		expect(container.innerHTML).toBe(
+		expect(renderResult.container.innerHTML).toBe(
 			'<div><div>Testing 1</div><div>Testing 2</div><div>Testing 3</div><div>Testing 4</div></div>'
 		);
 
-		const vnode2 = renderVnode(
+		renderResult = renderResult.rerender(
 			<div>
 				<div key="k2">Testing 2</div>
 				<div key="k1">Testing 1</div>
 				<div key="k4">Testing 4</div>
 				<div key="k3">Testing 3</div>
-			</div>,
-			vnode
+			</div>
 		);
-		patchVnodeDom(vnode2, vnode);
-		expect(container.innerHTML).toBe(
+		expect(renderResult.container.innerHTML).toBe(
 			'<div><div>Testing 2</div><div>Testing 1</div><div>Testing 4</div><div>Testing 3</div></div>'
 		);
 
-		const vnode3 = renderVnode(
+		renderResult = renderResult.rerender(
 			<div>
 				<div key="k4">Testing 4</div>
 				<div key="k2">Testing 2</div>
 				<div key="k3">Testing 3</div>
 				<div key="k5">Testing 5</div>
 				<div key="k1">Testing 1</div>
-			</div>,
-			vnode
+			</div>
 		);
-		patchVnodeDom(vnode3, vnode2);
-		expect(container.innerHTML).toBe(
+		expect(renderResult.container.innerHTML).toBe(
 			'<div><div>Testing 4</div><div>Testing 2</div><div>Testing 3</div><div>Testing 5</div><div>Testing 1</div></div>'
 		);
 	});

@@ -1,6 +1,7 @@
 import { queryHelpers } from '@testing-library/dom';
-import { append, unmount } from '../../../src/utils/dom';
+import { append } from '../../../src/utils/dom';
 import { getVNodeDom, options } from '../../../src/utils/internal';
+import { patchVnodeDom, renderVnode } from '../../../internal';
 
 const domVnodeMap = new WeakMap();
 
@@ -24,24 +25,6 @@ options.unmount = (vnode) => {
 
 export const waitFor = (number) => new Promise((resolve) => setTimeout(resolve, number));
 
-export const createRenderer = () => {
-	const container = document.createElement('div');
-	document.body.appendChild(container);
-	return {
-		render: (vnode) => render(vnode, container),
-		cleanup: () => {
-			[...container.children].forEach((child) => {
-				const vnode = domVnodeMap.get(child);
-				if (vnode) {
-					unmount(vnode);
-				} else {
-					child.remove();
-				}
-			});
-		},
-	};
-};
-
 /**
  * @typedef RenderResult
  * @prop {VNode} vnode Rendered VNode
@@ -53,17 +36,22 @@ export const createRenderer = () => {
  * @prop {(id: string, options?: any) => HTMLElement[ | null]} queryAllByTestId Get all matching elements from rendered container using data-test attribute
  * @prop {(selector: string) => HTMLElement | null} query Run given DOM query to rendered container, returns the first matching element
  * @prop {(selector: string) => HTMLElement[]} queryAll Run given DOM query to rendered container, returns all matching elements
+ * @prop {(vnode: VNode) => RenderResult} rerender Rerender the given vnode using previously rendered as an old vnode
  */
 
 /**
- *
  * @param {VNode} vnode
+ * @param {HTMLElement} [parentElement]
+ * @returns {RenderResult}
  */
 export const render = (vnode, parentElement = document.body) => {
 	const container = document.createElement('div');
 	parentElement.appendChild(container);
 
-	append(vnode, container);
+	append(vnode, container, false);
+	const element = getVNodeDom(vnode, true);
+	// Remove data-o attribute so we don't have to put it in every html comparison
+	if (element?.dataset) delete element.dataset.o;
 
 	const queryByTestId = queryHelpers.queryByAttribute.bind(null, 'data-test', container);
 	const queryAllByTestId = queryHelpers.queryAllByAttribute.bind(null, 'data-test', container);
@@ -84,16 +72,32 @@ export const render = (vnode, parentElement = document.body) => {
 		return result[0];
 	}
 
-	return {
-		vnode,
+	const sharedProperties = {
 		container,
-		element: getVNodeDom(vnode, true),
 		getByTestId,
 		getAllByTestId,
 		queryByTestId,
 		queryAllByTestId,
 		query: (selector) => container.querySelector(selector),
 		queryAll: (selector) => container.querySelectorAll(selector),
+	};
+
+	const createRerenderer = (oldVnode) => (newVnode) => {
+		const renderedVnode = renderVnode(newVnode, oldVnode);
+		patchVnodeDom(renderedVnode, oldVnode);
+		return {
+			...sharedProperties,
+			vnode: renderedVnode,
+			element: getVNodeDom(renderedVnode, true),
+			rerender: createRerenderer(renderedVnode),
+		};
+	};
+
+	return {
+		...sharedProperties,
+		vnode,
+		element,
+		rerender: createRerenderer(vnode),
 	};
 };
 
