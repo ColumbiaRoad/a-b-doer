@@ -382,7 +382,7 @@
 	      const old = { ...vnode };
 	      vnode = renderVnode(vnode, old);
 	      patchVnodeDom(vnode, old, null, "same");
-	      vnode.__dirty = false;
+	      if (vnode) vnode.__dirty = false;
 	    }
 	  });
 	};
@@ -439,7 +439,7 @@
 	    vnode.__hooks[index] = ["e", deps, null];
 	    ((vnode2, index2) => {
 	      onNextTick(vnode2, () => {
-	        vnode2.__hooks[index2][2] = cb();
+	        if (vnode2.__hooks[index2]) vnode2.__hooks[index2][2] = cb();
 	      });
 	    })(vnode, index);
 	  }

@@ -338,6 +338,7 @@ describe('JSX: Fragments', () => {
 		);
 
 		vi.runAllTimers();
+
 		expect(container.innerHTML).toBe(
 			minify(`<div>
 				<div>Top</div>

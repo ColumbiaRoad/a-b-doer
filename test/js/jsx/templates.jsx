@@ -114,7 +114,6 @@ export const Toggles = ({ id }) => {
 	const [val, setVal] = useState(0);
 
 	useEffect(() => {
-		console.log('=================');
 		setVal(1);
 	}, []);
 

@@ -36,7 +36,7 @@ export const useEffect = (cb, deps) => {
 		vnode.__hooks[index] = ['e', deps, null];
 		((vnode, index) => {
 			onNextTick(vnode, () => {
-				vnode.__hooks[index][2] = cb();
+				if (vnode.__hooks[index]) vnode.__hooks[index][2] = cb();
 			});
 		})(vnode, index);
 	}

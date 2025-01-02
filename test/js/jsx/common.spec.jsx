@@ -253,4 +253,50 @@ describe('JSX: Common', () => {
 		expect(svg.querySelector('g').outerHTML).toMatch('stroke-width="2"');
 		expect(svg.querySelector('polyline').outerHTML).toMatch('stroke-width="10"');
 	});
+
+	it('should patch correctly if component type returns null after update', () => {
+		const Custom = () => {
+			const [foo, setFoo] = useState(true);
+			useEffect(() => {
+				setFoo(false);
+			}, []);
+			if (!foo) return null;
+			return <div>foo</div>;
+		};
+		const { container } = render(
+			<div>
+				Text
+				<Custom />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe('<div>Text<div>foo</div><div>Bottom</div></div>');
+
+		vi.runAllTimers();
+
+		expect(container.innerHTML).toBe('<div>Text<div>Bottom</div></div>');
+	});
+
+	it('should patch correctly if component type returns something after update when previously returned null', () => {
+		const Custom = () => {
+			const [foo, setFoo] = useState(false);
+			useEffect(() => {
+				setFoo(true);
+			}, []);
+			if (!foo) return null;
+			return <div>foo</div>;
+		};
+		const { container } = render(
+			<div>
+				Text
+				<Custom />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe('<div>Text<div>Bottom</div></div>');
+
+		vi.runAllTimers();
+
+		expect(container.innerHTML).toBe('<div>Text<div>foo</div><div>Bottom</div></div>');
+	});
 });

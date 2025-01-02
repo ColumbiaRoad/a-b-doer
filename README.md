@@ -213,7 +213,7 @@ Supported attribute namespaces by default are these:
 }
 ```
 
-If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_namespaces or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
+If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_abNS or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
 
 ## Polyfills
 

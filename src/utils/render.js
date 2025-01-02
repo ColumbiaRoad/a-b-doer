@@ -311,12 +311,8 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 
 	if (vnode.__result) {
 		vnode.__result.__parent = vnode.__parent;
-		return patchVnodeDom(
-			vnode.__result,
-			isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode,
-			targetNode,
-			changeType
-		);
+		vnode.__result.__after = vnode.__after;
+		return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result : prevVnode, targetNode, changeType);
 	}
 	const vnodeChildren = vnode.__children;
 
@@ -332,6 +328,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 		const childVnode = vnodeChildren[index];
 		if (childVnode) {
 			childVnode.__parent = childrenParentNode;
+			childVnode.__after = afterSibling;
 		}
 		const oldChildVnodeCandidate = oldChildrenMap && childVnode?.key && oldChildrenMap.get(childVnode.key);
 		const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
@@ -345,17 +342,19 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 		}
 	}
 
+	if (changeType === 'same' && !prevVnodeDom) {
+		targetNode = vnode.__after;
+	}
+
 	if (isRenderableElement(returnDom)) {
 		if (prevVnodeDom && prevVnodeDom !== returnDom) {
 			domReplaceWith(prevVnodeDom, returnDom);
-		} else if (changeType !== 'same') {
-			if (targetNode && targetNode.nextSibling) {
-				if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
-			} else if (changeType === 'prepend') {
-				if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
-			} else if (vnode.__parent.lastChild !== returnDom) {
-				domAppend(vnode.__parent, returnDom);
-			}
+		} else if (targetNode && targetNode.nextSibling) {
+			if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
+		} else if (changeType === 'prepend') {
+			if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
+		} else if (vnode.__parent.lastChild !== returnDom) {
+			domAppend(vnode.__parent, returnDom);
 		}
 	}
 
@@ -486,7 +485,7 @@ export const onNextTick = (vnode, callback) => {
 			const old = { ...vnode };
 			vnode = renderVnode(vnode, old);
 			patchVnodeDom(vnode, old, null, 'same');
-			vnode.__dirty = false;
+			if (vnode) vnode.__dirty = false;
 		}
 	});
 };
