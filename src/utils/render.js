@@ -342,19 +342,24 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
 		}
 	}
 
+	let shouldMakeChanges = changeType !== 'same';
+
 	if (changeType === 'same' && !prevVnodeDom) {
 		targetNode = vnode.__after;
+		shouldMakeChanges = !!targetNode;
 	}
 
 	if (isRenderableElement(returnDom)) {
 		if (prevVnodeDom && prevVnodeDom !== returnDom) {
 			domReplaceWith(prevVnodeDom, returnDom);
-		} else if (targetNode && targetNode.nextSibling) {
-			if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
-		} else if (changeType === 'prepend') {
-			if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
-		} else if (vnode.__parent.lastChild !== returnDom) {
-			domAppend(vnode.__parent, returnDom);
+		} else if (shouldMakeChanges) {
+			if (targetNode && targetNode.nextSibling) {
+				if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
+			} else if (changeType === 'prepend') {
+				if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
+			} else if (vnode.__parent.lastChild !== returnDom) {
+				domAppend(vnode.__parent, returnDom);
+			}
 		}
 	}
 
