@@ -255,7 +255,7 @@
 	    if (childVnode) {
 	      childVnode.__parent = childrenParentNode;
 	    }
-	    const oldChildVnodeCandidate = oldChildrenMap && childVnode.key && oldChildrenMap.get(childVnode.key);
+	    const oldChildVnodeCandidate = oldChildrenMap && childVnode?.key && oldChildrenMap.get(childVnode.key);
 	    const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
 	    if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
 	      oldChildrenMap.delete(childVnode.key);

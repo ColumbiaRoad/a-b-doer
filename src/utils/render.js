@@ -326,7 +326,7 @@ export const patchVnodeDom = (vnode, prevVnode, targetNode, prepend) => {
 		if (childVnode) {
 			childVnode.__parent = childrenParentNode;
 		}
-		const oldChildVnodeCandidate = oldChildrenMap && childVnode.key && oldChildrenMap.get(childVnode.key);
+		const oldChildVnodeCandidate = oldChildrenMap && childVnode?.key && oldChildrenMap.get(childVnode.key);
 		const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
 
 		if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
