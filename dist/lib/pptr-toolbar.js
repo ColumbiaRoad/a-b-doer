@@ -241,12 +241,8 @@
 	  let returnDom = vnode.__dom;
 	  if (vnode.__result) {
 	    vnode.__result.__parent = vnode.__parent;
-	    return patchVnodeDom(
-	      vnode.__result,
-	      isVnodeSame ? prevVnode?.__result || prevVnode : prevVnode,
-	      targetNode,
-	      changeType
-	    );
+	    vnode.__result.__after = vnode.__after;
+	    return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result : prevVnode, targetNode, changeType);
 	  }
 	  const vnodeChildren = vnode.__children;
 	  const oldChildren = prevVnode ? prevVnode.__children : null;
@@ -259,6 +255,7 @@
 	    const childVnode = vnodeChildren[index];
 	    if (childVnode) {
 	      childVnode.__parent = childrenParentNode;
+	      childVnode.__after = afterSibling;
 	    }
 	    const oldChildVnodeCandidate = oldChildrenMap && childVnode?.key && oldChildrenMap.get(childVnode.key);
 	    const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
@@ -270,10 +267,15 @@
 	      afterSibling = childVnodeDom;
 	    }
 	  }
+	  let shouldMakeChanges = changeType !== "same";
+	  if (changeType === "same" && !prevVnodeDom) {
+	    targetNode = vnode.__after;
+	    shouldMakeChanges = !!targetNode;
+	  }
 	  if (isRenderableElement(returnDom)) {
 	    if (prevVnodeDom && prevVnodeDom !== returnDom) {
 	      domReplaceWith(prevVnodeDom, returnDom);
-	    } else if (changeType !== "same") {
+	    } else if (shouldMakeChanges) {
 	      if (targetNode && targetNode.nextSibling) {
 	        if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
 	      } else if (changeType === "prepend") {
