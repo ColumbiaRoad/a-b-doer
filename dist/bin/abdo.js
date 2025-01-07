@@ -867,7 +867,8 @@ function cssInjectPlugin() {
 					// Rename style bundle
 					if (mainKey.endsWith('.css')) {
 						bundle[bundleKeys[1]].fileName = mainKey;
-						bundle[bundleKeys[1]].name = mainKey;
+						bundle[bundleKeys[1]].names = bundle[bundleKeys[1]].names || [];
+						bundle[bundleKeys[1]].names[0] = mainKey;
 					}
 				}
 				// Create a proper javascript file from the css chunk

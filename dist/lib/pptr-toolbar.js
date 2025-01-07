@@ -57,11 +57,11 @@
 	    type: tag,
 	    props,
 	    key: props.key,
-	    __children: void 0,
-	    __dom: void 0,
-	    __parent: void 0,
-	    __prevSibling: void 0,
-	    __result: void 0
+	    __children: undefined,
+	    __dom: undefined,
+	    __parent: undefined,
+	    __prevSibling: undefined,
+	    __result: undefined
 	  };
 	};
 	const abdNsKey = "_abNS";
@@ -101,7 +101,7 @@
 	};
 	const copyInternal = (source, target) => {
 	  ["__hooks", "__class", "__parent", "__prevSibling"].forEach((a) => {
-	    if (source[a] !== void 0) target[a] = source[a];
+	    if (source[a] !== undefined) target[a] = source[a];
 	  });
 	};
 	const renderVnode = (vnode, oldVnode) => {
@@ -109,7 +109,7 @@
 	    return vnode;
 	  }
 	  let element;
-	  const oldProps = oldVnode ? oldVnode.props : void 0;
+	  const oldProps = oldVnode ? oldVnode.props : undefined;
 	  if (oldVnode) {
 	    copyInternal(oldVnode, vnode);
 	  }
@@ -153,11 +153,11 @@
 	      }
 	    }
 	    newVNode.key = vnode.key;
-	    vnode.__result = renderVnode(newVNode, oldVnode ? oldVnode.__result : void 0);
+	    vnode.__result = renderVnode(newVNode, oldVnode ? oldVnode.__result : undefined);
 	    if (props.ref) {
 	      if (isFunction(props.ref)) {
 	        props.ref(ref);
-	      } else if (props.ref.current !== void 0) {
+	      } else if (props.ref.current !== undefined) {
 	        props.ref.current = ref;
 	      }
 	    }
@@ -219,7 +219,7 @@
 	      child.key = child.props.key || `#${index}`;
 	      oldChild = childrenMap && childrenMap.get(child.key);
 	      if (oldChild && !isSameChild(child, oldChild)) {
-	        oldChild = void 0;
+	        oldChild = undefined;
 	      }
 	      const newVnode = renderVnode(child, oldChild);
 	      if ((getVNodeDom(newVnode, true) || isFragment(newVnode)) && isVNode(oldChild)) {
@@ -336,14 +336,14 @@
 	    }
 	    for (let name in props) {
 	      let value = props[name];
-	      if (sameProps[name] || value === void 0 || protectedKeysRegex.test(name)) {
+	      if (sameProps[name] || value === undefined || protectedKeysRegex.test(name)) {
 	        continue;
 	      } else if (name === "dangerouslySetInnerHTML") {
 	        element.innerHTML = value.__html;
 	      } else if (name === "ref" && value) {
 	        if (isFunction(value)) {
 	          value(element);
-	        } else if (value.current !== void 0) {
+	        } else if (value.current !== undefined) {
 	          value.current = element;
 	        }
 	      } else if (typeof value === "boolean") {
@@ -483,7 +483,7 @@
 
 	const wait = (waitTime) => new Promise((resolve) => setTimeout(resolve, waitTime));
 
-	var e=[],t=[];function n(n,r){if(n&&"undefined"!=typeof document){var a,s=!0===r.prepend?"prepend":"append",d=!0===r.singleTag,i="string"==typeof r.container?document.querySelector(r.container):document.getElementsByTagName("head")[0];if(d){var u=e.indexOf(i);-1===u&&(u=e.push(i)-1,t[u]={}),a=t[u]&&t[u][s]?t[u][s]:t[u][s]=c();}else a=c();65279===n.charCodeAt(0)&&(n=n.substring(1)),a.styleSheet?a.styleSheet.cssText+=n:a.appendChild(document.createTextNode(n));}function c(){var e=document.createElement("style");if(e.setAttribute("type","text/css"),r.attributes)for(var t=Object.keys(r.attributes),n=0;n<t.length;n++)e.setAttribute(t[n],r.attributes[t[n]]);var a="prepend"===s?"afterbegin":"beforeend";return i.insertAdjacentElement(a,e),e}}
+	var e=[],t=[];function n(n,r){if(n&&"undefined"!=typeof document){var a,s=true===r.prepend?"prepend":"append",d=true===r.singleTag,i="string"==typeof r.container?document.querySelector(r.container):document.getElementsByTagName("head")[0];if(d){var u=e.indexOf(i);-1===u&&(u=e.push(i)-1,t[u]={}),a=t[u]&&t[u][s]?t[u][s]:t[u][s]=c();}else a=c();65279===n.charCodeAt(0)&&(n=n.substring(1)),a.styleSheet?a.styleSheet.cssText+=n:a.appendChild(document.createTextNode(n));}function c(){var e=document.createElement("style");if(e.setAttribute("type","text/css"),r.attributes)for(var t=Object.keys(r.attributes),n=0;n<t.length;n++)e.setAttribute(t[n],r.attributes[t[n]]);var a="prepend"===s?"afterbegin":"beforeend";return i.insertAdjacentElement(a,e),e}}
 
 	var css$3 = ".styles_toggle__5c92c2bf {\n  display: flex;\n  align-items: center;\n  padding: 5px 0;\n}\n.styles_toggle__5c92c2bf input {\n  display: none !important;\n}\n.styles_toggle__5c92c2bf input:checked + .styles_icon__5c92c2bf {\n  border-color: #288fb0;\n}\n.styles_toggle__5c92c2bf input:checked + .styles_icon__5c92c2bf span {\n  transform: translateX(16px);\n  background: #288fb0;\n}\n.styles_toggle__5c92c2bf .styles_icon__5c92c2bf {\n  border: 2px solid #ccc;\n  width: 40px;\n  height: 22px;\n  border-radius: 12px;\n  position: relative;\n  display: inline-block;\n  cursor: pointer;\n  transition: border 0.2s ease-in-out;\n  margin-right: 13px;\n}\n.styles_toggle__5c92c2bf .styles_icon__5c92c2bf span {\n  height: 16px;\n  width: 16px;\n  border-radius: 10px;\n  background: #ccc;\n  transition: all 0.2s ease-in-out;\n  position: absolute;\n  left: 2px;\n  top: 1px;\n}";
 	var modules_ed59282c$3 = {"toggle":"styles_toggle__5c92c2bf","icon":"styles_icon__5c92c2bf"};
