@@ -11,7 +11,7 @@
     "try:watch": "node ./dist/bin/abdo.js watch",
     "try:preview": "node ./dist/bin/abdo.js preview",
     "try:screenshot": "node ./dist/bin/abdo.js screenshot",
-    "test": "npm run test:js -- --run; npm run test:styles -- --run; npm run test:config -- --run",
+    "test": "npm run test:js -- --run && npm run test:styles -- --run && npm run test:config -- --run",
     "test:js": "vitest -c ./test/js/vitest.config.js test/js",
     "test:styles": "vitest -c ./test/styles/vitest.config.js test/styles",
     "test:config": "vitest -c ./test/config/vitest.config.js test/config",
