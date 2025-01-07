@@ -208,8 +208,7 @@ export const renderVnode = (vnode, oldVnode) => {
 	} else {
 		// Create a dom node for fragments so we can follow the point in dom where elements should be inserted
 		vnode.__dom =
-			getVNodeDom(oldVnode) ||
-			document.createTextNode(process.env.TEST_ENV ? options.visibleFragment || '' : '__frag__');
+			getVNodeDom(oldVnode) || document.createTextNode(process.env.TEST_ENV ? options.visibleFragment || '' : '');
 	}
 
 	if (children) {
