@@ -86,7 +86,7 @@ export const render = (vnode, parentElement = document.body) => {
 
 	const createRerenderer = (oldVnode) => (newVnode) => {
 		const renderedVnode = renderVnode(newVnode, oldVnode);
-		patchVnodeDom(renderedVnode, oldVnode, null, 'same');
+		patchVnodeDom(renderedVnode, oldVnode, true);
 		return {
 			...sharedProperties,
 			vnode: renderedVnode,

@@ -9,6 +9,14 @@ export const domInsertBefore = (child, target) => {
 	getParent(target)?.insertBefore(child, target);
 };
 
+export const domInsertAfter = (child, target) => {
+	const parent = getParent(target);
+	if (parent) {
+		if (target.nextSibling) parent.insertBefore(child, target.nextSibling);
+		else parent.append(child);
+	}
+};
+
 export const domRemove = (node) => {
 	getParent(node)?.removeChild(node);
 };
@@ -84,6 +92,11 @@ export const createVNode = (tag = '', props) => {
 		type: tag,
 		props,
 		key: props.key,
+		__children: undefined,
+		__dom: undefined,
+		__parent: undefined,
+		__prevSibling: undefined,
+		__result: undefined,
 	};
 };
 

@@ -8,6 +8,13 @@
 	const domInsertBefore = (child, target) => {
 	  getParent(target)?.insertBefore(child, target);
 	};
+	const domInsertAfter = (child, target) => {
+	  const parent = getParent(target);
+	  if (parent) {
+	    if (target.nextSibling) parent.insertBefore(child, target.nextSibling);
+	    else parent.append(child);
+	  }
+	};
 	const domRemove = (node) => {
 	  getParent(node)?.removeChild(node);
 	};
@@ -49,7 +56,12 @@
 	  return {
 	    type: tag,
 	    props,
-	    key: props.key
+	    key: props.key,
+	    __children: void 0,
+	    __dom: void 0,
+	    __parent: void 0,
+	    __prevSibling: void 0,
+	    __result: void 0
 	  };
 	};
 	const abdNsKey = "_abNS";
@@ -71,6 +83,12 @@
 	const Fragment = (props) => props.children;
 	const getTestID = () => "t-pptr-toolbar";
 	const isDomNode = (tag) => tag instanceof Element;
+	const canAddUsingElementAsValidator = (vnode, element) => {
+	  if (!vnode) return false;
+	  if (!element) return true;
+	  if (!isFragment(vnode)) return getVNodeDom(vnode) !== element;
+	  return getVNodeDom(vnode) !== element && !vnode.__children.some((child) => getVNodeDom(child, true) === element);
+	};
 	const isVNode = (vnode) => !!vnode && !!vnode.props;
 	const isRenderableElement = (element) => !!element || element === 0;
 	const isSameChild = (vnode, vnode2) => Boolean(
@@ -82,7 +100,7 @@
 	  return tag === Fragment;
 	};
 	const copyInternal = (source, target) => {
-	  ["__hooks", "__class", "__parent"].forEach((a) => {
+	  ["__hooks", "__class", "__parent", "__prevSibling"].forEach((a) => {
 	    if (source[a] !== void 0) target[a] = source[a];
 	  });
 	};
@@ -170,7 +188,7 @@
 	    }
 	    vnode.__dom = element;
 	  } else {
-	    vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode("");
+	    vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode("__frag__");
 	  }
 	  if (children) {
 	    vnode.__children = renderVnodeChildren(vnode, children, oldVnode && oldVnode.__children);
@@ -225,7 +243,7 @@
 	    ""
 	  );
 	};
-	const patchVnodeDom = (vnode, prevVnode, targetNode, changeType) => {
+	const patchVnodeDom = (vnode, prevVnode, isPatchRoot) => {
 	  const isVnodeSame = isSameChild(vnode, prevVnode);
 	  const prevVnodeDom = getVNodeDom(prevVnode, true);
 	  if (!isRenderableElement(vnode)) {
@@ -238,59 +256,55 @@
 	    }
 	    return vnode;
 	  }
-	  let returnDom = vnode.__dom;
+	  const returnDom = vnode.__dom;
+	  const prevSibling = vnode && vnode.__prevSibling;
 	  if (vnode.__result) {
 	    vnode.__result.__parent = vnode.__parent;
-	    vnode.__result.__after = vnode.__after;
-	    return patchVnodeDom(vnode.__result, isVnodeSame ? prevVnode?.__result : prevVnode, targetNode, changeType);
+	    vnode.__result.__prevSibling = prevSibling;
+	    return patchVnodeDom(vnode.__result, prevVnode?.__result, isPatchRoot);
 	  }
 	  const vnodeChildren = vnode.__children;
 	  const oldChildren = prevVnode ? prevVnode.__children : null;
 	  const oldChildrenMap = oldChildren && createChildrenMap(oldChildren);
 	  const childCount = vnodeChildren ? vnodeChildren.length : 0;
 	  const vnodeIsFragment = isFragment(vnode);
-	  const childrenParentNode = vnodeIsFragment ? createDocumentFragment() : returnDom;
-	  let afterSibling = null;
+	  const childrenParentNode = vnodeIsFragment ? vnode.__parent : returnDom;
+	  if (isRenderableElement(returnDom)) {
+	    const parentDom = vnode.__parent;
+	    if (prevVnodeDom && canAddUsingElementAsValidator(vnode, prevVnodeDom)) {
+	      domReplaceWith(prevVnodeDom, returnDom);
+	    } else if (prevSibling) {
+	      if (canAddUsingElementAsValidator(vnode, prevSibling.nextSibling)) {
+	        domInsertAfter(returnDom, prevSibling);
+	      }
+	    } else if (isPatchRoot) {
+	      if (canAddUsingElementAsValidator(vnode, parentDom.lastChild) && !prevVnodeDom) {
+	        domAppend(parentDom, returnDom);
+	      }
+	    } else if (canAddUsingElementAsValidator(vnode, parentDom.firstChild)) {
+	      parentDom.prepend(returnDom);
+	    }
+	  }
+	  let childPrevSibling = vnode && isFunction(vnode.type) ? prevSibling : null;
 	  for (let index = 0; index < childCount; index++) {
 	    const childVnode = vnodeChildren[index];
 	    if (childVnode) {
 	      childVnode.__parent = childrenParentNode;
-	      childVnode.__after = afterSibling;
+	      childVnode.__prevSibling = childPrevSibling;
 	    }
 	    const oldChildVnodeCandidate = oldChildrenMap && childVnode?.key && oldChildrenMap.get(childVnode.key);
 	    const oldChildVnode = (!childVnode || isVnodeSame) && oldChildVnodeCandidate;
 	    if (oldChildVnode && isSameChild(childVnode, oldChildVnode)) {
 	      oldChildrenMap.delete(childVnode.key);
 	    }
-	    const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode, afterSibling, !afterSibling ? "prepend" : "append");
+	    const childVnodeDom = patchVnodeDom(childVnode, oldChildVnode);
 	    if (isRenderableElement(childVnodeDom)) {
-	      afterSibling = childVnodeDom;
+	      childPrevSibling = childVnodeDom;
 	    }
-	  }
-	  let shouldMakeChanges = changeType !== "same";
-	  if (changeType === "same" && !prevVnodeDom) {
-	    targetNode = vnode.__after;
-	    shouldMakeChanges = !!targetNode;
-	  }
-	  if (isRenderableElement(returnDom)) {
-	    if (prevVnodeDom && prevVnodeDom !== returnDom) {
-	      domReplaceWith(prevVnodeDom, returnDom);
-	    } else if (shouldMakeChanges) {
-	      if (targetNode && targetNode.nextSibling) {
-	        if (returnDom !== targetNode.nextSibling) domInsertBefore(returnDom, targetNode.nextSibling);
-	      } else if (changeType === "prepend") {
-	        if (vnode.__parent.firstChild !== returnDom) vnode.__parent.prepend(returnDom);
-	      } else if (vnode.__parent.lastChild !== returnDom) {
-	        domAppend(vnode.__parent, returnDom);
-	      }
-	    }
-	  }
-	  if (vnodeIsFragment) {
-	    domInsertBefore(childrenParentNode, returnDom);
 	  }
 	  oldChildrenMap?.forEach((child) => {
 	    if (isFragment(child)) {
-	      child.props.children.forEach((c) => getVNodeDom(c, true)?.remove());
+	      child.__children.forEach((c) => getVNodeDom(c, true)?.remove());
 	    } else {
 	      getVNodeDom(child, true)?.remove();
 	    }
@@ -383,7 +397,7 @@
 	    if (vnode.__dirty) {
 	      const old = { ...vnode };
 	      vnode = renderVnode(vnode, old);
-	      patchVnodeDom(vnode, old, null, "same");
+	      patchVnodeDom(vnode, old, true);
 	      if (vnode) vnode.__dirty = false;
 	    }
 	  });
@@ -762,7 +776,7 @@
 	const createMutation = (child) => {
 	  let node = child;
 	  if (isVNode(child)) {
-	    node = patchVnodeDom(renderVnode(child), null) || createDocumentFragment();
+	    node = patchVnodeDom(renderVnode(child), null, true) || createDocumentFragment();
 	  }
 	  getChildrenArray(node).forEach((c) => {
 	    if (c.dataset && !c.dataset.o) {

@@ -438,4 +438,67 @@ describe('JSX: Fragments', () => {
 			</div>`)
 		);
 	});
+
+	it('should not append fragment children to dom again if nothing changes', (done) => {
+		const Trs = ({ testId }) => {
+			return (
+				<>
+					<tr data-test="row1">
+						<td>{testId} cell1</td>
+					</tr>
+					<tr data-test="row2">
+						<td>{testId} cell2</td>
+					</tr>
+				</>
+			);
+		};
+
+		const Table = () => {
+			const [effectRan, setEffectRan] = useState('false');
+			useEffect(() => {
+				setEffectRan('true');
+			}, []);
+			return (
+				<table data-effect={effectRan} data-test="table">
+					<tbody>
+						<tr>
+							<td>heading</td>
+						</tr>
+						{['rows1', 'rows2'].map((testId) => (
+							<Trs key={testId} testId={testId} />
+						))}
+					</tbody>
+				</table>
+			);
+		};
+
+		const { container, getByTestId } = render(
+			<div>
+				<div>Top</div>
+				<Table />
+				<div>Bottom</div>
+			</div>
+		);
+
+		const table = getByTestId('table');
+
+		let addedNodes = [];
+
+		expect(table.dataset.effect).toBe('false');
+
+		new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				mutation.addedNodes.forEach((node) => addedNodes.push(node));
+			});
+
+			expect(table.dataset.effect).toBe('true');
+			expect(addedNodes.length).toBe(0);
+			console.log(addedNodes);
+
+			done();
+		}).observe(container, { childList: true, subtree: true });
+
+		expect(addedNodes.length).toBe(0);
+		vi.runAllTimers();
+	});
 });
