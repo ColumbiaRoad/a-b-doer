@@ -215,10 +215,6 @@ Supported attribute namespaces by default are these:
 
 If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_abNS or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
 
-## Polyfills
-
-This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
-
 ## DOM Utilities for queries
 
 ### pollQuerySelector
@@ -259,8 +255,6 @@ Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElem
 
 Returns a promise which will be resolved if given selector is found. It runs the dom query every 100ms until the timeout (ms) has passed.
 
-Note: polyfills Promise automatically
-
 ```js
 import { waitElement } from 'a-b-doer';
 
@@ -283,8 +277,6 @@ waitElement('.foo').then(function (node) {
 Type `(selector: string | Selector, timeout?: number = 5000) => Promise<NodeListOf<HTMLElement> | []>`
 
 Same as waitElement, but resolved value is always an array.
-
-Note: polyfills Promise automatically
 
 ```js
 import { waitElements } from 'a-b-doer';
@@ -310,8 +302,6 @@ waitElements('.foo').then(function (nodes) {
 Type `(() => any, timeout?: number = 5000) => Promise<any | undefined>`
 
 Returns a promise which will be resolved if given function returns truthy value. It calls the function every 100ms until the timeout (ms) has passed.
-
-Note: polyfills Promise automatically
 
 ```js
 import { waitFor } from 'a-b-doer';

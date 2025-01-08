@@ -188,7 +188,7 @@
 	    }
 	    vnode.__dom = element;
 	  } else {
-	    vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode("__frag__");
+	    vnode.__dom = getVNodeDom(oldVnode) || document.createTextNode("");
 	  }
 	  if (children) {
 	    vnode.__children = renderVnodeChildren(vnode, children, oldVnode && oldVnode.__children);
@@ -250,9 +250,8 @@
 	    if (prevVnode) {
 	      if (isFragment(prevVnode) && prevVnode.__children) {
 	        prevVnode.__children.forEach((child) => domRemove(getVNodeDom(child, true)));
-	      } else {
-	        domRemove(prevVnodeDom);
 	      }
+	      domRemove(prevVnodeDom);
 	    }
 	    return vnode;
 	  }
@@ -396,9 +395,10 @@
 	    }
 	    if (vnode.__dirty) {
 	      const old = { ...vnode };
-	      vnode = renderVnode(vnode, old);
-	      patchVnodeDom(vnode, old, true);
-	      if (vnode) vnode.__dirty = false;
+	      patchVnodeDom(renderVnode(vnode, old), old, true);
+	      if (vnode) {
+	        vnode.__dirty = false;
+	      }
 	    }
 	  });
 	};
@@ -442,42 +442,42 @@
 	};
 	const useEffect = (cb, deps) => {
 	  const vnode = hookPointer.__vnode;
-	  let index = vnode.__hookIndex;
-	  const oldDeps = vnode.__hooks[index]?.[1];
+	  const index = vnode.__hookIndex;
+	  const hooks = vnode.__hooks;
+	  const oldDeps = hooks[index]?.[1];
 	  let shouldCall = !oldDeps || !deps;
 	  if (!shouldCall && deps) {
 	    shouldCall = !isSame(deps, oldDeps || []);
 	  }
 	  if (shouldCall) {
-	    if (oldDeps && vnode.__hooks[index][2]) {
-	      vnode.__hooks[index][2]();
+	    if (oldDeps && hooks[index][2]) {
+	      hooks[index][2]();
 	    }
-	    vnode.__hooks[index] = ["e", deps, null];
-	    ((vnode2, index2) => {
-	      onNextTick(vnode2, () => {
-	        if (vnode2.__hooks[index2]) vnode2.__hooks[index2][2] = cb();
-	      });
-	    })(vnode, index);
+	    hooks[index] = ["e", deps, null];
+	    onNextTick(vnode, () => {
+	      if (hooks[index]) hooks[index][2] = cb();
+	    });
 	  }
 	  vnode.__hookIndex = index + 1;
 	};
 	const useState = (defaultValue) => {
 	  const vnode = hookPointer.__vnode;
-	  if (!vnode.__hooks[vnode.__hookIndex]) {
-	    vnode.__hooks[vnode.__hookIndex] = [defaultValue];
+	  const index = vnode.__hookIndex;
+	  const hooks = vnode.__hooks;
+	  if (!hooks[index]) {
+	    hooks[index] = [defaultValue];
 	  }
-	  vnode.__hooks[vnode.__hookIndex][1] = /* @__PURE__ */ ((vnode2, index) => (value) => {
-	    const hooks = vnode2.__hooks;
+	  hooks[index][1] = (value) => {
 	    if (!hooks[index]) return;
 	    if (hooks[index][0] === value) return;
 	    hooks[index][0] = value;
-	    if (vnode2) {
-	      vnode2.__dirty = true;
-	      onNextTick(vnode2);
+	    if (vnode) {
+	      vnode.__dirty = true;
+	      onNextTick(vnode);
 	    }
-	  })(vnode, vnode.__hookIndex);
-	  const state = vnode.__hooks[vnode.__hookIndex];
-	  vnode.__hookIndex++;
+	  };
+	  const state = hooks[index];
+	  vnode.__hookIndex = index + 1;
 	  return state;
 	};
 

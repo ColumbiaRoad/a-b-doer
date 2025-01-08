@@ -313,9 +313,8 @@ export const patchVnodeDom = (vnode, prevVnode, isPatchRoot) => {
 		if (prevVnode) {
 			if (isFragment(prevVnode) && prevVnode.__children) {
 				prevVnode.__children.forEach((child) => domRemove(getVNodeDom(child, true)));
-			} else {
-				domRemove(prevVnodeDom);
 			}
+			domRemove(prevVnodeDom);
 		}
 		return vnode;
 	}
@@ -498,9 +497,10 @@ export const onNextTick = (vnode, callback) => {
 		}
 		if (vnode.__dirty) {
 			const old = { ...vnode };
-			vnode = renderVnode(vnode, old);
-			patchVnodeDom(vnode, old, true);
-			if (vnode) vnode.__dirty = false;
+			patchVnodeDom(renderVnode(vnode, old), old, true);
+			if (vnode) {
+				vnode.__dirty = false;
+			}
 		}
 	});
 };

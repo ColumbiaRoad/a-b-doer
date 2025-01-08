@@ -1,4 +1,3 @@
-import { Promise } from '../polyfills';
 import { patchVnodeDom, isVNode, runUnmountCallbacks, getTestID, renderVnode } from './render';
 import {
 	config,

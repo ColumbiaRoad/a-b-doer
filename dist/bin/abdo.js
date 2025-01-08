@@ -851,10 +851,7 @@ function cssInjectPlugin() {
 
 			const bundleKeys = Object.keys(bundle);
 			const jsAssets = bundleKeys.filter(
-				(i) =>
-					bundle[i].type == 'chunk' &&
-					bundle[i].fileName.match(/\.[cm]?js$/) != null &&
-					!bundle[i].fileName.includes('polyfill')
+				(i) => bundle[i].type == 'chunk' && bundle[i].fileName.match(/\.[cm]?js$/) != null
 			);
 
 			// Support style entries

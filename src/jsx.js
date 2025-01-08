@@ -1,4 +1,3 @@
-import './polyfills.js';
 import { config, createVNode, initNs, options } from './utils/internal';
 import { Fragment } from './utils/render';
 
