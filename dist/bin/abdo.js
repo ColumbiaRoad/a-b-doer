@@ -1070,7 +1070,7 @@ const browsers = browserslist();
 
 const supportIE = !!browsers.find((b) => b.startsWith('ie'));
 
-const rootDir = __dirname.replace(/(\/|\\)(dist|bin|lib).*/, '');
+const rootDir = __dirname.replace(/(\/|\\)(dist|bin|lib).*/, '').replaceAll('\\', '/');
 
 const cwd = process.cwd();
 
@@ -1152,26 +1152,26 @@ function getBundlerConfigs(buildSpecConfig) {
 
 	const chunksInputConfig = chunks
 		? {
-				preserveEntrySignatures: 'allow-extension',
-		  }
+			preserveEntrySignatures: 'allow-extension',
+		}
 		: {};
 
 	const chunksOuputConfig = chunks
 		? {
-				format: 'es',
-				manualChunks(id) {
-					if (id.includes('node_modules') || /^vite\//.test(id)) return 'vendor';
-				},
-		  }
+			format: 'es',
+			manualChunks(id) {
+				if (id.includes('node_modules') || /^vite\//.test(id)) return 'vendor';
+			},
+		}
 		: {
-				format: 'iife',
-		  };
+			format: 'iife',
+		};
 
 	// const outputOptions = {};
 
 	const jsxInject = preact
 		? 'import {h,Fragment} from "preact"'
-		: `import {h,hf} from "${path.join(rootDir, '/src/jsx')}"`;
+		: `import {h,hf} from "${path.posix.join(rootDir, '/src/jsx')}"`;
 
 	const optimizeDeps = {
 		exclude: [`@prefresh/vite/runtime`, `@prefresh/vite/utils`],
@@ -1186,9 +1186,9 @@ function getBundlerConfigs(buildSpecConfig) {
 		},
 		optimizeDeps: stylesOnly
 			? {
-					...optimizeDeps,
-					entries: [entryFile],
-			  }
+				...optimizeDeps,
+				entries: [entryFile],
+			}
 			: optimizeDeps,
 		esbuild: {
 			jsx: 'transform',
@@ -1221,9 +1221,9 @@ function getBundlerConfigs(buildSpecConfig) {
 			minify: minify ? 'terser' : false,
 			terserOptions: minify
 				? {
-						mangle: { toplevel: true },
-						format: { comments: false },
-				  }
+					mangle: { toplevel: true },
+					format: { comments: false },
+				}
 				: false,
 			emptyOutDir: false,
 			chunkSizeWarningLimit: 2048,
@@ -1278,14 +1278,14 @@ function getBundlerConfigs(buildSpecConfig) {
 				},
 			}),
 			!TEST_ENV &&
-				!watch &&
-				!preact &&
-				createModifiablePlugin(replace, {
-					name: 'replace2',
-					preventAssignment: false,
-					delimiters: ['', ''],
-					values: minifiedProperties,
-				}),
+			!watch &&
+			!preact &&
+			createModifiablePlugin(replace, {
+				name: 'replace2',
+				preventAssignment: false,
+				delimiters: ['', ''],
+				values: minifiedProperties,
+			}),
 			createModifiablePlugin(svgr, {
 				name: 'vite-plugin-svgr',
 				exportAsDefault: true,
@@ -1300,9 +1300,9 @@ function getBundlerConfigs(buildSpecConfig) {
 				include: '**/*.svg',
 			}),
 			watch &&
-				(preact
-					? createModifiablePlugin(prefresh, { name: 'prefresh' })
-					: createModifiablePlugin(customJsxPrefreshPlugin, { name: 'custom-prefresh' })),
+			(preact
+				? createModifiablePlugin(prefresh, { name: 'prefresh' })
+				: createModifiablePlugin(customJsxPrefreshPlugin, { name: 'custom-prefresh' })),
 		].filter(Boolean),
 	});
 
