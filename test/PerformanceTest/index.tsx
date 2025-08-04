@@ -41,10 +41,12 @@ const TestComponent = () => {
 		}, 250);
 	}, []);
 
+	// console.log('render', arr);
+
 	return (
 		<div>
 			<h3>
-				<a onClick={() => setArr(shuffle(arr))}>Shuffle</a>
+				<button onClick={() => setArr(shuffle(arr))}>Shuffle</button>
 			</h3>
 			{arr.map((v) => (
 				<div key={v}>
@@ -55,7 +57,7 @@ const TestComponent = () => {
 	);
 };
 
-pollQuerySelector('#app', (target) => {
+pollQuerySelector('body > div', (target) => {
 	init();
 	console.time();
 	const a = <TestComponent />;

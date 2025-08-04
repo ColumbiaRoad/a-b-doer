@@ -3,8 +3,8 @@
  * @property {*|null} current
  */
 
-import { hookPointer, isSame, onNextTick } from './utils/internal';
-import { renderVnode, patchVnodeDom } from './utils/render';
+import { onNextTick } from './utils/render';
+import { hookPointer, isSame } from './utils/internal';
 
 /**
  * Initializes the reference object.
@@ -12,52 +12,55 @@ import { renderVnode, patchVnodeDom } from './utils/render';
  * @returns {Ref}
  */
 export const useRef = (current = null) => {
-	if (!hookPointer.__hooks[hookPointer.__current]) {
-		hookPointer.__hooks[hookPointer.__current] = { current };
+	const vnode = hookPointer.__vnode;
+	if (!vnode.__hooks[vnode.__hookIndex]) {
+		vnode.__hooks[vnode.__hookIndex] = { current };
 	}
-	const ret = hookPointer.__hooks[hookPointer.__current];
-	hookPointer.__current++;
+	const ret = vnode.__hooks[vnode.__hookIndex];
+	vnode.__hookIndex++;
 	return ret;
 };
 
 export const useEffect = (cb, deps) => {
-	const oldDeps = hookPointer.__hooks[hookPointer.__current]?.[1];
+	const vnode = hookPointer.__vnode;
+	const index = vnode.__hookIndex;
+	const hooks = vnode.__hooks;
+	const oldDeps = hooks[index]?.[1];
 	let shouldCall = !oldDeps || !deps;
 	if (!shouldCall && deps) {
 		shouldCall = !isSame(deps, oldDeps || []);
 	}
 	if (shouldCall) {
-		if (oldDeps && hookPointer.__hooks[hookPointer.__current][2]) {
-			hookPointer.__hooks[hookPointer.__current][2]();
+		if (oldDeps && hooks[index][2]) {
+			hooks[index][2]();
 		}
-		hookPointer.__hooks[hookPointer.__current] = ['e', deps, null];
-		((hooks, index) => {
-			onNextTick(() => {
-				hooks[index][2] = cb();
-			});
-		})(hookPointer.__hooks, hookPointer.__current);
+		hooks[index] = ['e', deps, null];
+		onNextTick(vnode, () => {
+			if (hooks[index]) hooks[index][2] = cb();
+		});
 	}
-	hookPointer.__current++;
+	vnode.__hookIndex = index + 1;
 };
 
 export const useState = (defaultValue) => {
-	if (!hookPointer.__hooks[hookPointer.__current]) {
-		hookPointer.__hooks[hookPointer.__current] = [defaultValue];
+	const vnode = hookPointer.__vnode;
+	const index = vnode.__hookIndex;
+	const hooks = vnode.__hooks;
+	if (!hooks[index]) {
+		hooks[index] = [defaultValue];
 	}
 
-	hookPointer.__hooks[hookPointer.__current][1] = ((hooks, index, vnode) => (value) => {
+	hooks[index][1] = (value) => {
+		if (!hooks[index]) return;
+		if (hooks[index][0] === value) return;
 		hooks[index][0] = value;
 		if (vnode) {
-			onNextTick(() => {
-				const old = { ...vnode };
-				vnode.__hooks = hooks;
-				vnode = renderVnode(vnode, old);
-				patchVnodeDom(vnode, old);
-			});
+			vnode.__dirty = true;
+			onNextTick(vnode);
 		}
-	})(hookPointer.__hooks, hookPointer.__current, hookPointer.__vnode);
+	};
 
-	const state = hookPointer.__hooks[hookPointer.__current];
-	hookPointer.__current++;
+	const state = hooks[index];
+	vnode.__hookIndex = index + 1;
 	return state;
 };

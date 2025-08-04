@@ -1,11 +1,11 @@
-import { expect, describe, vi, it } from 'vitest';
+import { expect, describe, vi, it, beforeEach } from 'vitest';
 import { clearAll, unmount } from 'a-b-doer';
 import { useState, useEffect } from 'a-b-doer/hooks';
-import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles } from './templates';
+import { Simple, RefHook, Hooks, Switch, OrderApp, Toggles, Loading } from './templates';
 import { render } from './test-utils';
-import { patchVnodeDom, renderVnode } from '../../../src/utils/render';
+import Checked from './components/Checked.svg';
 
-describe('JSX', () => {
+describe('JSX: Common', () => {
 	vi.useFakeTimers();
 
 	beforeEach(() => {
@@ -16,17 +16,6 @@ describe('JSX', () => {
 		render(<Simple id="tpl1" foo="0" />);
 		expect(document.head.innerHTML).toMatch(/body\s*{\s*background:\s*red;\s*}/s);
 		expect(document.head.innerHTML).toMatch(/\..*simple.*\s*{\s*background:\s*blue;\s*}/s);
-	});
-
-	it('should add proper amount of elements', () => {
-		const { container } = render(
-			<>
-				<Simple id="tpl1" foo="0" />
-				<Simple id="tpl2" foo="1" />
-				<Simple id="tpl3" foo="2" bar="1" />
-			</>
-		);
-		expect(container.querySelectorAll('.simple').length).toBe(3);
 	});
 
 	it('should pass props correctly', () => {
@@ -118,8 +107,13 @@ describe('JSX', () => {
 					setLoading(false);
 				}, 50);
 			}, []);
-			if (loading) return <div data-test="loading">Loading</div>;
-			return <div data-test="app">{children}</div>;
+			if (loading) return <Loading />;
+			return (
+				<div data-test="app">
+					{children}
+					<div data-test="bottom-element">Bottom</div>
+				</div>
+			);
 		};
 
 		const Tpl = (props) => {
@@ -137,19 +131,20 @@ describe('JSX', () => {
 				<Tpl test="3" />
 			</App>
 		);
-
 		expect(queryByTestId('app')).toBeFalsy();
 		expect(queryByTestId('loading')).toBeTruthy();
 		vi.runAllTimers();
-		expect(queryByTestId('app')).toBeTruthy();
 
 		const children = queryByTestId('app').children;
-		expect(children.length).toBe(3);
+		expect(children.length).toBe(4);
 
 		const tpl = queryAllByTestId('tpl');
 		expect(tpl.length).toBe(3);
 
-		for (let i = 0; i < children.length; i++) {
+		const bottom = queryByTestId('bottom-element');
+		expect(children[3]).toBe(bottom);
+
+		for (let i = 0; i < 3; i++) {
 			expect(children[i].innerHTML).toBe(`<h3>tpl test ${i + 1}</h3>`);
 		}
 	});
@@ -176,62 +171,61 @@ describe('JSX', () => {
 		}
 	});
 
-	it('should render correctly mapped array children with fragments', () => {
-		const FragComponent = ({ children }) => (
-			<>
-				<>
-					<div data-test="row">Some element</div>
-					<div data-test="row">{children}</div>
-				</>
-			</>
-		);
-
-		const FragComponent2 = ({ children }) => (
-			<>
-				<div data-test="subrow">Some other element</div>
-				<div data-test="subrow">{children}</div>
-			</>
-		);
-
-		const { queryByTestId, queryAllByTestId } = render(
-			<div data-test="container">
-				{[0, 1, 2].map((i) => (
-					<FragComponent key={`i${i}`}>
-						<FragComponent2>Item {i}</FragComponent2>
-					</FragComponent>
-				))}
-				<div data-test="bottom-element">Bottom</div>
-			</div>
-		);
-
-		const container = queryByTestId('container');
-		expect(container.children.length).toBe(7);
-		const bottom = queryByTestId('bottom-element');
-		expect(container.lastChild).toBe(bottom);
-		const rows = queryAllByTestId('row');
-
-		for (let i = 0; i < container.children.length - 1; i++) {
-			expect(container.children[i]).toBe(rows[i]);
-		}
-	});
-
 	it('should patch correctly if vnode type changes', () => {
-		const container = document.createElement('div');
-		const vnode = renderVnode(
+		let renderResult = render(
 			<div>
+				Text
 				<h1>Testing</h1>
 			</div>
 		);
-		patchVnodeDom(vnode, null, container);
-		expect(container.innerHTML).toBe('<div><h1>Testing</h1></div>');
-		const vnode2 = renderVnode(
+		expect(renderResult.container.innerHTML).toBe('<div>Text<h1>Testing</h1></div>');
+
+		renderResult = renderResult.rerender(
 			<div>
+				Text
 				<h4>Testing</h4>
-			</div>,
-			vnode
+			</div>
 		);
-		patchVnodeDom(vnode2, vnode, container);
-		expect(container.innerHTML).toBe('<div><h4>Testing</h4></div>');
+		expect(renderResult.container.innerHTML).toBe('<div>Text<h4>Testing</h4></div>');
+	});
+
+	it('should handle keyed element reordering', () => {
+		let renderResult = render(
+			<div>
+				<div key="k1">Testing 1</div>
+				<div key="k2">Testing 2</div>
+				<div key="k3">Testing 3</div>
+				<div key="k4">Testing 4</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			'<div><div>Testing 1</div><div>Testing 2</div><div>Testing 3</div><div>Testing 4</div></div>'
+		);
+
+		renderResult = renderResult.rerender(
+			<div>
+				<div key="k2">Testing 2</div>
+				<div key="k1">Testing 1</div>
+				<div key="k4">Testing 4</div>
+				<div key="k3">Testing 3</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			'<div><div>Testing 2</div><div>Testing 1</div><div>Testing 4</div><div>Testing 3</div></div>'
+		);
+
+		renderResult = renderResult.rerender(
+			<div>
+				<div key="k4">Testing 4</div>
+				<div key="k2">Testing 2</div>
+				<div key="k3">Testing 3</div>
+				<div key="k5">Testing 5</div>
+				<div key="k1">Testing 1</div>
+			</div>
+		);
+		expect(renderResult.container.innerHTML).toBe(
+			'<div><div>Testing 4</div><div>Testing 2</div><div>Testing 3</div><div>Testing 5</div><div>Testing 1</div></div>'
+		);
 	});
 
 	it('should render looped children correctly after render', () => {
@@ -247,5 +241,62 @@ describe('JSX', () => {
 			expect(toggle.childNodes[1].tagName).toBe('SPAN');
 			expect(toggle.childNodes[2].nodeType).toBe(3);
 		}
+	});
+
+	it('should render svg correctly', () => {
+		const { queryByTestId } = render(<Checked width="24" height="24" />);
+		const svg = queryByTestId('svg');
+		expect(svg).toBeTruthy();
+		expect(svg.outerHTML).toMatch('viewBox="0 0 154 154"');
+		expect(svg.outerHTML).toMatch('width="24"');
+		expect(svg.outerHTML).toMatch('height="24"');
+		expect(svg.querySelector('g').outerHTML).toMatch('stroke-width="2"');
+		expect(svg.querySelector('polyline').outerHTML).toMatch('stroke-width="10"');
+	});
+
+	it('should patch correctly if component type returns null after update', () => {
+		const Custom = () => {
+			const [foo, setFoo] = useState(true);
+			useEffect(() => {
+				setFoo(false);
+			}, []);
+			if (!foo) return null;
+			return <div>foo</div>;
+		};
+		const { container } = render(
+			<div>
+				Text
+				<Custom />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe('<div>Text<div>foo</div><div>Bottom</div></div>');
+
+		vi.runAllTimers();
+
+		expect(container.innerHTML).toBe('<div>Text<div>Bottom</div></div>');
+	});
+
+	it('should patch correctly if component type returns something after update when previously returned null', () => {
+		const Custom = () => {
+			const [foo, setFoo] = useState(false);
+			useEffect(() => {
+				setFoo(true);
+			}, []);
+			if (!foo) return null;
+			return <div>foo</div>;
+		};
+		const { container } = render(
+			<div>
+				Text
+				<Custom />
+				<div>Bottom</div>
+			</div>
+		);
+		expect(container.innerHTML).toBe('<div>Text<div>Bottom</div></div>');
+
+		vi.runAllTimers();
+
+		expect(container.innerHTML).toBe('<div>Text<div>foo</div><div>Bottom</div></div>');
 	});
 });

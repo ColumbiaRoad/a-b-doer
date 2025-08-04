@@ -104,8 +104,6 @@ If you're more familiar with path aliases in import calls, there is path alias f
 
 JSX files are also supported and you can create custom components with either functional style or class style syntax. Custom component syntax is like in preact but implemented in much simpler way. This means that all hooks and component render cycle methods are not implemented (if you need them, use preact). This library uses a simple createElement utility which works with babel and transforms jsx to virtual nodes that'll be rendered automatically to DOM nodes when they're added to DOM with library's own DOM utilities.
 
-The lib handles element attributes as is and does not do any camelCase to hyphenated conversion to them. Also some namespaced attributes are supported by default.
-
 ```js
 import { append, pollQuerySelector, Component } from 'a-b-doer';
 import SomeSvgImage from '@/images/some-svg-image.svg';
@@ -213,11 +211,7 @@ Supported attribute namespaces by default are these:
 }
 ```
 
-If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_namespaces or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
-
-## Polyfills
-
-This lib uses NodeList.forEach, Array.from and Promise (if "wait" prefixed utils are used) polyfills if [browserlist config](https://github.com/browserslist/browserslist) contains `ie 11`.
+If namespace doesn't start with http, it will be prefixed with `http://www.w3.org/`. You can extend this support by overriding window.\_\_abNS or by modifying the namespace object. Namespaced attribute will first be splitted in half and if the second part has a own namespace, it will be used and otherwise the attribute prefix will be used as searched namespace key.
 
 ## DOM Utilities for queries
 
@@ -259,8 +253,6 @@ Type `(selector: string | Selector, timeout?: number = 5000) => Promise<HTMLElem
 
 Returns a promise which will be resolved if given selector is found. It runs the dom query every 100ms until the timeout (ms) has passed.
 
-Note: polyfills Promise automatically
-
 ```js
 import { waitElement } from 'a-b-doer';
 
@@ -283,8 +275,6 @@ waitElement('.foo').then(function (node) {
 Type `(selector: string | Selector, timeout?: number = 5000) => Promise<NodeListOf<HTMLElement> | []>`
 
 Same as waitElement, but resolved value is always an array.
-
-Note: polyfills Promise automatically
 
 ```js
 import { waitElements } from 'a-b-doer';
@@ -310,8 +300,6 @@ waitElements('.foo').then(function (nodes) {
 Type `(() => any, timeout?: number = 5000) => Promise<any | undefined>`
 
 Returns a promise which will be resolved if given function returns truthy value. It calls the function every 100ms until the timeout (ms) has passed.
-
-Note: polyfills Promise automatically
 
 ```js
 import { waitFor } from 'a-b-doer';
@@ -571,11 +559,11 @@ Adds some extra logging for debug
 
 Type `Object` (optional)
 
-Default `{ classes: true, className: true, namespaces: true, jsx: 'auto', hooks: 'auto' }`
+Default `{ classes: true, className: true, namespace: true, jsx: 'auto', hooks: 'auto' }`
 
 - classes: Support class component syntax
 - className: Populate className with class prop and class prop with className
-- namespaces: Support namespace attributes and elements. Some namespaces are defined by default
+- namespace: Support namespace attributes and elements. Some namespaces are defined by default
 - jsx: Support jsx syntax
 - hooks: Support functional component hooks, e.g. useState
 - extendedVnodes: Support custom types for JSX VNodes, those are DOM Element and HTML string

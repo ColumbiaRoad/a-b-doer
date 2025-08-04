@@ -83,9 +83,9 @@ export const Switch = ({ id }) => {
 	);
 };
 
-const Loading = ({ num }) => {
+export const Loading = ({ num }) => {
 	return (
-		<div>
+		<div data-test="loading">
 			<h1>Loading... {num}</h1>
 		</div>
 	);
@@ -114,7 +114,6 @@ export const Toggles = ({ id }) => {
 	const [val, setVal] = useState(0);
 
 	useEffect(() => {
-		console.log('=================');
 		setVal(1);
 	}, []);
 

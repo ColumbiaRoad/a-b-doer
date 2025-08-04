@@ -3,21 +3,29 @@ export const domAppend = (parent, child) => {
 	parent.append(child);
 };
 
-export const getParent = (node) => node?.parentElement;
+export const getParent = (node) => node?.parentNode;
 
 export const domInsertBefore = (child, target) => {
+	getParent(target)?.insertBefore(child, target);
+};
+
+export const domInsertAfter = (child, target) => {
 	const parent = getParent(target);
-	parent && parent.insertBefore(child, target);
+	if (parent) {
+		if (target.nextSibling) parent.insertBefore(child, target.nextSibling);
+		else parent.append(child);
+	}
 };
 
 export const domRemove = (node) => {
-	const parent = getParent(node);
-	parent && parent.removeChild(node);
+	getParent(node)?.removeChild(node);
 };
 
 export const domReplaceWith = (oldNode, newNode) => {
 	const parent = getParent(oldNode);
-	parent && parent.replaceChild(newNode, oldNode);
+	if (!parent) return;
+	domInsertBefore(newNode, oldNode);
+	domRemove(oldNode);
 };
 
 export const isFunction = (fn) => typeof fn === 'function';
@@ -38,27 +46,7 @@ export const isDomFragment = (node) => node && node.nodeType === 11;
  * @returns {Element|null}
  */
 export const getVNodeDom = (vnode, recursive) =>
-	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result) : vnode.__result?.__dom) : null;
-
-/**
- * Helper function to get first rendered DOM node. Is used by components that has a fragment as root
- * @param {VNode} vnode
- * @returns {Element|null}
- */
-export const getVNodeFirstRenderedDom = (vnode) => {
-	if (!vnode) return null;
-	if (vnode.__dom) return vnode.__dom;
-	if (vnode.__result) return getVNodeDom(vnode.__result);
-	if (vnode.__children) {
-		for (const child of vnode.__children) {
-			const dom = getVNodeDom(child);
-			if (dom && dom.nodeType < 4) {
-				return dom;
-			}
-		}
-	}
-	return null;
-};
+	vnode ? vnode.__dom || (recursive ? getVNodeDom(vnode.__result, recursive) : vnode.__result?.__dom) : null;
 
 // Internal object for storing details of current output/etc
 // This is just a placeholder object, all properties will be replaced to booleans with replace plugin.
@@ -75,13 +63,9 @@ export const config = {};
 /**
  * Internal object for storing details of currently rendered component's hooks.
  * Hook pointer properties:
- * @prop {boolean} __current Currently processed hook index
- * @prop {boolean} __hooks Array pointer to current VNode's hooks
  * @prop {boolean} __vnode Current VNode
  */
 export const hookPointer = {
-	__current: 0,
-	__hooks: [],
 	__vnode: null,
 };
 
@@ -103,40 +87,39 @@ export const isSame = (iter, iter2) => {
 	return false;
 };
 
-export const onNextTick = (callback) => {
-	setTimeout(callback);
-};
-
 export const createVNode = (tag = '', props) => {
 	return {
 		type: tag,
 		props,
 		key: props.key,
+		__children: undefined,
+		__dom: undefined,
+		__parent: undefined,
+		__prevSibling: undefined,
+		__result: undefined,
 	};
 };
 
-let NAMESPACES;
+const abdNsKey = '_abNS';
 
 export const initNs = () => {
-	if (!NAMESPACES) {
-		NAMESPACES = {
-			svg: '2000/svg',
-			xlink: '1999/xlink',
-			xmlns: '2000/xmlns/',
-		};
-	}
+	window[abdNsKey] = window[abdNsKey] || {};
+	Object.assign(window[abdNsKey], {
+		svg: '2000/svg',
+		xlink: '1999/xlink',
+		xmlns: '2000/xmlns/',
+	});
 };
 
 export const getNs = (key) => {
 	if (!config.jsx || !config.namespace) return null;
-	const ns = NAMESPACES[key];
+	const ns = window[abdNsKey]?.[key];
 	if (!ns) return null;
 	return ns.indexOf('http') !== 0 ? `http://www.w3.org/${ns}` : ns;
 };
 
 export const addNs = (ns, url) => {
-	NAMESPACES = NAMESPACES || {};
-	NAMESPACES[ns] = url;
+	window[abdNsKey][ns] = url;
 };
 
 export const options = {

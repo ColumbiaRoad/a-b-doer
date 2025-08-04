@@ -851,10 +851,7 @@ function cssInjectPlugin() {
 
 			const bundleKeys = Object.keys(bundle);
 			const jsAssets = bundleKeys.filter(
-				(i) =>
-					bundle[i].type == 'chunk' &&
-					bundle[i].fileName.match(/\.[cm]?js$/) != null &&
-					!bundle[i].fileName.includes('polyfill')
+				(i) => bundle[i].type == 'chunk' && bundle[i].fileName.match(/\.[cm]?js$/) != null
 			);
 
 			// Support style entries
@@ -867,7 +864,8 @@ function cssInjectPlugin() {
 					// Rename style bundle
 					if (mainKey.endsWith('.css')) {
 						bundle[bundleKeys[1]].fileName = mainKey;
-						bundle[bundleKeys[1]].name = mainKey;
+						bundle[bundleKeys[1]].names = bundle[bundleKeys[1]].names || [];
+						bundle[bundleKeys[1]].names[0] = mainKey;
 					}
 				}
 				// Create a proper javascript file from the css chunk
@@ -965,7 +963,7 @@ function customJsxPrefreshPlugin(options = {}) {
           import.meta.hot.accept(() => {
             try {
 							console.log("%cReloading A/B injection", "color: cyan; text-shadow: 1px 1px 1px #000", "${entryImportPath}");
-							import('${entryImportPath}?${Date.now()}').then(mod => mod.default());
+							import('${entryImportPath}?${Date.now()}').then(mod => mod?.default?.());
             } catch (e) {
               self.location.reload();
             }
@@ -1077,16 +1075,18 @@ const cwd = process.cwd();
 const DEV_SERVER_PORT = process.env.DEV_SERVER_PORT || 5173;
 
 const minifiedProperties = {
-	__hooks: 'h',
-	__class: 'c',
-	__vnode: 'v',
-	__current: 'i',
-	__state: 's',
-	__dirty: 'd',
 	__children: 'a',
-	__result: 'r',
+	__class: 'c',
+	__current: 'i',
+	__dirty: 'd',
 	__dom: 'e',
-	__delete: 'x',
+	__hookIndex: 'x',
+	__hooks: 'h',
+	__parent: 'p',
+	__prevSibling: 'b',
+	__result: 'r',
+	__state: 's',
+	__vnode: 'v',
 };
 
 /**
