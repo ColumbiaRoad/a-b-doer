@@ -7,7 +7,7 @@ import { getBundlerConfigs } from '../../lib/bundler';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const rootDir = path.join(__dirname, '..', '..');
+const rootDir = path.join(__dirname, '..', '..').replaceAll('\\', '/');
 
 const { bundlerConfig } = getBundlerConfigs({
 	...config,
@@ -19,7 +19,7 @@ const { bundlerConfig } = getBundlerConfigs({
 			jsx: 'transform',
 			jsxFactory: 'h',
 			jsxFragment: 'hf',
-			jsxInject: `import {h,hf} from "${path.join(rootDir, 'src', 'jsx')}"`,
+			jsxInject: `import {h,hf} from "${path.posix.join(rootDir, 'src', 'jsx')}"`,
 		},
 	},
 });
