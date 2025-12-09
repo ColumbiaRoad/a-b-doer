@@ -957,7 +957,7 @@ function customJsxPrefreshPlugin(options = {}) {
 			// Check if there are jsx refresh properties made by babel plugin. If not, use manual hmr which just re-injects the code
 			if (!hasSig && !hasReg) {
 				if (config.server?.hmr === false) return code;
-				const entryImportPath = config.abConfig.entryFile.replace(process.cwd(), '');
+				const entryImportPath = config.abConfig.entryFile.replace(process.cwd(), '').replaceAll('\\', '/');
 				return `${code}
         if (import.meta.hot) {
           import.meta.hot.accept(() => {
@@ -980,7 +980,7 @@ function customJsxPrefreshPlugin(options = {}) {
 				'lib',
 				'plugins',
 				'custom-prefresh-utils.js'
-			)}";
+			).replaceAll('\\', '/')}";
 
         let prevRefreshReg;
         let prevRefreshSig;
@@ -1438,7 +1438,12 @@ async function bundler(buildSpecConfig) {
 
 		if (testConfig.toolbar) {
 			moduleScripts.push(
-				`https://localhost:${port}/${path.join(rootDir.replace(cwd, ''), 'dist', 'lib', 'pptr-toolbar.js')}`
+				`https://localhost:${port}/${path.join(
+					rootDir.replace(cwd.replaceAll('\\', '/'), ''),
+					'dist',
+					'lib',
+					'pptr-toolbar.js'
+				)}`
 			);
 		}
 
